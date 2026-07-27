@@ -709,11 +709,11 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
     if (_btnDl) _btnDl.addEventListener("click", _generarPDF);
     if (_btnXl) _btnXl.addEventListener("click", _generarExcel);
 
-    // PDF individual por registro
+    // PDF individual por registro con fotos
     window.generarDocumentoPDF = function(idx) {
         var raw = window._ruteoRegistros[idx]; if (!raw) return;
         var r = window.normalizarRegistroRuteo ? window.normalizarRegistroRuteo(raw) : raw;
-        function _hacer() {
+        function _hacer(imgs) {
             var j = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
             if (!j) { alert("Libreria PDF no disponible."); return; }
             var doc = new j({ orientation: "portrait", unit: "mm", format: "a4" }), w = doc.internal.pageSize.getWidth();
@@ -722,17 +722,68 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
             doc.setFontSize(10); doc.text("Fecha: "+r.fecha, w/2, 26, { align: "center" });
             doc.setFontSize(10); doc.text("Tramo: "+r.tramo+" | Codigo: "+r.codigo, w/2, 34, { align: "center" });
             var data = [["Estructura",r.estructura],["Tipo",r.tipo_estructura],["Altura",r.altura+" m"],["Ubicacion",r.ubicacion],["ID Consol",r.id_consol],["Mufa",r.mufa],["Retencion",r.retencion],["Suspension",r.suspension],["Cruceta",r.cruceta],["Hebillas",r.hebillas],["Fleje",r.fleje],["Amortiguador",r.amortiguador],["Brazo Extensor",r.brazo_extensor],["Kit Retenida",r.kit_retenida],["Observacion",r.observacion]];
+            var yy = 45;
             if (typeof doc.autoTable === "function") {
-                doc.autoTable({ startY:45, body:data, theme:"grid", headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold"},margin:{left:20,right:20} });
+                doc.autoTable({ startY:yy, body:data, theme:"grid", headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold"},margin:{left:14,right:14} });
+                yy = doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : yy + 80;
             }
+            // Fotos
+            var imgW = 70, imgH = 55, gap = 10, x1 = (w - imgW*2 - gap) / 2, x2 = x1 + imgW + gap;
+            doc.setFontSize(9); doc.setTextColor(0,151,216);
+            doc.text("FOTOGRAFIA 1", x1+imgW/2, yy, { align:"center" });
+            doc.text("FOTOGRAFIA 2", x2+imgW/2, yy, { align:"center" });
+            yy += 5;
+            function addImg(dUrl, x) {
+                if (!dUrl) { doc.setFillColor(226,232,240); doc.rect(x,yy,imgW,imgH,"F"); doc.setTextColor(100); doc.setFontSize(8); doc.text("Sin imagen",x+imgW/2,yy+imgH/2,{align:"center"}); return; }
+                try { var t = dUrl.indexOf("image/png") !== -1 ? "PNG" : "JPEG"; doc.addImage(dUrl,t,x,yy,imgW,imgH); } catch(e) { doc.setFillColor(226,232,240); doc.rect(x,yy,imgW,imgH,"F"); doc.setTextColor(100); doc.setFontSize(8); doc.text("No disponible",x+imgW/2,yy+imgH/2,{align:"center"}); }
+            }
+            addImg(imgs[0], x1); addImg(imgs[1], x2);
             doc.save("Ficha_Ruteo_"+r.codigo+".pdf");
         }
-        _hacer();
+        var imgs = [null, null], pending = 0;
+        function checkDone() { pending--; if (pending <= 0) _hacer(imgs); }
+        [r.foto_1, r.foto_2].forEach(function(url, i) {
+            if (!url) return;
+            pending++;
+            if (window.fetchImageDataUrl) {
+                window.fetchImageDataUrl(url, 8000).then(function(dataUrl) { imgs[i] = dataUrl; checkDone(); }).catch(function() { checkDone(); });
+            } else { checkDone(); }
+        });
+        if (pending === 0) _hacer(imgs);
     };
 
     // Word individual por registro
     window.generarDocumentoWord = function(idx) {
-        alert("Funcion Word en desarrollo. Use PDF por ahora.");
+        var raw = window._ruteoRegistros[idx]; if (!raw) return;
+        var r = window.normalizarRegistroRuteo ? window.normalizarRegistroRuteo(raw) : raw;
+        function _hacer() {
+            if (!window.docx || !window.docx.Document) { alert("Libreria Word no disponible."); return; }
+            var D = window.docx;
+            var doc = new D.Document({
+                sections: [{
+                    properties: {},
+                    children: [
+                        new D.Paragraph({ text: "FICHA TECNICA DE REGISTRO", heading: D.HeadingLevel.HEADING_1, alignment: D.AlignmentType.CENTER, spacing: { after: 200 } }),
+                        new D.Paragraph({ text: "Fecha: "+(r.fecha||"N/A")+"    |    Tramo: "+r.tramo+"    |    Codigo: "+r.codigo, spacing: { after: 300 } }),
+                        new D.Table({ rows: [
+                            ["Estructura", r.estructura||""],["Tipo", r.tipo_estructura||""],["Altura", (r.altura||"")+" m"],["Ubicacion", r.ubicacion||""],["ID Consol", r.id_consol||""],["Mufa", r.mufa||"0"],["Retencion", r.retencion||"0"],["Suspension", r.suspension||"0"],["Cruceta", r.cruceta||"0"],["Hebillas", r.hebillas||"0"],["Fleje", r.fleje||"0"],["Amortiguador", r.amortiguador||"0"],["Brazo Extensor", r.brazo_extensor||"0"],["Kit Retenida", r.kit_retenida||"0"],["Observacion", r.observacion||""]
+                        ].map(function(row) { return new D.TableRow({ children: [new D.TableCell({ children: [new D.Paragraph({ text: row[0], bold: true, shading: { fill: "0097D8" } })] }), new D.TableCell({ children: [new D.Paragraph(row[1])] })] }); }) }),
+                        new D.Paragraph({ text: "", spacing: { after: 200 } }),
+                        new D.Paragraph({ text: "Fotos y KMZ:", heading: D.HeadingLevel.HEADING_2 }),
+                        new D.Paragraph({ text: "Foto 1: "+(r.foto_1||"No disponible"), spacing: { after: 100 } }),
+                        new D.Paragraph({ text: "Foto 2: "+(r.foto_2||"No disponible"), spacing: { after: 100 } }),
+                        new D.Paragraph({ text: "KMZ: "+(r.link_kmz||"No disponible") })
+                    ]
+                }]
+            });
+            D.Packer.toBlob(doc).then(function(blob) {
+                var u = URL.createObjectURL(blob), a = document.createElement("a");
+                a.href = u; a.download = "Ficha_Ruteo_"+r.codigo+".docx"; document.body.appendChild(a); a.click();
+                setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(u); }, 500);
+            }).catch(function(e) { alert("Error Word: "+e.message); });
+        }
+        if (window.docx && window.docx.Document) { _hacer(); return; }
+        var s = document.createElement("script"); s.src = "https://unpkg.com/docx@8.5.0/build/index.umd.js"; s.onload = _hacer; document.head.appendChild(s);
     };
 
     // Pre-load CDN libraries
