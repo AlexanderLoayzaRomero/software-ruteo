@@ -709,6 +709,32 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
     if (_btnDl) _btnDl.addEventListener("click", _generarPDF);
     if (_btnXl) _btnXl.addEventListener("click", _generarExcel);
 
+    // PDF individual por registro
+    window.generarDocumentoPDF = function(idx) {
+        var raw = window._ruteoRegistros[idx]; if (!raw) return;
+        var r = window.normalizarRegistroRuteo ? window.normalizarRegistroRuteo(raw) : raw;
+        function _hacer() {
+            var j = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+            if (!j) { alert("Libreria PDF no disponible."); return; }
+            var doc = new j({ orientation: "portrait", unit: "mm", format: "a4" }), w = doc.internal.pageSize.getWidth();
+            doc.setFillColor(0,151,216); doc.rect(0,0,w,40,"F"); doc.setTextColor(255,255,255);
+            doc.setFontSize(20); doc.text("FICHA TECNICA DE REGISTRO", w/2, 16, { align: "center" });
+            doc.setFontSize(10); doc.text("Fecha: "+r.fecha, w/2, 26, { align: "center" });
+            doc.setFontSize(10); doc.text("Tramo: "+r.tramo+" | Codigo: "+r.codigo, w/2, 34, { align: "center" });
+            var data = [["Estructura",r.estructura],["Tipo",r.tipo_estructura],["Altura",r.altura+" m"],["Ubicacion",r.ubicacion],["ID Consol",r.id_consol],["Mufa",r.mufa],["Retencion",r.retencion],["Suspension",r.suspension],["Cruceta",r.cruceta],["Hebillas",r.hebillas],["Fleje",r.fleje],["Amortiguador",r.amortiguador],["Brazo Extensor",r.brazo_extensor],["Kit Retenida",r.kit_retenida],["Observacion",r.observacion]];
+            if (typeof doc.autoTable === "function") {
+                doc.autoTable({ startY:45, body:data, theme:"grid", headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold"},margin:{left:20,right:20} });
+            }
+            doc.save("Ficha_Ruteo_"+r.codigo+".pdf");
+        }
+        _hacer();
+    };
+
+    // Word individual por registro
+    window.generarDocumentoWord = function(idx) {
+        alert("Funcion Word en desarrollo. Use PDF por ahora.");
+    };
+
     // Pre-load CDN libraries
     (function() {
         var libs = ["https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js","https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js","https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js","https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"];
