@@ -149,7 +149,11 @@ jQuery(document).ready(function($) {
                 $('.ruteo-tab-btn[data-tab="registros"]').click();
             }
         } else {
-            // Ocultar badge de usuario en cabecera cuando no hay sesion activa
+            // Limpiar datos de sesion anterior
+            window._ruteoRegistros = [];
+            var tbody = document.querySelector('#portal-table-body');
+            if (tbody) tbody.innerHTML = '';
+            // Ocultar badge de usuario en cabecera
             $('#ruteo-user-badge').hide();
             $('#btn-ruteo-logout').hide();
 
@@ -254,8 +258,14 @@ jQuery(document).ready(function($) {
                 nonce: wpRuteoAjax.nonce
             },
             success: function() {
+                // Limpiar datos y tabla
+                window._ruteoRegistros = [];
+                var tbody = document.querySelector('#portal-table-body');
+                if (tbody) tbody.innerHTML = '';
+                var stats = document.getElementById('portal-stats');
+                if (stats) stats.innerHTML = '';
+                // Redirigir a login
                 actualizarInterfazUsuario({ isLoggedIn: false, isAdmin: false, role: 'guest' });
-                $('.ruteo-tab-btn[data-tab="registros"]').click();
             }
         });
     });
