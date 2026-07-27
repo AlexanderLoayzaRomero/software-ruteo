@@ -174,7 +174,9 @@ jQuery(document).ready(function($) {
 
     // Boton ir a iniciar sesion dentro del aviso de formulario
     $(document).on('click', '.btn-goto-login', function() {
-        $('.ruteo-tab-btn[data-tab="login"]').click();
+        $('.ruteo-tab-content').removeClass('active').hide();
+        $('#tab-login').addClass('active').show();
+        $('.ruteo-tabs-bar').hide();
     });
 
     // Cambio de Pestanas
@@ -258,6 +260,10 @@ jQuery(document).ready(function($) {
                 nonce: wpRuteoAjax.nonce
             },
             success: function() {
+                // Sincronizar estado cliente
+                wpRuteoAjax.user.isLoggedIn = false;
+                wpRuteoAjax.user.isAdmin = false;
+                wpRuteoAjax.user.role = 'guest';
                 // Limpiar datos y tabla
                 window._ruteoRegistros = [];
                 var tbody = document.querySelector('#portal-table-body');
