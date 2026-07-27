@@ -223,6 +223,8 @@ jQuery(document).ready(function($) {
                     $msg.addClass('success').text(res.data.message).fadeIn(300);
                     var u = res.data.user;
                     u.isLoggedIn = true;
+                    // Sincronizar estado global
+                    wpRuteoAjax.user = u;
                     actualizarInterfazUsuario(u);
                     
                     // Recargar registros automaticamente tras login exitoso
