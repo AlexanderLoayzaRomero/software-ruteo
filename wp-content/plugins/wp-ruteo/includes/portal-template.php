@@ -13,8 +13,12 @@ $ajax_url = esc_js( admin_url( 'admin-ajax.php' ) );
 $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
 ?>
 
+<!-- Force centrado en cualquier theme -->
+<div style="display:flex;justify-content:center;align-items:flex-start;width:100%;margin:0;padding:0;">
+    <div style="width:100%;max-width:1400px;margin:0 auto;padding:0 20px;">
 <div class="ruteo-wrapper">
     <div class="ruteo-glass-container animate-fade-in">
+
 
         <!-- CABECERA PRINCIPAL CON USUARIO LOGUEADO -->
         <div class="ruteo-app-header">
@@ -326,6 +330,8 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
             </div>
         </footer>
 
+    </div>
+</div>
     </div>
 </div>
 

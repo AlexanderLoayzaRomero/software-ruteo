@@ -177,12 +177,18 @@ header ul li a:hover {
 .wp-block-post-content:has(.ruteo-wrapper),
 .site-main:has(.ruteo-wrapper),
 main:has(.ruteo-wrapper),
-#page:has(.ruteo-wrapper) {
+#page:has(.ruteo-wrapper),
+body:has(.ruteo-wrapper) .entry-content,
+body:has(.ruteo-wrapper) .site-main,
+body:has(.ruteo-wrapper) main,
+body:has(.ruteo-wrapper) .wp-block-post-content {
     max-width: 100% !important;
     width: 100% !important;
     margin: 0 auto !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
+    float: none !important;
+    display: block !important;
 }
 
 .ruteo-wrapper {
