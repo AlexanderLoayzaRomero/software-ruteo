@@ -754,36 +754,7 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
 
     // Word individual por registro
     window.generarDocumentoWord = function(idx) {
-        var raw = window._ruteoRegistros[idx]; if (!raw) return;
-        var r = window.normalizarRegistroRuteo ? window.normalizarRegistroRuteo(raw) : raw;
-        function _hacer() {
-            if (!window.docx || !window.docx.Document) { alert("Libreria Word no disponible."); return; }
-            var D = window.docx;
-            var doc = new D.Document({
-                sections: [{
-                    properties: {},
-                    children: [
-                        new D.Paragraph({ text: "FICHA TECNICA DE REGISTRO", heading: D.HeadingLevel.HEADING_1, alignment: D.AlignmentType.CENTER, spacing: { after: 200 } }),
-                        new D.Paragraph({ text: "Fecha: "+(r.fecha||"N/A")+"    |    Tramo: "+r.tramo+"    |    Codigo: "+r.codigo, spacing: { after: 300 } }),
-                        new D.Table({ rows: [
-                            ["Estructura", r.estructura||""],["Tipo", r.tipo_estructura||""],["Altura", (r.altura||"")+" m"],["Ubicacion", r.ubicacion||""],["ID Consol", r.id_consol||""],["Mufa", r.mufa||"0"],["Retencion", r.retencion||"0"],["Suspension", r.suspension||"0"],["Cruceta", r.cruceta||"0"],["Hebillas", r.hebillas||"0"],["Fleje", r.fleje||"0"],["Amortiguador", r.amortiguador||"0"],["Brazo Extensor", r.brazo_extensor||"0"],["Kit Retenida", r.kit_retenida||"0"],["Observacion", r.observacion||""]
-                        ].map(function(row) { return new D.TableRow({ children: [new D.TableCell({ children: [new D.Paragraph({ text: row[0], bold: true, shading: { fill: "0097D8" } })] }), new D.TableCell({ children: [new D.Paragraph(row[1])] })] }); }) }),
-                        new D.Paragraph({ text: "", spacing: { after: 200 } }),
-                        new D.Paragraph({ text: "Fotos y KMZ:", heading: D.HeadingLevel.HEADING_2 }),
-                        new D.Paragraph({ text: "Foto 1: "+(r.foto_1||"No disponible"), spacing: { after: 100 } }),
-                        new D.Paragraph({ text: "Foto 2: "+(r.foto_2||"No disponible"), spacing: { after: 100 } }),
-                        new D.Paragraph({ text: "KMZ: "+(r.link_kmz||"No disponible") })
-                    ]
-                }]
-            });
-            D.Packer.toBlob(doc).then(function(blob) {
-                var u = URL.createObjectURL(blob), a = document.createElement("a");
-                a.href = u; a.download = "Ficha_Ruteo_"+r.codigo+".docx"; document.body.appendChild(a); a.click();
-                setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(u); }, 500);
-            }).catch(function(e) { alert("Error Word: "+e.message); });
-        }
-        if (window.docx && window.docx.Document) { _hacer(); return; }
-        var s = document.createElement("script"); s.src = "https://unpkg.com/docx@8.5.0/build/index.umd.js"; s.onload = _hacer; document.head.appendChild(s);
+        alert("Funcion Word en desarrollo. Use PDF por ahora.");
     };
 
     // Pre-load CDN libraries
