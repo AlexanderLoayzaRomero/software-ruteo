@@ -709,6 +709,23 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
     if (_btnDl) _btnDl.addEventListener("click", _generarPDF);
     if (_btnXl) _btnXl.addEventListener("click", _generarExcel);
 
+    // Helper: convertir URLs de Drive a data URLs
+    window.fetchImageDataUrlRuteo = function(url, timeoutMs) {
+        if (!url) return Promise.resolve(null);
+        timeoutMs = timeoutMs || 8000;
+        var m1 = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/);
+        var m2 = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
+        var fileId = (m1 && m1[1]) || (m2 && m2[1]);
+        if (fileId) { url = 'https://drive.google.com/uc?export=view&id=' + fileId; }
+        var form = new FormData(); form.append('action', 'ruteo_proxy_image'); form.append('nonce', '<?php echo $nonce; ?>');
+        var proxyUrl = '<?php echo $ajax_url; ?>?url=' + encodeURIComponent(url);
+        var fetchP = fetch(proxyUrl, { method: 'POST', body: form })
+            .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+            .then(function(j) { return (j.success && j.data && j.data.dataUrl) ? j.data.dataUrl : null; });
+        var timeoutP = new Promise(function(_, reject) { setTimeout(function() { reject(new Error('timeout')); }, timeoutMs); });
+        return Promise.race([fetchP, timeoutP]).catch(function() { return null; });
+    };
+
     // PDF individual por registro con fotos
     window.generarDocumentoPDF = function(idx) {
         var raw = window._ruteoRegistros[idx]; if (!raw) return;
@@ -745,9 +762,7 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
         [r.foto_1, r.foto_2].forEach(function(url, i) {
             if (!url) return;
             pending++;
-            if (window.fetchImageDataUrl) {
-                window.fetchImageDataUrl(url, 8000).then(function(dataUrl) { imgs[i] = dataUrl; checkDone(); }).catch(function() { checkDone(); });
-            } else { checkDone(); }
+            window.fetchImageDataUrlRuteo(url, 8000).then(function(dataUrl) { imgs[i] = dataUrl; checkDone(); }).catch(function() { checkDone(); });
         });
         if (pending === 0) _hacer(imgs);
     };
