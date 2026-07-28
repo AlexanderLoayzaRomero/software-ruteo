@@ -95,6 +95,11 @@ jQuery(document).ready(function($) {
                     $('.preview').removeClass('show').css('background-image', 'none');
                     $('.ruteo-photo-upload').removeClass('has-file');
                     
+                    // Sincronizar portal en segundo plano (modo silencioso)
+                    if (typeof window.cargarDatosPortal === 'function') {
+                        window.cargarDatosPortal(true);
+                    }
+
                     setTimeout(function() { $msg.fadeOut(300); }, 5000);
                 } else {
                     $msg.addClass('error').html('<strong>Error:</strong> ' + (response.data || 'El proceso fallo.')).fadeIn(300);
@@ -191,6 +196,12 @@ jQuery(document).ready(function($) {
 
         if (targetTab === 'usuarios' && currentUser.isAdmin) {
             cargarUsuarios();
+        } else if (targetTab === 'registros' && currentUser.isLoggedIn) {
+            // Sincronizar datos al volver a la pestana de registros
+            if (typeof window.cargarDatosPortal === 'function') {
+                var hayRegistros = window._ruteoRegistros && window._ruteoRegistros.length > 0;
+                window.cargarDatosPortal(hayRegistros);
+            }
         }
     });
 

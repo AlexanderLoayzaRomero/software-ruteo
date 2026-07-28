@@ -132,16 +132,26 @@ class WPRuteoApp {
         }
 
         set_time_limit( 25 );
+        nocache_headers();
+        header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
+        header( 'Pragma: no-cache' );
+        header( 'Expires: 0' );
 
         $body = '';
+        // Parametro anti-cache para evitar que proxis o servidores intermedios devuelvan respuestas cacheadas
+        $target_url = add_query_arg( '_ts', microtime( true ), $this->webhook_url );
 
         // Metodo 1: wp_remote_get (estandar WordPress)
-        $response = wp_remote_get( $this->webhook_url, array(
+        $response = wp_remote_get( $target_url, array(
             'timeout'     => 20,
             'redirection' => 5,
             'httpversion' => '1.1',
             'sslverify'   => false,
             'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'headers'     => array(
+                'Cache-Control' => 'no-cache, no-store, must-revalidate',
+                'Pragma'        => 'no-cache',
+            ),
         ) );
 
         if ( ! is_wp_error( $response ) ) {
@@ -167,6 +177,7 @@ class WPRuteoApp {
                         'timeout'         => 15,
                         'ignore_errors'   => true,
                         'user_agent'      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                        'header'          => "Cache-Control: no-cache\r\nPragma: no-cache\r\n",
                     ),
                     'ssl' => array(
                         'verify_peer'      => false,
@@ -174,7 +185,7 @@ class WPRuteoApp {
                     ),
                 );
                 $context = stream_context_create( $opts );
-                $body = @file_get_contents( $this->webhook_url, false, $context );
+                $body = @file_get_contents( $target_url, false, $context );
                 if ( ! empty( $body ) ) {
                     $json = json_decode( $body, true );
                     if ( json_last_error() === JSON_ERROR_NONE ) {
@@ -192,7 +203,7 @@ class WPRuteoApp {
             try {
                 $ch = curl_init();
                 curl_setopt_array( $ch, array(
-                    CURLOPT_URL            => $this->webhook_url,
+                    CURLOPT_URL            => $target_url,
                     CURLOPT_RETURNTRANSFER => true,
                     CURLOPT_TIMEOUT        => 15,
                     CURLOPT_FOLLOWLOCATION => true,
@@ -201,6 +212,10 @@ class WPRuteoApp {
                     CURLOPT_SSL_VERIFYHOST => false,
                     CURLOPT_USERAGENT      => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
                     CURLOPT_HTTPGET        => true,
+                    CURLOPT_HTTPHEADER     => array(
+                        'Cache-Control: no-cache',
+                        'Pragma: no-cache',
+                    ),
                 ) );
                 $body = curl_exec( $ch );
                 $httpCode = curl_getinfo( $ch, CURLINFO_HTTP_CODE );

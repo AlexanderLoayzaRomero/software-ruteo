@@ -498,7 +498,22 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
         if (elTramos) elTramos.textContent = tramos.size;
     }
 
-    function procesarRegistros(payload) {
+    var isFetching = false;
+    var syncTimer = null;
+    var datosCargadosEnProgreso = false;
+
+    function iniciarSincronizacionAutomatica() {
+        if (syncTimer) clearInterval(syncTimer);
+        syncTimer = setInterval(function() {
+            var isLogged = IS_LOGGED_IN_WP || (window.wpRuteoAjax && window.wpRuteoAjax.user && window.wpRuteoAjax.user.isLoggedIn);
+            var activeTab = document.getElementById('tab-registros');
+            if (isLogged && activeTab && activeTab.classList.contains('active')) {
+                cargarDatos(true);
+            }
+        }, 60000);
+    }
+
+    function procesarRegistros(payload, silent) {
         var loader = document.getElementById('portal-loading');
         var section = document.getElementById('portal-data-section');
         if (loader) loader.style.display = 'none';
@@ -515,10 +530,25 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
         if (elUpdate) {
             elUpdate.textContent = 'Actualizado: ' + ahora.toLocaleTimeString('es-PE');
         }
+
+        isFetching = false;
+        datosCargadosEnProgreso = false;
+        iniciarSincronizacionAutomatica();
         document.dispatchEvent(new Event('ruteo:datos-cargados'));
     }
 
-    function mostrarErrorProxy() {
+    function mostrarErrorProxy(silent) {
+        isFetching = false;
+        datosCargadosEnProgreso = false;
+
+        if (silent) {
+            var elUpdate = document.getElementById('portal-last-update');
+            if (elUpdate) {
+                elUpdate.textContent = 'Error de sincronizacion temporal';
+            }
+            return;
+        }
+
         var loader = document.getElementById('portal-loading');
         var error = document.getElementById('portal-error');
         if (loader) loader.style.display = 'none';
@@ -529,14 +559,24 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
         }
     }
 
-    function cargarDatos() {
+    function cargarDatos(silent) {
+        if (isFetching) return;
+        isFetching = true;
+
         var loader = document.getElementById('portal-loading');
         var section = document.getElementById('portal-data-section');
         var error = document.getElementById('portal-error');
 
-        if (loader) loader.style.display = 'flex';
-        if (section) section.style.display = 'none';
-        if (error) error.style.display = 'none';
+        if (!silent) {
+            if (loader) loader.style.display = 'flex';
+            if (section) section.style.display = 'none';
+            if (error) error.style.display = 'none';
+        } else {
+            var elUpdate = document.getElementById('portal-last-update');
+            if (elUpdate) {
+                elUpdate.textContent = 'Sincronizando...';
+            }
+        }
 
         // METODO 1: Proxy via PHP (intento principal, timeout 12s)
         var formData = new FormData();
@@ -552,7 +592,7 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
             if (!json.success) throw new Error((json.data && json.data.message) || 'Error proxy PHP');
             var payload = json.data;
             if (payload.status === 'error') throw new Error(payload.message || 'Error en Google Script');
-            procesarRegistros(payload);
+            procesarRegistros(payload, silent);
             return true;
         });
 
@@ -573,23 +613,20 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                 script.src = webhookUrl + '?callback=window._ruteoJsonpCallback';
                 var timeoutId = setTimeout(function() {
                     if (script.parentNode) script.parentNode.removeChild(script);
-                    mostrarErrorProxy();
+                    mostrarErrorProxy(silent);
                 }, 10000);
                 window._ruteoJsonpCallback = function(data) {
                     clearTimeout(timeoutId);
                     if (script.parentNode) script.parentNode.removeChild(script);
                     if (data && data.status === 'success') {
-                        procesarRegistros(data);
+                        procesarRegistros(data, silent);
                     } else {
-                        mostrarErrorProxy();
+                        mostrarErrorProxy(silent);
                     }
                 };
                 document.head.appendChild(script);
             } else {
-                if (loader) loader.style.display = 'none';
-                if (error) error.style.display = 'flex';
-                var elErrMsg = document.getElementById('portal-error-msg');
-                if (elErrMsg) elErrMsg.textContent = 'No se pudo conectar. Verifica la URL del Google Script.';
+                mostrarErrorProxy(silent);
             }
         });
     }
@@ -611,18 +648,17 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
     var btnRefresh = document.getElementById('btn-refresh-portal');
     if (btnRefresh) {
         btnRefresh.addEventListener('click', function() {
-            cargarDatos();
+            cargarDatos(false);
         });
     }
 
     // Cargar datos automaticamente al cargar la pagina si el usuario esta autenticado
-    var datosCargadosEnProgreso = false;
     function autoCargarPortal() {
-        if (datosCargadosEnProgreso) return;
+        if (datosCargadosEnProgreso || isFetching) return;
         var isLogged = IS_LOGGED_IN_WP || (window.wpRuteoAjax && window.wpRuteoAjax.user && window.wpRuteoAjax.user.isLoggedIn);
         if (isLogged) {
             datosCargadosEnProgreso = true;
-            cargarDatos();
+            cargarDatos(false);
         }
     }
 
@@ -633,8 +669,10 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
         window.addEventListener('load', autoCargarPortal);
     }
 
-    // Exponer globalmente para que app.js pueda recargar tras login
-    window.cargarDatosPortal = cargarDatos;
+    // Exponer globalmente para que app.js pueda recargar tras login o tras envio del formulario
+    window.cargarDatosPortal = function(silent) {
+        cargarDatos(silent);
+    };
 })();
 
     // Attach download button click handlers
