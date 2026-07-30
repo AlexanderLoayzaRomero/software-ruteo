@@ -48,16 +48,16 @@ software-ruteo/
 - ✅ **PDF grupal**: reporte general en landscape A4 con tabla de 17+ columnas formateadas, encabezado corporativo azul, fecha y responsable
 - ✅ **Excel grupal**: dos hojas (portada "Información" + "Registros de Campo"), 21 columnas, hipervínculos a fotos y KMZ, encabezados congelados, auto-filtro, filas alternadas
 - ✅ **PDF individual** por registro (ícono rojo): ficha técnica con datos de la estructura y **fotografías incrustadas** desde Google Drive (con fallback si no cargan)
-- 🟡 **Word individual** (ícono azul): en desarrollo
+- ✅ **Word individual** (ícono azul): ficha técnica editable en `.docx` generada 100% en el cliente, con tabla y fotografías incrustadas nativamente.
 - ✅ Temas claro/oscuro
 - ✅ Homepage configurada (`http://localhost:8080/` muestra el portal)
 
 ### 📝 Formulario de Captura (`[formulario_ruteo]`)
 - Registro de estructuras de campo (torres, postes, etc.)
 - 17 campos técnicos + observaciones
+- **Entrada de Datos Flexible:** Uso de `datalists` HTML5 para sugerir opciones genéricas rápidas (ej. Tramo A, 0, 1, 2) sin restringir la escritura de texto/números personalizados.
 - Subida de fotos (2 por registro) a Google Drive
-- Subida de archivo KMZ
-- Geolocalización integrada
+- Archivo KMZ con **Geolocalización Inteligente**: detecta latitud/longitud por Regex o busca ubicaciones textuales ("Plaza de Armas, Arequipa") usando el Geocodificador interno de Google Maps.
 
 ### 🔐 Login y Gestión de Usuarios (`[login_ruteo]`)
 - Sistema de roles personalizado
