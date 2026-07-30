@@ -807,12 +807,101 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
 
     // Word individual por registro
     window.generarDocumentoWord = function(idx) {
-        alert("Funcion Word en desarrollo. Use PDF por ahora.");
+        var raw = window._ruteoRegistros[idx]; if (!raw) return;
+        var r = window.normalizarRegistroRuteo ? window.normalizarRegistroRuteo(raw) : raw;
+        
+        function cargarDocx() {
+            if (window.docx) { _hacerWord(); return; }
+            var s = document.createElement("script"); s.src = "https://unpkg.com/docx@8.5.0/build/index.js"; s.onload = _hacerWord; document.head.appendChild(s);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            var binary_string = window.atob(base64.split(',')[1]);
+            var len = binary_string.length;
+            var bytes = new Uint8Array(len);
+            for (var i = 0; i < len; i++) { bytes[i] = binary_string.charCodeAt(i); }
+            return bytes.buffer;
+        }
+
+        function _hacerWord() {
+            var docx = window.docx;
+            if (!docx) { alert("Libreria docx no disponible."); return; }
+            
+            var imgs = [null, null], pending = 0;
+            function checkDone() { pending--; if (pending <= 0) _construir(imgs); }
+            [r.foto_1, r.foto_2].forEach(function(url, i) {
+                if (!url) return;
+                pending++;
+                window.fetchImageDataUrlRuteo(url, 15000).then(function(dataUrl) { imgs[i] = dataUrl; checkDone(); }).catch(function() { checkDone(); });
+            });
+            if (pending === 0) _construir(imgs);
+            
+            function _construir(imgsData) {
+                var paragraphs = [
+                    new docx.Paragraph({ text: "FICHA TECNICA DE REGISTRO", heading: docx.HeadingLevel.HEADING_1, alignment: docx.AlignmentType.CENTER }),
+                    new docx.Paragraph({ text: "Fecha: " + r.fecha, alignment: docx.AlignmentType.CENTER }),
+                    new docx.Paragraph({ text: "Tramo: " + r.tramo + " | Codigo: " + r.codigo, alignment: docx.AlignmentType.CENTER }),
+                    new docx.Paragraph({ text: "" })
+                ];
+                
+                var tableData = [
+                    ["Estructura",r.estructura],["Tipo",r.tipo_estructura],["Altura",r.altura+" m"],["Ubicacion",r.ubicacion],
+                    ["ID Consol",r.id_consol],["Mufa",r.mufa],["Retencion",r.retencion],["Suspension",r.suspension],
+                    ["Cruceta",r.cruceta],["Hebillas",r.hebillas],["Fleje",r.fleje],["Amortiguador",r.amortiguador],
+                    ["Brazo Ext.",r.brazo_extensor],["Kit Ret.",r.kit_retenida],["Obs.",r.observacion]
+                ];
+                
+                var rows = tableData.map(function(item) {
+                    return new docx.TableRow({
+                        children: [
+                            new docx.TableCell({ children: [new docx.Paragraph({ text: item[0] })], width: { size: 30, type: docx.WidthType.PERCENTAGE } }),
+                            new docx.TableCell({ children: [new docx.Paragraph({ text: item[1] || "-" })], width: { size: 70, type: docx.WidthType.PERCENTAGE } })
+                        ]
+                    });
+                });
+                
+                paragraphs.push(new docx.Table({ rows: rows, width: { size: 100, type: docx.WidthType.PERCENTAGE } }));
+                paragraphs.push(new docx.Paragraph({ text: "" }));
+                
+                // Imgs
+                imgsData.forEach(function(imgData, i) {
+                    paragraphs.push(new docx.Paragraph({ text: "FOTOGRAFIA " + (i+1), alignment: docx.AlignmentType.CENTER }));
+                    if (imgData) {
+                        try {
+                            var arrBuffer = base64ToArrayBuffer(imgData);
+                            var image = new docx.ImageRun({
+                                data: arrBuffer,
+                                transformation: { width: 300, height: 200 }
+                            });
+                            paragraphs.push(new docx.Paragraph({ children: [image], alignment: docx.AlignmentType.CENTER }));
+                        } catch(e) {
+                            paragraphs.push(new docx.Paragraph({ text: "[Error al cargar imagen]", alignment: docx.AlignmentType.CENTER }));
+                        }
+                    } else {
+                        paragraphs.push(new docx.Paragraph({ text: "[Sin imagen]", alignment: docx.AlignmentType.CENTER }));
+                    }
+                    paragraphs.push(new docx.Paragraph({ text: "" }));
+                });
+                
+                var doc = new docx.Document({
+                    sections: [{
+                        properties: {},
+                        children: paragraphs
+                    }]
+                });
+                
+                docx.Packer.toBlob(doc).then(function(blob) {
+                    window.downloadBlobRuteo(blob, "Ficha_Ruteo_"+r.codigo+".docx");
+                });
+            }
+        }
+        
+        cargarDocx();
     };
 
     // Pre-load CDN libraries
     (function() {
-        var libs = ["https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js","https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js","https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js","https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"];
+        var libs = ["https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js","https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js","https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js","https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js","https://unpkg.com/docx@8.5.0/build/index.js"];
         libs.forEach(function(src) { var s = document.createElement("script"); s.src = src; s.async = true; document.head.appendChild(s); });
     })();
 </script>

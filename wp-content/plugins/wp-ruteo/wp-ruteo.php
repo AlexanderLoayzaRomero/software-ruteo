@@ -59,8 +59,8 @@ class WPRuteoApp {
         if ( wp_script_is( 'wp-ruteo-app', 'enqueued' ) ) {
             return;
         }
-        wp_enqueue_style( 'wp-ruteo-style', plugin_dir_url( __FILE__ ) . 'assets/css/style.css', array(), '1.6.0' );
-        wp_enqueue_script( 'wp-ruteo-app', plugin_dir_url( __FILE__ ) . 'assets/js/app.js', array( 'jquery' ), '1.6.0', true );
+        wp_enqueue_style( 'wp-ruteo-style', plugin_dir_url( __FILE__ ) . 'assets/css/style.css', array(), '1.6.1' );
+        wp_enqueue_script( 'wp-ruteo-app', plugin_dir_url( __FILE__ ) . 'assets/js/app.js', array( 'jquery' ), '1.6.1', true );
 
         $current_user = wp_get_current_user();
         $is_logged_in = is_user_logged_in();

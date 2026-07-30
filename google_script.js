@@ -160,10 +160,24 @@ function doPost(e) {
 function generarKMZ(data, folderId) {
   var coords = "0,0,0"; // Coordenada por defecto
   
-  if (data.ubicacion && data.ubicacion.indexOf(',') > -1) {
-    var parts = data.ubicacion.split(',');
-    if (parts.length >= 2) {
-      coords = parts[1].trim() + "," + parts[0].trim() + ",0";
+  if (data.ubicacion) {
+    // 1. Intentar extraer coordenadas numericas (ej: -12.04, -77.02)
+    var latLonRegex = /(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/;
+    var match = data.ubicacion.match(latLonRegex);
+    
+    if (match) {
+      coords = match[2].trim() + "," + match[1].trim() + ",0";
+    } else {
+      // 2. Geocodificacion (Fallback)
+      try {
+        var geocoder = Maps.newGeocoder().geocode(data.ubicacion);
+        if (geocoder.status === 'OK' && geocoder.results.length > 0) {
+          var loc = geocoder.results[0].geometry.location;
+          coords = loc.lng + "," + loc.lat + ",0";
+        }
+      } catch (e) {
+        // Ignorar error, se mantendra 0,0,0
+      }
     }
   }
 

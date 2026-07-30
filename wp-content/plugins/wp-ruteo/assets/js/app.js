@@ -238,18 +238,9 @@ jQuery(document).ready(function($) {
                     wpRuteoAjax.user = u;
                     actualizarInterfazUsuario(u);
                     
-                    // Recargar registros automaticamente tras login exitoso
-                    if (typeof window.cargarDatosPortal === 'function') {
-                        window.cargarDatosPortal();
-                    }
                     setTimeout(function() {
-                        $msg.fadeOut(300);
-                        if (isRedirect) {
-                            window.location.href = window.location.origin + '/portal-ruteo/';
-                        } else {
-                            $('.ruteo-tab-btn[data-tab="registros"]').click();
-                        }
-                    }, 1000);
+                        window.location.reload();
+                    }, 500);
                 } else {
                     $msg.addClass('error').text(res.data.message || 'Error al iniciar sesion.').fadeIn(300);
                 }
@@ -273,18 +264,7 @@ jQuery(document).ready(function($) {
                 nonce: wpRuteoAjax.nonce
             },
             success: function() {
-                // Sincronizar estado cliente
-                wpRuteoAjax.user.isLoggedIn = false;
-                wpRuteoAjax.user.isAdmin = false;
-                wpRuteoAjax.user.role = 'guest';
-                // Limpiar datos y tabla
-                window._ruteoRegistros = [];
-                var tbody = document.querySelector('#portal-table-body');
-                if (tbody) tbody.innerHTML = '';
-                var stats = document.getElementById('portal-stats');
-                if (stats) stats.innerHTML = '';
-                // Redirigir a login
-                actualizarInterfazUsuario({ isLoggedIn: false, isAdmin: false, role: 'guest' });
+                window.location.reload();
             }
         });
     });
