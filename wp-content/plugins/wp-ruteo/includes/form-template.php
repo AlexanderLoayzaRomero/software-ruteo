@@ -60,12 +60,7 @@ $is_logged_in = is_user_logged_in();
                     <div class="form-group">
                         <label>Tramo</label>
                         <div class="input-wrapper">
-                            <select name="tramo" required>
-                                <option value="">Seleccione un tramo...</option>
-                                <option value="Tramo A">Tramo A</option>
-                                <option value="Tramo B">Tramo B</option>
-                                <option value="Tramo C">Tramo C</option>
-                            </select>
+                            <input type="text" name="tramo" placeholder="Ej: Tramo A, Tramo Sur..." required>
                         </div>
                     </div>
 
