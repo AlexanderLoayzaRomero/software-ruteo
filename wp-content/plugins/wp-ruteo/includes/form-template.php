@@ -60,7 +60,12 @@ $is_logged_in = is_user_logged_in();
                     <div class="form-group">
                         <label>Tramo</label>
                         <div class="input-wrapper">
-                            <input type="text" name="tramo" placeholder="Ej: Tramo A, Tramo Sur..." required>
+                            <input type="text" name="tramo" placeholder="Ej: Tramo A, Tramo Sur..." list="tramos_list" required>
+                            <datalist id="tramos_list">
+                                <option value="Tramo A">
+                                <option value="Tramo B">
+                                <option value="Tramo C">
+                            </datalist>
                         </div>
                     </div>
 
@@ -116,14 +121,14 @@ $is_logged_in = is_user_logged_in();
                     <div class="form-group">
                         <label>Altura (m)</label>
                         <div class="input-wrapper">
-                            <select name="altura_estructura" required>
-                                <option value="">Seleccione...</option>
-                                <option value="7">7 m</option>
-                                <option value="8">8 m</option>
-                                <option value="9">9 m</option>
-                                <option value="11">11 m</option>
-                                <option value="12">12 m</option>
-                            </select>
+                            <input type="number" name="altura_estructura" placeholder="Ej: 8" step="0.1" list="alturas_list" required>
+                            <datalist id="alturas_list">
+                                <option value="7">
+                                <option value="8">
+                                <option value="9">
+                                <option value="11">
+                                <option value="12">
+                            </datalist>
                         </div>
                     </div>
                 </div>
@@ -135,112 +140,70 @@ $is_logged_in = is_user_logged_in();
                     <div class="form-group">
                         <label>Mufa</label>
                         <div class="input-wrapper">
-                            <select name="mufa" required>
-                                <option value="">Seleccione...</option>
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
+                            <input type="number" name="mufa" min="0" placeholder="0" list="hardware_list" required>
+                            <datalist id="hardware_list">
+                                <option value="0">
+                                <option value="1">
+                                <option value="2">
+                                <option value="3">
+                                <option value="4">
+                            </datalist>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Retencion</label>
                         <div class="input-wrapper">
-                            <select name="retencion" required>
-                                <option value="">Seleccione...</option>
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                            </select>
+                            <input type="number" name="retencion" min="0" placeholder="0" list="hardware_list" required>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Suspension</label>
                         <div class="input-wrapper">
-                            <select name="suspension" required>
-                                <option value="">Seleccione...</option>
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
+                            <input type="number" name="suspension" min="0" placeholder="0" list="hardware_list" required>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Cruceta</label>
                         <div class="input-wrapper">
-                            <select name="cruceta" required>
-                                <option value="">Seleccione...</option>
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
+                            <input type="number" name="cruceta" min="0" placeholder="0" list="hardware_list" required>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Hebillas</label>
                         <div class="input-wrapper">
-                            <select name="hebillas" required>
-                                <option value="">Seleccione...</option>
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                                <option value="4">4</option>
-                            </select>
+                            <input type="number" name="hebillas" min="0" placeholder="0" list="hardware_list" required>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Fleje Acero</label>
                         <div class="input-wrapper">
-                            <select name="fleje" required>
-                                <option value="">Seleccione...</option>
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                                <option value="3">3</option>
-                            </select>
+                            <input type="number" name="fleje" min="0" placeholder="0" list="hardware_list" required>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Amortiguador</label>
                         <div class="input-wrapper">
-                            <select name="amortiguador" required>
-                                <option value="">Seleccione...</option>
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
+                            <input type="number" name="amortiguador" min="0" placeholder="0" list="hardware_list" required>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Brazo Extensor</label>
                         <div class="input-wrapper">
-                            <select name="brazo_extensor" required>
-                                <option value="">Seleccione...</option>
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
+                            <input type="number" name="brazo_extensor" min="0" placeholder="0" list="hardware_list" required>
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label>Kit Retenida</label>
                         <div class="input-wrapper">
-                            <select name="kit_retenida" required>
-                                <option value="">Seleccione...</option>
-                                <option value="0">0</option>
-                                <option value="1">1</option>
-                                <option value="2">2</option>
-                            </select>
+                            <input type="number" name="kit_retenida" min="0" placeholder="0" list="hardware_list" required>
                         </div>
                     </div>
                 </div>
