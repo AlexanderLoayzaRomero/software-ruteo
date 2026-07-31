@@ -1,14 +1,44 @@
 // ---------------------------------------------------------------
-// GET: Devuelve todos los registros del sheet como JSON
-// Usado por el Portal de Consulta de Registros en WordPress
+// GET: Devuelve registros de ruteo o materiales del sheet como JSON
+// Usado por el Aplicativo de Ruteo en WordPress
 // ---------------------------------------------------------------
 function doGet(e) {
   try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    
+    // Si solicitan materiales via doGet ?action=get_materiales
+    if (e && e.parameter && e.parameter.action === 'get_materiales') {
+      var matSheet = ss.getSheetByName('Materiales');
+      if (!matSheet) {
+        return outputResponse({ status: 'success', materiales: [], total: 0 }, e);
+      }
+      var matData = matSheet.getDataRange().getValues();
+      if (matData.length <= 1) {
+        return outputResponse({ status: 'success', materiales: [], total: 0 }, e);
+      }
+      var matHeaders = matData[0];
+      var materiales = [];
+      for (var m = 1; m < matData.length; m++) {
+        var mRow = {};
+        for (var n = 0; n < matHeaders.length; n++) {
+          var mKey = matHeaders[n].toString().toLowerCase().replace(/ /g, '_').replace(/[^a-z0-9_]/g, '');
+          var mVal = matData[m][n];
+          if (mVal instanceof Date) {
+            mVal = Utilities.formatDate(mVal, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
+          }
+          mRow[mKey] = mVal !== undefined && mVal !== null ? mVal.toString() : '';
+        }
+        materiales.push(mRow);
+      }
+      materiales.reverse();
+      return outputResponse({ status: 'success', materiales: materiales, total: materiales.length }, e);
+    }
+
+    // Por defecto: devuelve registros de ruteo de campo
+    var sheet = ss.getActiveSheet();
     var data  = sheet.getDataRange().getValues();
 
     if (data.length <= 1) {
-      // Solo cabecera o hoja vacia
       var result = { status: 'success', registros: [], total: 0 };
       return outputResponse(result, e);
     }
@@ -23,7 +53,6 @@ function doGet(e) {
                     .replace(/ /g, '_')
                     .replace(/[^a-z0-9_]/g, '');
         var val = data[i][j];
-        // Formatear fechas
         if (val instanceof Date) {
           val = Utilities.formatDate(val, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
         }
@@ -32,7 +61,6 @@ function doGet(e) {
       registros.push(row);
     }
 
-    // Mas recientes primero
     registros.reverse();
 
     var result = { status: 'success', registros: registros, total: registros.length };
@@ -45,7 +73,6 @@ function doGet(e) {
 
 function outputResponse(obj, e) {
   var json = JSON.stringify(obj);
-  // Soporte JSONP: si recibe parametro ?callback=nombreFuncion, devuelve JSONP
   if (e && e.parameter && e.parameter.callback) {
     return ContentService
       .createTextOutput(e.parameter.callback + '(' + json + ')')
@@ -68,6 +95,35 @@ function doPost(e) {
 
     var data = JSON.parse(e.postData.contents);
     
+    // Si la peticion es para guardar reporte de materiales
+    if (data.action_type === 'save_materiales') {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var matSheet = ss.getSheetByName('Materiales');
+      if (!matSheet) {
+        matSheet = ss.insertSheet('Materiales');
+        matSheet.appendRow(["Fecha", "Incidencia", "CRQ", "Almacen PM", "Tramo", "Descripcion", "Materiales", "Usuario"]);
+      }
+      
+      var rep = data.report || {};
+      var itemsStr = (rep.items || []).map(function(it) {
+        return it.cantidad + ' ' + it.unidad + ' ' + it.descripcion + (it.codigo_sap ? ' [' + it.codigo_sap + ']' : '');
+      }).join('; ');
+      
+      matSheet.appendRow([
+        rep.fecha || new Date(),
+        rep.incidencia || '',
+        rep.crq || '',
+        rep.almacen_pm || '',
+        rep.tramo || '',
+        rep.descripcion || '',
+        itemsStr,
+        rep.user || ''
+      ]);
+      
+      return ContentService.createTextOutput(JSON.stringify({"status": "success", "message": "Reporte de materiales guardado en Google Sheets"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    
     // Si la peticion es para subir un documento generado (Word)
     if (data.action_type === 'save_document') {
       var folder = DriveApp.getFolderById(FOLDER_ID);
@@ -82,10 +138,8 @@ function doPost(e) {
     // Sino, es la subida normal del formulario de campo
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
     
-    // Obtener la ultima fila
     var nextRow = sheet.getLastRow() + 1;
     
-    // Si la hoja esta vacia, agregar cabeceras
     if (nextRow === 1) {
       sheet.appendRow([
         "Fecha", "Tramo", "ID Consol", "Estructura", "Tipo Estructura", "Altura",
@@ -96,7 +150,6 @@ function doPost(e) {
       nextRow = 2;
     }
     
-    // Función para guardar imagen en Drive
     function saveImageToDrive(base64Data, filename) {
       if (!base64Data) return "";
       try {
@@ -117,10 +170,8 @@ function doPost(e) {
     data.foto1_url = saveImageToDrive(data.foto1_base64, "foto1_" + dateString + ".jpg");
     data.foto2_url = saveImageToDrive(data.foto2_base64, "foto2_" + dateString + ".jpg");
 
-    // Generar el archivo KMZ (KML Zippeado) en la misma carpeta
     var kmzUrl = generarKMZ(data, FOLDER_ID);
     
-    // Preparar fila de datos
     var row = [
       new Date(),
       data.tramo || '',
@@ -145,7 +196,6 @@ function doPost(e) {
       kmzUrl
     ];
     
-    // Insertar en la hoja
     sheet.appendRow(row);
     
     return ContentService.createTextOutput(JSON.stringify({"status": "success", "message": "Datos y fotos guardados en Drive, KMZ generado"}))
@@ -158,17 +208,15 @@ function doPost(e) {
 }
 
 function generarKMZ(data, folderId) {
-  var coords = "0,0,0"; // Coordenada por defecto
+  var coords = "0,0,0";
   
   if (data.ubicacion) {
-    // 1. Intentar extraer coordenadas numericas (ej: -12.04, -77.02)
     var latLonRegex = /(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)/;
     var match = data.ubicacion.match(latLonRegex);
     
     if (match) {
       coords = match[2].trim() + "," + match[1].trim() + ",0";
     } else {
-      // 2. Geocodificacion (Fallback)
       try {
         var geocoder = Maps.newGeocoder().geocode(data.ubicacion);
         if (geocoder.status === 'OK' && geocoder.results.length > 0) {
@@ -176,7 +224,6 @@ function generarKMZ(data, folderId) {
           coords = loc.lng + "," + loc.lat + ",0";
         }
       } catch (e) {
-        // Ignorar error, se mantendra 0,0,0
       }
     }
   }
@@ -187,8 +234,7 @@ function generarKMZ(data, folderId) {
                     "Observacion: " + data.observacion + "<br>";
   if (data.foto1_url) descripcion += "<img src='" + data.foto1_url + "' width='300'>";
 
-  // Contenido KML basico
-  var kmlContent = "<?xml version='1.0' encoding='UTF-8'?>\n" +
+  var kmlContent = "<?xml version='1.0' UTF-8'?>\n" +
   "<kml xmlns='http://www.opengis.net/kml/2.2'>\n" +
   "  <Document>\n" +
   "    <name>Ruteo_" + nombrePunto + ".kml</name>\n" +
@@ -213,86 +259,8 @@ function generarKMZ(data, folderId) {
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     return file.getUrl();
   } catch(e) {
-    // Si falla (ej. ID de carpeta invalido), guardar en raiz temporalmente
     var file = DriveApp.createFile(zipBlob);
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     return file.getUrl();
   }
-}
-
-// ==============================================================================
-// SCRIPT PARA ENLAZAR IMAGENES YA SUBIDAS A DRIVE
-// ==============================================================================
-function enlazarImagenesYaSubidas() {
-  // 1. REEMPLAZA AQUI TU ID DE CARPETA DE DRIVE
-  var FOLDER_ID = '1m19aeKOuPJYw01yvFPP9_SGmpdJgUg_q'; 
-  
-  var folder = DriveApp.getFolderById(FOLDER_ID);
-  var files = folder.getFiles();
-  
-  // Crear un diccionario (mapa) de NombreDeArchivo -> URL de Drive
-  var fileMap = {};
-  while (files.hasNext()) {
-    var file = files.next();
-    fileMap[file.getName()] = file.getUrl();
-  }
-  
-  Logger.log("Archivos encontrados en Drive: " + Object.keys(fileMap).length);
-  
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var dataRange = sheet.getDataRange();
-  var values = dataRange.getValues();
-  var headers = values[0];
-  
-  var colFoto1 = -1;
-  var colFoto2 = -1;
-  
-  for (var i = 0; i < headers.length; i++) {
-    if (headers[i].toString().toLowerCase().trim() === 'foto 1') colFoto1 = i;
-    if (headers[i].toString().toLowerCase().trim() === 'foto 2') colFoto2 = i;
-  }
-  
-  if (colFoto1 === -1 && colFoto2 === -1) {
-    Logger.log("No se encontraron columnas de Foto 1 ni Foto 2. Verifica los nombres.");
-    return;
-  }
-  
-  // Recorrer filas y actualizar si el nombre de archivo coincide
-  for (var r = 1; r < values.length; r++) {
-    var rowData = values[r];
-    var updated = false;
-    
-    // Función auxiliar para extraer el nombre del archivo de una URL local
-    function getFilenameFromUrl(url) {
-      if (!url) return null;
-      var parts = url.split('/');
-      return parts[parts.length - 1].split('?')[0]; // quitar parametros si hay
-    }
-    
-    if (colFoto1 !== -1) {
-      var url1 = rowData[colFoto1];
-      if (url1 && url1.indexOf('drive.google.com') === -1) {
-        var fname1 = getFilenameFromUrl(url1);
-        if (fname1 && fileMap[fname1]) {
-          sheet.getRange(r + 1, colFoto1 + 1).setValue(fileMap[fname1]);
-          updated = true;
-          Logger.log("Fila " + (r+1) + " - Foto 1 actualizada.");
-        }
-      }
-    }
-    
-    if (colFoto2 !== -1) {
-      var url2 = rowData[colFoto2];
-      if (url2 && url2.indexOf('drive.google.com') === -1) {
-        var fname2 = getFilenameFromUrl(url2);
-        if (fname2 && fileMap[fname2]) {
-          sheet.getRange(r + 1, colFoto2 + 1).setValue(fileMap[fname2]);
-          updated = true;
-          Logger.log("Fila " + (r+1) + " - Foto 2 actualizada.");
-        }
-      }
-    }
-  }
-  
-  Logger.log("PROCESO DE ACTUALIZACION DE ENLACES TERMINADO.");
 }

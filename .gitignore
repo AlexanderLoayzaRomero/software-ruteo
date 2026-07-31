@@ -1,4 +1,8 @@
 *.rar
 *.zip
+*.wpress
 .DS_Store
 Thumbs.db
+wp-content/ai1wm-backups/
+wp-content/plugins/all-in-one-wp-migration/
+wp-content/languages/plugins/all-in-one-wp-migration*

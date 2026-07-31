@@ -1,6 +1,6 @@
 <?php
 /**
- * Portal de Ruteo - Vista principal con Sistema de Usuarios y Pestanas
+ * Portal de Ruteo - Vista principal con Sidebar Lateral (Estilo HSE App)
  * Shortcode: [portal_ruteo]
  */
 
@@ -11,81 +11,315 @@ if ( ! defined( 'ABSPATH' ) ) {
 global $wp_ruteo_webhook_url;
 $ajax_url = esc_js( admin_url( 'admin-ajax.php' ) );
 $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
+
+$pm_list = array(
+    'PM 12 - Arequipa',
+    'PM 13 - Cusco',
+    'PM 22 - Espinar',
+    'PM 23 - Puno',
+    'PM 24 - Tacna',
+    'PM 25 - Puerto Maldonado',
+    'PM 26 - Moquegua',
+    'PM 30 - Trujillo',
+    'PM 31 - Piura',
+    'PM 32 - Cajamarca',
+    'PM 33 - Jaen',
+    'PM 43 - Tarapoto',
+    'PM 46 - Huaraz',
+    'PM 47 - Sihuas',
+    'PM 38 - Lima',
+    'PM 39 - Junin',
+    'PM 40 - Pasco',
+    'PM 41 - Ayacucho',
+    'PM 42 - Huancavelica',
+    'PM 44 - Ica',
+    'PM 45 - Abancay',
+    'PM 48 - Huanuco',
+    'PM 49 - Ucayali',
+    'PM 50 - Tingo Maria'
+);
 ?>
-
 <style>
-.ruteo-wrapper { max-width: 95vw !important; margin: 12px auto 30px auto !important; width: 100% !important; }
-.ruteo-glass-container { margin: 0 auto !important; }
-.is-layout-constrained > .ruteo-wrapper, .is-layout-flow > .ruteo-wrapper, .entry-content > .ruteo-wrapper, .wp-block-post-content > .ruteo-wrapper { max-width: 95vw !important; }
+body, #page, .wp-site-blocks, .entry-content, .wp-block-post-content, main, .site-main, .is-layout-constrained, .is-layout-flow {
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+header, header.wp-block-template-part, .wp-block-header, .site-header, .wp-block-navigation, .wp-block-post-title, .entry-title, footer, .wp-block-footer {
+    display: none !important;
+}
+body.admin-bar .ruteo-app-layout {
+    margin-top: 32px !important;
+    min-height: calc(100vh - 32px) !important;
+}
 </style>
-<div class="ruteo-wrapper">
-    <div class="ruteo-glass-container animate-fade-in">
 
-
-        <!-- CABECERA PRINCIPAL CON USUARIO LOGUEADO -->
-        <div class="ruteo-app-header">
-            <div class="ruteo-brand">
-                <div class="ruteo-logo-icon">
-                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+<div class="ruteo-app-layout">
+    
+    <!-- BARRA LATERAL (SIDEBAR) -->
+    <aside class="ruteo-sidebar" id="ruteo-sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <div class="brand-logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
                 </div>
-                <div class="ruteo-title-area">
-                    <h2>Aplicativo de Ruteo</h2>
-                    <p>Sistema de captura de campo y monitoreo en tiempo real</p>
+                <div class="brand-text">
+                    <span class="brand-title">Software Ruteo</span>
+                    <span class="brand-subtitle">Gestion y Ruteo</span>
                 </div>
             </div>
-
-            <div class="ruteo-header-controls">
-                <button class="ruteo-theme-toggle" id="btn-theme-toggle" type="button" title="Cambiar Tema Dia/Noche">
-                    <span id="theme-toggle-icon">&#9790;</span>
-                    <span id="theme-toggle-text">Modo Noche</span>
-                </button>
-
-                <div class="ruteo-user-badge" id="ruteo-user-badge">
-                    <div class="user-avatar-mini" id="user-avatar-text">?</div>
-                    <div class="user-info-text">
-                        <span class="user-name-str" id="user-display-name">Invitado</span>
-                        <span class="user-role-str" id="user-role-label">Acceso Bloqueado</span>
-                    </div>
-                    <button class="btn-logout-mini" id="btn-ruteo-logout" style="display:none;" title="Cerrar Sesion">Salir</button>
-                </div>
-            </div>
+            <button class="sidebar-collapse-btn" id="btn-sidebar-collapse" title="Contraer panel">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
+                </svg>
+                <span class="btn-collapse-label">Contraer</span>
+            </button>
         </div>
 
-        <!-- BARRA DE PESTANAS -->
-        <div class="ruteo-tabs-bar">
-            <button class="ruteo-tab-btn active" data-tab="registros">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <nav class="sidebar-menu">
+            <button class="sidebar-item active" data-tab="inicio">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                </svg>
+                <span>Inicio</span>
+            </button>
+
+            <button class="sidebar-item" data-tab="registros">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                 </svg>
                 <span>Registros</span>
             </button>
 
-            <button class="ruteo-tab-btn" data-tab="formulario">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button class="sidebar-item" data-tab="formulario">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
                 <span>Nuevo Registro</span>
             </button>
 
-            <button class="ruteo-tab-btn" data-tab="usuarios" id="tab-btn-usuarios" style="display:none;">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+            <button class="sidebar-item" data-tab="materiales">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                 </svg>
-                <span>Gestion Usuarios</span>
+                <span>Consumo Materiales</span>
             </button>
 
-            <button class="ruteo-tab-btn" data-tab="login" id="tab-btn-login">
-                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button class="sidebar-item" data-tab="sla-informes">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span>SLA e Informes</span>
+            </button>
+
+            <button class="sidebar-item" data-tab="usuarios" id="tab-btn-usuarios" style="display:none;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                </svg>
+                <span>Usuarios</span>
+            </button>
+
+            <button class="sidebar-item" data-tab="perfil" id="tab-btn-perfil" style="display:none;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                </svg>
+                <span>Perfil</span>
+            </button>
+
+            <button class="sidebar-item" data-tab="login" id="tab-btn-login">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/>
                 </svg>
                 <span>Iniciar Sesion</span>
             </button>
-        </div>
+        </nav>
 
-        <!-- PESTANA 1: CONSULTA DE REGISTROS -->
-        <div class="ruteo-tab-content active" id="tab-registros">
+        <div class="sidebar-footer">
+            <span class="sidebar-copy">&copy; 2026 HSE Ruteo App</span>
+            <span class="sidebar-url">app.ruteo.org.pe</span>
+        </div>
+    </aside>
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main class="ruteo-main-content">
+
+        <!-- HEADER SUPERIOR -->
+        <header class="ruteo-top-header">
+            <div class="header-left">
+                <h1 class="header-title" id="page-header-title">Panel de Administracion</h1>
+                <div class="header-subtitle-row">
+                    <span class="header-date" id="current-date-str">Viernes, 31 de julio de 2026</span>
+                    <span class="bullet-sep">•</span>
+                    <span class="header-subtext">Gestion Ruteo y Mantenimiento</span>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="system-status-pill">
+                    <span class="status-dot-active"></span>
+                    <span>Sistema Activo</span>
+                </div>
+
+                <button class="theme-toggle-btn" id="btn-theme-toggle" type="button" title="Cambiar Tema Dia/Noche">
+                    <span id="theme-toggle-icon">&#9790;</span>
+                    <span id="theme-toggle-text">Modo Noche</span>
+                </button>
+
+                <div class="user-profile-badge" id="ruteo-user-badge">
+                    <div class="user-avatar" id="user-avatar-box">
+                        <span id="user-avatar-text">?</span>
+                    </div>
+                    <div class="user-details">
+                        <span class="user-name" id="user-display-name">Invitado</span>
+                        <span class="user-role-badge" id="user-role-label">Acceso Bloqueado</span>
+                    </div>
+                    <button class="btn-logout-icon" id="btn-ruteo-logout" style="display:none;" title="Cerrar Sesion">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- SECCIONES / PESTANAS -->
+
+        <!-- SECCION 1: INICIO (DASHBOARD) -->
+        <section class="ruteo-tab-content active" id="tab-inicio">
+            <div class="dashboard-stats-grid">
+                <div class="dash-stat-card">
+                    <div class="stat-icon icon-blue">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-title">Registros Activos</span>
+                        <span class="stat-number" id="dash-stat-total">-</span>
+                    </div>
+                </div>
+
+                <div class="dash-stat-card">
+                    <div class="stat-icon icon-green">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-title">Reportes Materiales</span>
+                        <span class="stat-number" id="dash-stat-materiales">-</span>
+                    </div>
+                </div>
+
+                <div class="dash-stat-card">
+                    <div class="stat-icon icon-purple">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-title">Tramos Activos</span>
+                        <span class="stat-number" id="dash-stat-tramos">-</span>
+                    </div>
+                </div>
+
+                <div class="dash-stat-card">
+                    <div class="stat-icon icon-red">
+                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                        </svg>
+                    </div>
+                    <div class="stat-info">
+                        <span class="stat-title">Cuentas Registradas</span>
+                        <span class="stat-number" id="dash-stat-users">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-panels-grid">
+                <div class="dash-panel quick-actions-panel">
+                    <h3 class="panel-title">Acciones Rapidas</h3>
+                    <div class="quick-actions-list">
+                        <button class="action-btn-card" data-goto="formulario">
+                            <div class="btn-card-icon icon-blue-bg">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                </svg>
+                            </div>
+                            <div class="btn-card-text">
+                                <span class="card-text-title">Nuevo Registro de Campo</span>
+                                <span class="card-text-sub">Capturar estructura, herrajes y fotos</span>
+                            </div>
+                        </button>
+
+                        <button class="action-btn-card" data-goto="materiales">
+                            <div class="btn-card-icon icon-green-bg">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                </svg>
+                            </div>
+                            <div class="btn-card-text">
+                                <span class="card-text-title">Consumo de Materiales</span>
+                                <span class="card-text-sub">Reportar materiales usados por PM/Incidencia</span>
+                            </div>
+                        </button>
+
+                        <button class="action-btn-card" data-goto="sla-informes">
+                            <div class="btn-card-icon icon-purple-bg">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <div class="btn-card-text">
+                                <span class="card-text-title">SLA e Informes</span>
+                                <span class="card-text-sub">Generar formatos de mantenimiento</span>
+                            </div>
+                        </button>
+                    </div>
+
+                    <!-- ACCESOS DIRECTOS A GOOGLE SHEETS PARA ADMIN -->
+                    <div class="admin-sheets-panel" id="admin-sheets-box" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); display: none;">
+                        <h4 style="font-size: 14px; font-weight: 700; margin: 0 0 12px 0; color: var(--menu-title);">Accesos Directos a Google Sheets (Solo Admin)</h4>
+                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                            <a href="https://docs.google.com/spreadsheets/d/1m19aeKOuPJYw01yvFPP9_SGmpdJgUg_q/edit" target="_blank" class="portal-btn portal-btn--excel" id="btn-link-gsheet-ruteo" style="font-size: 12px; padding: 8px 14px; text-decoration: none;">
+                                📊 Abrir Google Sheet Ruteo
+                            </a>
+                            <a href="https://docs.google.com/spreadsheets" target="_blank" class="portal-btn portal-btn--download" id="btn-link-gsheet-materiales" style="font-size: 12px; padding: 8px 14px; text-decoration: none;">
+                                📦 Abrir Google Sheet Materiales
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dash-panel system-status-panel">
+                    <h3 class="panel-title">Estado del Sistema</h3>
+                    <div class="status-items-list">
+                        <div class="status-item-row">
+                            <span>Sincronizacion Google Sheets</span>
+                            <span class="status-badge-active">En linea</span>
+                        </div>
+                        <div class="status-item-row">
+                            <span>Almacenamiento de Fotos Drive</span>
+                            <span class="status-badge-active">Disponible</span>
+                        </div>
+                        <div class="status-item-row">
+                            <span>Generacion de PDF / KMZ</span>
+                            <span class="status-badge-active">Operativo</span>
+                        </div>
+                        <div class="status-item-row">
+                            <span>Centros de Mantenimiento (PMs)</span>
+                            <span class="status-badge-info">24 Sedes Activas</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCION 2: REGISTROS DE CAMPO -->
+        <section class="ruteo-tab-content" id="tab-registros">
             <div class="portal-actions">
                 <button class="portal-btn portal-btn--refresh" id="btn-refresh-portal">
                     <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -109,12 +343,13 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                 </button>
             </div>
 
-<!-- Botones PDF/Excel: funciones definidas al final del bloque de datos -->
             <div class="portal-filters-row">
-                <label for="filter-tramo">Tramo</label>
-                <select id="filter-tramo">
-                    <option value="">Todos los tramos</option>
-                </select>
+                <div class="filter-group">
+                    <label for="filter-tramo">Filtrar Tramo</label>
+                    <select id="filter-tramo">
+                        <option value="">Todos los tramos</option>
+                    </select>
+                </div>
 
                 <div class="portal-search-wrap">
                     <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -124,25 +359,10 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                 </div>
             </div>
 
-            <div class="portal-stats" id="portal-stats">
-                <div class="stat-card">
-                    <span class="stat-value" id="stat-total">-</span>
-                    <span class="stat-label">Registros totales</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-value" id="stat-hoy">-</span>
-                    <span class="stat-label">Enviados hoy</span>
-                </div>
-                <div class="stat-card">
-                    <span class="stat-value" id="stat-tramos">-</span>
-                    <span class="stat-label">Tramos activos</span>
-                </div>
-            </div>
-
             <div class="portal-table-wrapper" id="portal-table-wrapper">
                 <div class="portal-loading" id="portal-loading">
                     <div class="portal-spinner"></div>
-                    <span>Cargando registros...</span>
+                    <span>Cargando registros de campo...</span>
                 </div>
 
                 <div class="portal-error" id="portal-error" style="display:none;">
@@ -150,7 +370,6 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                     </svg>
                     <p id="portal-error-msg">No se pudo conectar con Google Sheets.</p>
-                    <small>Verifica que el script de Google este desplegado correctamente.</small>
                 </div>
 
                 <div id="portal-data-section" style="display:none;">
@@ -177,35 +396,226 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                                     <th>Foto 1</th>
                                     <th>Foto 2</th>
                                     <th>KMZ</th>
-                                    <th>Doc</th>
                                 </tr>
                             </thead>
-                            <tbody id="portal-tbody">
-                            </tbody>
+                            <tbody id="portal-tbody"></tbody>
                         </table>
                     </div>
                     <div class="portal-empty" id="portal-empty" style="display:none;">
-                        <svg width="40" height="40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
                         <p>No hay registros aun.</p>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- PESTANA 2: FORMULARIO DE CAMPO -->
-        <div class="ruteo-tab-content" id="tab-formulario">
+        <!-- SECCION 3: NUEVO REGISTRO (FORMULARIO) -->
+        <section class="ruteo-tab-content" id="tab-formulario">
             <?php include plugin_dir_path( __FILE__ ) . 'form-template.php'; ?>
-        </div>
+        </section>
 
-        <!-- PESTANA 3: GESTION DE USUARIOS (SOLO ADMIN) -->
-        <div class="ruteo-tab-content" id="tab-usuarios">
+        <!-- SECCION 4: CONSUMO DE MATERIALES -->
+        <section class="ruteo-tab-content" id="tab-materiales">
+            <div class="materiales-container">
+                
+                <!-- TARJETA FORMULARIO MATERIALES -->
+                <div class="material-card">
+                    <div class="card-header">
+                        <h3>Reporte de Consumo de Materiales</h3>
+                        <p>Registre los materiales utilizados en incidencias o mantenimientos por Almacen / PM</p>
+                    </div>
+
+                    <form id="form-consumo-materiales" class="ruteo-materiales-form">
+                        <div class="form-grid-3">
+                            <div class="form-group">
+                                <label>No. Incidencia / INC</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="mat-incidencia" placeholder="Ej: INC 78093" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>CRQ (Opcional)</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="mat-crq" placeholder="Ej: CRQ-90272">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Almacen / PM (Centro Mantenimiento)</label>
+                                <div class="input-wrapper">
+                                    <select id="mat-almacen-pm" required>
+                                        <option value="">-- Seleccionar Almacen / PM --</option>
+                                        <?php foreach ($pm_list as $pm_item) : ?>
+                                            <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Tramo</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="mat-tramo" placeholder="Ej: Urubamba - Quillabamba" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Fecha de Intervencion</label>
+                                <div class="input-wrapper">
+                                    <input type="date" id="mat-fecha" value="<?php echo date('Y-m-d'); ?>" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label>Descripcion de Incidencia / Trabajo</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="mat-descripcion" placeholder="Ej: Perdida de enlace Cusco - Quillabamba / Preventivo PEXT" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- TABLA DINAMICA DE MATERIALES -->
+                        <div class="materials-items-section">
+                            <div class="items-section-header">
+                                <h4>Materiales Utilizados</h4>
+                                <button type="button" class="btn-add-item" id="btn-add-material-row">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    <span>Agregar Material</span>
+                                </button>
+                            </div>
+
+                            <div class="portal-table-scroll">
+                                <table class="items-table" id="table-material-items">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 50px;">Item</th>
+                                            <th>Descripcion del Material</th>
+                                            <th style="width: 120px;">Unidad</th>
+                                            <th style="width: 100px;">Cantidad</th>
+                                            <th style="width: 160px;">Codigo SAP</th>
+                                            <th style="width: 140px;">No. Drum</th>
+                                            <th style="width: 60px;">Accion</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody-material-items">
+                                        <!-- Filas dinamicas JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="form-footer-actions">
+                            <button type="submit" class="ruteo-submit-btn" style="min-width: 220px;">
+                                <span class="btn-text">Guardar Reporte Materiales</span>
+                                <div class="spinner"></div>
+                            </button>
+                            <div id="mat-form-msg" class="ruteo-message"></div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- HISTORIAL DE MATERIALES -->
+                <div class="material-card" style="margin-top: 24px;">
+                    <div class="card-header">
+                        <h3>Historial de Reportes de Materiales</h3>
+                    </div>
+
+                    <div class="portal-filters-row">
+                        <div class="filter-group">
+                            <label for="filter-mat-pm">Filtrar por PM</label>
+                            <select id="filter-mat-pm">
+                                <option value="">Todos los PMs</option>
+                                <?php foreach ($pm_list as $pm_item) : ?>
+                                    <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+
+                        <div class="portal-search-wrap">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                            </svg>
+                            <input type="text" id="mat-search" placeholder="Buscar por INC, Tramo o Material...">
+                        </div>
+                    </div>
+
+                    <div class="portal-table-scroll">
+                        <table class="portal-table">
+                            <thead>
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>INC / CRQ</th>
+                                    <th>Almacen / PM</th>
+                                    <th>Tramo</th>
+                                    <th>Descripcion</th>
+                                    <th>Materiales</th>
+                                    <th>Usuario</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mat-reports-tbody">
+                                <tr><td colspan="7" style="text-align:center; padding: 20px;">Cargando historial de materiales...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- SECCION 5: SLA E INFORMES DE MANTENIMIENTO -->
+        <section class="ruteo-tab-content" id="tab-sla-informes">
+            <div class="sla-container">
+                <div class="sla-header">
+                    <h3>Formato SLA e Informes de Mantenimiento</h3>
+                    <p>Acceda a los formatos estandarizados de soporte y reportes tecnicos</p>
+                </div>
+
+                <div class="sla-cards-grid">
+                    <div class="sla-card">
+                        <div class="sla-icon icon-blue-bg">
+                            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                        </div>
+                        <h4>Formato SLA Cumplimiento</h4>
+                        <p>Generacion de reporte de cumplimiento de tiempos de respuesta y solucion segun acuerdo de nivel de servicio.</p>
+                        <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Formato SLA">Abrir Formato SLA</button>
+                    </div>
+
+                    <div class="sla-card">
+                        <div class="sla-icon icon-green-bg">
+                            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <h4>Informe Tecnico Preventivo</h4>
+                        <p>Formato normalizado para mantenimientos preventivos PEXT en tramos de fibra optica.</p>
+                        <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Informe Preventivo">Generar Informe</button>
+                    </div>
+
+                    <div class="sla-card">
+                        <div class="sla-icon icon-purple-bg">
+                            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                        </div>
+                        <h4>Informe Tecnico Correctivo</h4>
+                        <p>Reporte detallado de atencion de incidencias, reparacion de hilos, empalmes y consumo de fibra.</p>
+                        <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Informe Correctivo">Generar Informe</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCION 6: GESTION DE USUARIOS (SOLO ADMIN) -->
+        <section class="ruteo-tab-content" id="tab-usuarios">
             <div class="users-container">
                 <div class="users-header-row">
                     <div>
-                        <h3 style="margin:0; font-size:18px; color:var(--menu-title);"> Gestion de Cuentas de Usuario</h3>
-                        <p style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);">  Administra los accesos para usuarios Administradores y Operarios Workers.</p>
+                        <h3>Gestion de Cuentas de Usuario</h3>
+                        <p>Administra accesos para Administradores y Operarios Workers con foto y sede asignada.</p>
                     </div>
                     <button class="btn-secondary" id="btn-toggle-create-user">
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -215,10 +625,10 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                     </button>
                 </div>
 
-                <!-- FORMULARIO CREAR USUARIO -->
+                <!-- FORMULARIO CREAR USUARIO AMPLIADO -->
                 <div class="user-create-card" id="user-create-card" style="display:none;">
-                    <h4>Crear Cuenta de Usuario</h4>
-                    <form id="form-create-user">
+                    <h4>Crear Nueva Cuenta de Usuario</h4>
+                    <form id="form-create-user" enctype="multipart/form-data">
                         <div class="user-form-grid">
                             <div class="form-group">
                                 <label>Nombre Completo</label>
@@ -239,6 +649,12 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                                 </div>
                             </div>
                             <div class="form-group">
+                                <label>Numero Telefonico</label>
+                                <div class="input-wrapper">
+                                    <input type="tel" id="user-phone-input" placeholder="+51 987 654 321">
+                                </div>
+                            </div>
+                            <div class="form-group">
                                 <label>Clave de Acceso</label>
                                 <div class="input-wrapper">
                                     <input type="password" id="user-password-input" placeholder="--------" required>
@@ -252,6 +668,22 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                                         <option value="admin">Administrador (Admin)</option>
                                     </select>
                                 </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Centro de Mantenimiento / PM Asignado</label>
+                                <div class="input-wrapper">
+                                    <select id="user-pm-select">
+                                        <option value="">-- Sin PM Especifico --</option>
+                                        <?php foreach ($pm_list as $pm_item) : ?>
+                                            <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Foto de Perfil / Imagen Avatar</label>
+                                <input type="file" id="user-avatar-input" accept="image/*">
+                                <div class="avatar-preview-box" id="user-avatar-preview"></div>
                             </div>
                         </div>
                         <div style="margin-top:16px; display:flex; gap:10px; justify-content:flex-end;">
@@ -274,28 +706,95 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                         <table class="portal-table">
                             <thead>
                                 <tr>
-                                    <th>ID</th>
+                                    <th>Avatar</th>
                                     <th>Usuario</th>
-                                    <th>Nombre</th>
+                                    <th>Nombre Completo</th>
                                     <th>Correo</th>
+                                    <th>Telefono</th>
+                                    <th>PM Asignado</th>
                                     <th>Rol</th>
                                     <th>Acciones</th>
                                 </tr>
                             </thead>
-                            <tbody id="users-tbody">
-                            </tbody>
+                            <tbody id="users-tbody"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
 
-        <!-- PESTANA 4: INICIAR SESION -->
-        <div class="ruteo-tab-content" id="tab-login">
+        <!-- SECCION 7: PERFIL DE USUARIO -->
+        <section class="ruteo-tab-content" id="tab-perfil">
+            <div class="profile-container">
+                <div class="profile-card">
+                    <div class="profile-header-banner">
+                        <div class="profile-avatar-large" id="profile-avatar-img-box">
+                            <span id="profile-avatar-large-text">?</span>
+                        </div>
+                        <div class="profile-header-info">
+                            <h2 id="profile-name-heading">Nombre de Usuario</h2>
+                            <p id="profile-role-heading">Cargando perfil...</p>
+                        </div>
+                    </div>
+
+                    <form id="form-update-profile" class="profile-form">
+                        <div class="form-grid-2">
+                            <div class="form-group">
+                                <label>Nombre Completo</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="prof-display-name" required>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Correo Electronico (Solo Lectura)</label>
+                                <div class="input-wrapper">
+                                    <input type="email" id="prof-email" disabled readonly>
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Numero Telefonico</label>
+                                <div class="input-wrapper">
+                                    <input type="tel" id="prof-phone" placeholder="+51 987 654 321">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Centro de Mantenimiento / PM Asignado</label>
+                                <div class="input-wrapper">
+                                    <select id="prof-pm">
+                                        <option value="">-- Seleccionar PM --</option>
+                                        <?php foreach ($pm_list as $pm_item) : ?>
+                                            <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label>Actualizar Foto de Perfil</label>
+                                <input type="file" id="prof-avatar-file" accept="image/*">
+                            </div>
+                        </div>
+
+                        <div class="form-footer-actions">
+                            <button type="submit" class="ruteo-submit-btn">
+                                <span>Guardar Cambios de Perfil</span>
+                            </button>
+                            <div id="prof-form-msg" class="ruteo-message"></div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCION 8: INICIAR SESION -->
+        <section class="ruteo-tab-content" id="tab-login">
             <div class="login-card-container">
                 <div class="login-card-title">
-                    <h3>Acceso al Aplicativo</h3>
-                    <p>Ingresa tus credenciales para acceder como Admin o Worker</p>
+                    <h3>Acceso al Aplicativo HSE Ruteo</h3>
+                    <p>Ingresa tus credenciales para acceder al sistema</p>
                 </div>
                 <form class="ruteo-auth-login-form" id="ruteo-login-form">
                     <div class="form-group" style="margin-bottom:16px;">
@@ -317,22 +816,9 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                     <div class="ruteo-message login-message" id="login-message"></div>
                 </form>
             </div>
-        </div>
+        </section>
 
-        <!-- FOOTER EMPRESARIAL -->
-        <footer class="ruteo-main-footer">
-            <div class="footer-left">
-                <span class="footer-copy">&copy; 2026 Aplicativo de Ruteo</span>
-                <span class="footer-bullet">-</span>
-                <span class="footer-status"><span class="status-dot"></span> Servidor en Linea</span>
-            </div>
-            <div class="footer-right">
-                <span class="footer-tag">v1.2.0</span>
-                <span class="footer-tag">Google Sheets Sync</span>
-            </div>
-        </footer>
-
-    </div>
+    </main>
 </div>
 
 <script>
@@ -695,12 +1181,13 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
         function _hacerPDF() {
             var j = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
             var doc = new j({ orientation: "landscape", unit: "mm", format: "a4" });
+            var w = doc.internal.pageSize.getWidth();
             var f = new Date().toLocaleDateString("es-PE", { day: "2-digit", month: "long", year: "numeric" });
-            doc.setFillColor(0,151,216); doc.rect(0,0,doc.internal.pageSize.getWidth(),32,"F"); doc.setTextColor(255,255,255); doc.setFontSize(18); doc.text("REPORTE GENERAL DE RUTEO DE CAMPO",14,13);
-            doc.setFontSize(9); doc.text("Fecha: "+f,14,21); doc.text("Total: "+data.length+" registros",doc.internal.pageSize.getWidth()-14,13,{align:"right"});
-            var cols=[{header:"Fecha",dataKey:"fecha"},{header:"Tramo",dataKey:"tramo"},{header:"ID Consol",dataKey:"id_consol"},{header:"Estructura",dataKey:"estructura"},{header:"Tipo",dataKey:"tipo_estructura"},{header:"Alt.(m)",dataKey:"altura"},{header:"Codigo",dataKey:"codigo"},{header:"Ubicacion",dataKey:"ubicacion"},{header:"Mufa",dataKey:"mufa"},{header:"Ret.",dataKey:"retencion"},{header:"Susp.",dataKey:"suspension"},{header:"Cruceta",dataKey:"cruceta"},{header:"Heb.",dataKey:"hebillas"},{header:"Fleje",dataKey:"fleje"},{header:"Amort.",dataKey:"amortiguador"},{header:"Br.Ext.",dataKey:"brazo_extensor"},{header:"Kit Ret.",dataKey:"kit_retenida"},{header:"Obs.",dataKey:"observacion"},{header:"Link KMZ",dataKey:"link_kmz"}];
+            doc.setFillColor(0,151,216); doc.rect(0,0,w,28,"F"); doc.setTextColor(255,255,255); doc.setFontSize(16); doc.text("REPORTE GENERAL DE RUTEO DE CAMPO",14,13);
+            doc.setFontSize(9); doc.text("Fecha: "+f+"  |  Total: "+data.length+" registros",14,21);
+            var cols=[{header:"Fecha",dataKey:"fecha"},{header:"Tramo",dataKey:"tramo"},{header:"ID Consol",dataKey:"id_consol"},{header:"Estructura",dataKey:"estructura"},{header:"Tipo",dataKey:"tipo_estructura"},{header:"Alt.(m)",dataKey:"altura"},{header:"Codigo",dataKey:"codigo"},{header:"Ubicacion",dataKey:"ubicacion"},{header:"Mufa",dataKey:"mufa"},{header:"Ret.",dataKey:"retencion"},{header:"Susp.",dataKey:"suspension"},{header:"Cruceta",dataKey:"cruceta"},{header:"Heb.",dataKey:"hebillas"},{header:"Fleje",dataKey:"fleje"},{header:"Amort.",dataKey:"amortiguador"},{header:"Br.Ext.",dataKey:"brazo_extensor"},{header:"Kit Ret.",dataKey:"kit_retenida"},{header:"Obs.",dataKey:"observacion"}];
             var rows=data.map(function(raw){var r=window.normalizarRegistroRuteo?window.normalizarRegistroRuteo(raw):raw;var o={};cols.forEach(function(c){o[c.dataKey]=r[c.dataKey]||""});return o;});
-            try{doc.autoTable({startY:36,columns:cols,body:rows,theme:"grid",headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold",fontSize:7},bodyStyles:{fontSize:6.5},alternateRowStyles:{fillColor:[239,246,255]},margin:{top:36,bottom:15,left:14,right:14}})}catch(e){}
+            try{doc.autoTable({startY:32,columns:cols,body:rows,theme:"grid",headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold",fontSize:7.5,halign:"center"},bodyStyles:{fontSize:7,cellPadding:2},alternateRowStyles:{fillColor:[244,246,249]},margin:{top:32,bottom:12,left:10,right:10},styles:{overflow:"linebreak"}})}catch(e){}
             var blob=doc.output("blob"), u=URL.createObjectURL(blob), a=document.createElement("a"); a.href=u; a.download="Reporte_Ruteo_"+f.replace(/\//g,"-")+".pdf"; document.body.appendChild(a); a.click(); setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u)},500);
         }
         cargarJSPDF();
@@ -764,36 +1251,48 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
         return Promise.race([fetchP, timeoutP]).catch(function() { return null; });
     };
 
-    // PDF individual por registro con fotos
+    // PDF individual por registro con fotos optimizado para tablets
     window.generarDocumentoPDF = function(idx) {
         var raw = window._ruteoRegistros[idx]; if (!raw) return;
         var r = window.normalizarRegistroRuteo ? window.normalizarRegistroRuteo(raw) : raw;
         function _hacer(imgs) {
             var j = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
             if (!j) { alert("Libreria PDF no disponible."); return; }
-            var doc = new j({ orientation: "portrait", unit: "mm", format: "a4" }), w = doc.internal.pageSize.getWidth();
-            doc.setFillColor(0,151,216); doc.rect(0,0,w,40,"F"); doc.setTextColor(255,255,255);
-            doc.setFontSize(20); doc.text("FICHA TECNICA DE REGISTRO", w/2, 16, { align: "center" });
-            doc.setFontSize(10); doc.text("Fecha: "+r.fecha, w/2, 26, { align: "center" });
-            doc.setFontSize(10); doc.text("Tramo: "+r.tramo+" | Codigo: "+r.codigo, w/2, 34, { align: "center" });
-            var data = [["Estructura",r.estructura],["Tipo",r.tipo_estructura],["Altura",r.altura+" m"],["Ubicacion",r.ubicacion],["ID Consol",r.id_consol],["Mufa",r.mufa],["Retencion",r.retencion],["Suspension",r.suspension],["Cruceta",r.cruceta],["Hebillas",r.hebillas],["Fleje",r.fleje],["Amortiguador",r.amortiguador],["Brazo Extensor",r.brazo_extensor],["Kit Retenida",r.kit_retenida],["Observacion",r.observacion]];
-            var yy = 45;
+            var doc = new j({ orientation: "portrait", unit: "mm", format: "a4" });
+            var w = doc.internal.pageSize.getWidth();
+            var pageH = doc.internal.pageSize.getHeight();
+            doc.setFillColor(0,151,216); doc.rect(0,0,w,32,"F"); doc.setTextColor(255,255,255);
+            doc.setFontSize(18); doc.text("FICHA TECNICA DE REGISTRO", w/2, 14, { align: "center" });
+            doc.setFontSize(10); doc.text("Fecha: "+r.fecha+" | Tramo: "+r.tramo, w/2, 24, { align: "center" });
+            var data = [
+                ["ID Consol", r.id_consol || '-'],
+                ["Codigo Estructura", r.codigo || '-'],
+                ["Estructura", r.estructura || '-'],
+                ["Tipo Estructura", r.tipo_estructura || '-'],
+                ["Altura", (r.altura || '-') + " m"],
+                ["Ubicacion", r.ubicacion || '-'],
+                ["Mufa / Herrajes", "Mufa: " + r.mufa + " | Ret: " + r.retencion + " | Susp: " + r.suspension],
+                ["Cruceta / Accesorios", "Cruceta: " + r.cruceta + " | Hebillas: " + r.hebillas + " | Fleje: " + r.fleje],
+                ["Amortiguador / Extensor", "Amort: " + r.amortiguador + " | Brazo Ext: " + r.brazo_extensor + " | Kit Ret: " + r.kit_retenida],
+                ["Observacion", r.observacion || '-']
+            ];
+            var yy = 38;
             if (typeof doc.autoTable === "function") {
-                doc.autoTable({ startY:yy, body:data, theme:"grid", headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold"},margin:{left:14,right:14} });
-                yy = doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : yy + 80;
+                doc.autoTable({ startY:yy, body:data, theme:"grid", headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold"}, bodyStyles:{fontSize:8.5,cellPadding:2.5}, margin:{left:12,right:12} });
+                yy = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : yy + 90;
             }
-            // Fotos
-            var imgW = 70, imgH = 55, gap = 10, x1 = (w - imgW*2 - gap) / 2, x2 = x1 + imgW + gap;
-            doc.setFontSize(9); doc.setTextColor(0,151,216);
-            doc.text("FOTOGRAFIA 1", x1+imgW/2, yy, { align:"center" });
-            doc.text("FOTOGRAFIA 2", x2+imgW/2, yy, { align:"center" });
-            yy += 5;
+            var imgW = 75, imgH = 58, gap = 12, x1 = (w - imgW*2 - gap) / 2, x2 = x1 + imgW + gap;
+            if (yy + imgH + 15 > pageH) { doc.addPage(); yy = 20; }
+            doc.setFontSize(10); doc.setTextColor(0,151,216);
+            doc.text("EVIDENCIA FOTOGRAFICA EN CAMPO", w/2, yy, { align: "center" });
+            yy += 6;
             function addImg(dUrl, x) {
-                if (!dUrl) { doc.setFillColor(226,232,240); doc.rect(x,yy,imgW,imgH,"F"); doc.setTextColor(100); doc.setFontSize(8); doc.text("Sin imagen",x+imgW/2,yy+imgH/2,{align:"center"}); return; }
-                try { var t = dUrl.indexOf("image/png") !== -1 ? "PNG" : "JPEG"; doc.addImage(dUrl,t,x,yy,imgW,imgH); } catch(e) { doc.setFillColor(226,232,240); doc.rect(x,yy,imgW,imgH,"F"); doc.setTextColor(100); doc.setFontSize(8); doc.text("No disponible",x+imgW/2,yy+imgH/2,{align:"center"}); }
+                if (!dUrl) { doc.setFillColor(241,245,249); doc.rect(x,yy,imgW,imgH,"F"); doc.setTextColor(165,172,184); doc.setFontSize(9); doc.text("Sin Imagen",x+imgW/2,yy+imgH/2,{align:"center"}); return; }
+                try { var t = dUrl.indexOf("image/png") !== -1 ? "PNG" : "JPEG"; doc.addImage(dUrl,t,x,yy,imgW,imgH); } catch(e) { doc.setFillColor(241,245,249); doc.rect(x,yy,imgW,imgH,"F"); doc.setTextColor(165,172,184); doc.setFontSize(9); doc.text("No disponible",x+imgW/2,yy+imgH/2,{align:"center"}); }
             }
             addImg(imgs[0], x1); addImg(imgs[1], x2);
-            doc.save("Ficha_Ruteo_"+r.codigo+".pdf");
+            var blob = doc.output("blob");
+            window.downloadBlobRuteo(blob, "Ficha_Ruteo_"+(r.codigo || r.id_consol)+".pdf");
         }
         var imgs = [null, null], pending = 0;
         function checkDone() { pending--; if (pending <= 0) _hacer(imgs); }

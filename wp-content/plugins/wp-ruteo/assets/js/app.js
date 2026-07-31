@@ -1,8 +1,8 @@
 jQuery(document).ready(function($) {
 
-    // CONTROL DE TEMA (MODO DIA / MODO NOCHE EN TODA LA PAGINA)
+    // --- CONTROL DE TEMA (MODO DIA / MODO NOCHE) ---
     function aplicarTema(tema) {
-        $('.ruteo-wrapper').attr('data-theme', tema);
+        $('.ruteo-app-layout').attr('data-theme', tema);
         $('body').attr('data-theme', tema);
         $('html').attr('data-theme', tema);
         localStorage.setItem('ruteo_theme', tema);
@@ -24,27 +24,12 @@ jQuery(document).ready(function($) {
         aplicarTema(nuevo);
     });
 
-    // Observer para animaciones suaves
-    const observerOptions = {
-        root: null,
-        rootMargin: '0px',
-        threshold: 0.05
-    };
-
-    const observer = new IntersectionObserver((entries, observer) => {
-        entries.forEach(entry => {
-            if (entry.isIntersecting) {
-                entry.target.classList.add('visible');
-                observer.unobserve(entry.target); 
-            }
-        });
-    }, observerOptions);
-
-    document.querySelectorAll('.animate-slide-up').forEach(el => {
-        observer.observe(el);
+    // --- COLAPSAR / EXPANDIR SIDEBAR LATERAL ---
+    $('#btn-sidebar-collapse').on('click', function() {
+        $('#ruteo-sidebar').toggleClass('collapsed');
     });
 
-    // Previsualizacion de fotos
+    // --- PREVISUALIZACION DE FOTOS DE CAMPO ---
     function readURL(input, previewId) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
@@ -64,10 +49,9 @@ jQuery(document).ready(function($) {
     $('#foto1').change(function() { readURL(this, 'preview1'); });
     $('#foto2').change(function() { readURL(this, 'preview2'); });
 
-    // Envio del Formulario de Campo
+    // --- ENVIO DEL FORMULARIO DE CAMPO ---
     $('#ruteo-form').on('submit', function(e) {
         e.preventDefault();
-
         var $form = $(this);
         var $btn = $form.find('.ruteo-submit-btn');
         var $msg = $('#ruteo-message');
@@ -87,7 +71,6 @@ jQuery(document).ready(function($) {
             contentType: false,
             success: function(response) {
                 $btn.removeClass('loading').prop('disabled', false);
-
                 if (response.success) {
                     var msg = (response.data && response.data.message) ? response.data.message : 'Datos enviados correctamente.';
                     $msg.addClass('success').html(msg).fadeIn(300);
@@ -95,11 +78,9 @@ jQuery(document).ready(function($) {
                     $('.preview').removeClass('show').css('background-image', 'none');
                     $('.ruteo-photo-upload').removeClass('has-file');
                     
-                    // Sincronizar portal en segundo plano (modo silencioso)
                     if (typeof window.cargarDatosPortal === 'function') {
                         window.cargarDatosPortal(true);
                     }
-
                     setTimeout(function() { $msg.fadeOut(300); }, 5000);
                 } else {
                     $msg.addClass('error').html('<strong>Error:</strong> ' + (response.data || 'El proceso fallo.')).fadeIn(300);
@@ -112,7 +93,7 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // SISTEMA DE PESTANAS (TABS) Y ESTADO DE USUARIO
+    // --- INTERFAZ Y ESTADO DE USUARIO ---
     var currentUser = (window.wpRuteoAjax && window.wpRuteoAjax.user) ? window.wpRuteoAjax.user : { isLoggedIn: false, isAdmin: false, role: 'guest' };
 
     function actualizarInterfazUsuario(user) {
@@ -121,55 +102,63 @@ jQuery(document).ready(function($) {
         if (user.isLoggedIn) {
             $('#ruteo-user-badge').css('display', 'flex');
             $('#user-display-name').text(user.displayName || user.username);
-            var initial = (user.displayName || user.username || '?').charAt(0).toUpperCase();
-            $('#user-avatar-text').text(initial);
+            
+            if (user.avatar) {
+                $('#user-avatar-box').html('<img src="' + user.avatar + '" alt="Avatar">');
+                $('#profile-avatar-img-box').html('<img src="' + user.avatar + '" alt="Avatar">');
+            } else {
+                var initial = (user.displayName || user.username || '?').charAt(0).toUpperCase();
+                $('#user-avatar-box').html('<span id="user-avatar-text">' + initial + '</span>');
+                $('#profile-avatar-large-text').text(initial);
+            }
 
             var roleText = user.isAdmin ? 'Administrador (Admin)' : 'Operario (Worker)';
             $('#user-role-label').text(roleText);
             $('#btn-ruteo-logout').show();
 
-            // Mostrar form y ocultar aviso de restriccion
             $('#ruteo-form-restricted-notice').hide();
             $('#ruteo-form').show();
 
-            // Mostrar barra de pestanas y opciones autenticadas
-            $('.ruteo-tabs-bar').show();
-            $('.ruteo-tab-btn[data-tab="registros"]').show();
-            $('.ruteo-tab-btn[data-tab="formulario"]').show();
             $('#tab-btn-login').hide();
+            $('#tab-btn-perfil').show();
 
             if (user.isAdmin) {
                 $('#tab-btn-usuarios').show();
+                $('#admin-sheets-box').show();
             } else {
                 $('#tab-btn-usuarios').hide();
+                $('#admin-sheets-box').hide();
             }
 
-            // Cargar datos del portal si el usuario esta autenticado
+            // Llenar datos de perfil
+            $('#profile-name-heading').text(user.displayName || user.username);
+            $('#profile-role-heading').text(roleText + ' - ' + (user.pmAssigned || 'Sin PM asignado'));
+            $('#prof-display-name').val(user.displayName || user.username);
+            $('#prof-email').val(user.email || '');
+            $('#prof-phone').val(user.phone || '');
+            $('#prof-pm').val(user.pmAssigned || '');
+
             if (typeof window.cargarDatosPortal === 'function' && (!window._ruteoRegistros || window._ruteoRegistros.length === 0)) {
                 window.cargarDatosPortal();
             }
 
-            // Si estaba en login, ir a registros
-            if ($('#tab-login').hasClass('active') || !$('.ruteo-tab-btn.active').is(':visible')) {
-                $('.ruteo-tab-btn[data-tab="registros"]').click();
+            cargarMateriales();
+
+            if ($('#tab-login').hasClass('active') || !$('.sidebar-item.active').is(':visible')) {
+                $('.sidebar-item[data-tab="inicio"]').click();
             }
         } else {
-            // Limpiar datos de sesion anterior
             window._ruteoRegistros = [];
-            var tbody = document.querySelector('#portal-table-body');
-            if (tbody) tbody.innerHTML = '';
-            // Ocultar badge de usuario en cabecera
             $('#ruteo-user-badge').hide();
             $('#btn-ruteo-logout').hide();
 
-            // Ocultar form y mostrar aviso
             $('#ruteo-form-restricted-notice').show();
             $('#ruteo-form').hide();
 
-            // Ocultar barra de pestanas para vista limpia de inicio de sesion
-            $('.ruteo-tabs-bar').hide();
+            $('#tab-btn-usuarios').hide();
+            $('#tab-btn-perfil').hide();
+            $('#tab-btn-login').show();
 
-            // Mostrar pantalla de login directamente
             $('.ruteo-tab-content').removeClass('active').hide();
             $('#tab-login').addClass('active').show();
         }
@@ -177,27 +166,37 @@ jQuery(document).ready(function($) {
 
     actualizarInterfazUsuario(currentUser);
 
-    // Boton ir a iniciar sesion dentro del aviso de formulario
-    $(document).on('click', '.btn-goto-login', function() {
-        $('.ruteo-tab-content').removeClass('active').hide();
-        $('#tab-login').addClass('active').show();
-        $('.ruteo-tabs-bar').hide();
-    });
+    // --- NAVEGACION POR SIDEBAR Y ACCIONES RAPIDAS ---
+    $('.sidebar-item, [data-goto]').on('click', function() {
+        var targetTab = $(this).data('tab') || $(this).data('goto');
+        if (!targetTab) return;
 
-    // Cambio de Pestanas
-    $('.ruteo-tab-btn').on('click', function() {
-        var targetTab = $(this).data('tab');
-        
-        $('.ruteo-tab-btn').removeClass('active');
-        $(this).addClass('active');
+        $('.sidebar-item').removeClass('active');
+        $('.sidebar-item[data-tab="' + targetTab + '"]').addClass('active');
+
+        var titleMap = {
+            'inicio': 'Panel de Administracion',
+            'registros': 'Registros de Campo',
+            'formulario': 'Nuevo Registro de Campo',
+            'materiales': 'Consumo de Materiales',
+            'sla-informes': 'SLA e Informes de Mantenimiento',
+            'usuarios': 'Gestion de Cuentas de Usuario',
+            'perfil': 'Perfil de Usuario',
+            'login': 'Iniciar Sesion'
+        };
+
+        if (titleMap[targetTab]) {
+            $('#page-header-title').text(titleMap[targetTab]);
+        }
 
         $('.ruteo-tab-content').removeClass('active').hide();
         $('#tab-' + targetTab).addClass('active').fadeIn(200);
 
         if (targetTab === 'usuarios' && currentUser.isAdmin) {
             cargarUsuarios();
+        } else if (targetTab === 'materiales') {
+            cargarMateriales();
         } else if (targetTab === 'registros' && currentUser.isLoggedIn) {
-            // Sincronizar datos al volver a la pestana de registros
             if (typeof window.cargarDatosPortal === 'function') {
                 var hayRegistros = window._ruteoRegistros && window._ruteoRegistros.length > 0;
                 window.cargarDatosPortal(hayRegistros);
@@ -205,19 +204,200 @@ jQuery(document).ready(function($) {
         }
     });
 
-    // LOGIN AJAX UNIFICADO
+    // --- CONSUMO DE MATERIALES: TABLA DINAMICA ---
+    var materialRowCount = 0;
+
+    function agregarFilaMaterial(itemData) {
+        materialRowCount++;
+        var d = itemData || { descripcion: '', unidad: 'UND', cantidad: 1, codigo_sap: '', drum: '' };
+
+        var html = '<tr id="mat-row-' + materialRowCount + '">' +
+            '<td>' + materialRowCount + '</td>' +
+            '<td><input type="text" class="mat-desc" placeholder="Ej: Cable ADSS 48 FO" value="' + (d.descripcion || '') + '" required></td>' +
+            '<td>' +
+                '<select class="mat-unidad">' +
+                    '<option value="UND"' + (d.unidad === 'UND' ? ' selected' : '') + '>UND</option>' +
+                    '<option value="MTRS"' + (d.unidad === 'MTRS' || d.unidad === 'M' ? ' selected' : '') + '>MTRS</option>' +
+                    '<option value="KIT"' + (d.unidad === 'KIT' ? ' selected' : '') + '>KIT</option>' +
+                    '<option value="KG"' + (d.unidad === 'KG' ? ' selected' : '') + '>KG</option>' +
+                '</select>' +
+            '</td>' +
+            '<td><input type="number" class="mat-cant" min="1" step="0.1" value="' + (d.cantidad || 1) + '" required></td>' +
+            '<td><input type="text" class="mat-sap" placeholder="Ej: PR-30001" value="' + (d.codigo_sap || '') + '"></td>' +
+            '<td><input type="text" class="mat-drum" placeholder="Ej: DRUM 0126" value="' + (d.drum || '') + '"></td>' +
+            '<td><button type="button" class="btn-del-row" data-row="' + materialRowCount + '" title="Eliminar">&times;</button></td>' +
+        '</tr>';
+
+        $('#tbody-material-items').append(html);
+
+        $('.btn-del-row').off('click').on('click', function() {
+            var rId = $(this).data('row');
+            $('#mat-row-' + rId).remove();
+            reorganizarItemsMaterial();
+        });
+    }
+
+    function reorganizarItemsMaterial() {
+        $('#tbody-material-items tr').each(function(idx) {
+            $(this).find('td:first').text(idx + 1);
+        });
+    }
+
+    // Agregar primera fila por defecto
+    agregarFilaMaterial();
+
+    $('#btn-add-material-row').on('click', function() {
+        agregarFilaMaterial();
+    });
+
+    // GUARDAR REPORTES DE MATERIALES
+    $('#form-consumo-materiales').on('submit', function(e) {
+        e.preventDefault();
+        var $msg = $('#mat-form-msg');
+        var $btn = $(this).find('.ruteo-submit-btn');
+
+        var items = [];
+        $('#tbody-material-items tr').each(function() {
+            var desc = $(this).find('.mat-desc').val();
+            var und = $(this).find('.mat-unidad').val();
+            var cant = $(this).find('.mat-cant').val();
+            var sap = $(this).find('.mat-sap').val();
+            var drum = $(this).find('.mat-drum').val();
+
+            if (desc) {
+                items.push({
+                    descripcion: desc,
+                    unidad: und,
+                    cantidad: cant,
+                    codigo_sap: sap,
+                    drum: drum
+                });
+            }
+        });
+
+        if (items.length === 0) {
+            $msg.addClass('error').text('Agrega al menos un material utilizado.').fadeIn(200);
+            return;
+        }
+
+        $msg.removeClass('success error').hide();
+        $btn.prop('disabled', true);
+
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'ruteo_save_materiales',
+                nonce: wpRuteoAjax.nonce,
+                incidencia: $('#mat-incidencia').val(),
+                crq: $('#mat-crq').val(),
+                almacen_pm: $('#mat-almacen-pm').val(),
+                tramo: $('#mat-tramo').val(),
+                fecha: $('#mat-fecha').val(),
+                descripcion: $('#mat-descripcion').val(),
+                items: JSON.stringify(items)
+            },
+            success: function(res) {
+                $btn.prop('disabled', false);
+                if (res.success) {
+                    $msg.addClass('success').text(res.data.message).fadeIn(200);
+                    $('#form-consumo-materiales')[0].reset();
+                    $('#tbody-material-items').empty();
+                    materialRowCount = 0;
+                    agregarFilaMaterial();
+                    cargarMateriales();
+                    setTimeout(function() { $msg.fadeOut(300); }, 5000);
+                } else {
+                    $msg.addClass('error').text(res.data.message || 'Error al guardar reporte.').fadeIn(200);
+                }
+            },
+            error: function() {
+                $btn.prop('disabled', false);
+                $msg.addClass('error').text('Error de conexion.').fadeIn(200);
+            }
+        });
+    });
+
+    var allMaterialesList = [];
+
+    function cargarMateriales() {
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'ruteo_get_materiales',
+                nonce: wpRuteoAjax.nonce
+            },
+            success: function(res) {
+                if (res.success && res.data && res.data.materiales) {
+                    allMaterialesList = res.data.materiales;
+                    $('#dash-stat-materiales').text(allMaterialesList.length);
+                    renderTablaMateriales(allMaterialesList);
+                }
+            }
+        });
+    }
+
+    function renderTablaMateriales(list) {
+        var $tbody = $('#mat-reports-tbody');
+        $tbody.empty();
+
+        if (list.length === 0) {
+            $tbody.append('<tr><td colspan="7" style="text-align:center; padding: 20px;">No hay reportes de materiales registrados aun.</td></tr>');
+            return;
+        }
+
+        list.forEach(function(r) {
+            var itemsSummary = r.items ? r.items.map(function(it) {
+                return it.cantidad + ' ' + it.unidad + ' ' + it.descripcion + (it.codigo_sap ? ' (' + it.codigo_sap + ')' : '');
+            }).join('<br>') : '-';
+
+            var tr = '<tr>' +
+                '<td>' + (r.fecha || '-') + '</td>' +
+                '<td><strong>' + r.incidencia + '</strong>' + (r.crq ? '<br><small style="color:var(--text-muted);">' + r.crq + '</small>' : '') + '</td>' +
+                '<td><span class="status-badge-info">' + r.almacen_pm + '</span></td>' +
+                '<td>' + r.tramo + '</td>' +
+                '<td>' + r.descripcion + '</td>' +
+                '<td style="font-size: 12px; line-height: 1.4;">' + itemsSummary + '</td>' +
+                '<td>' + r.user + '</td>' +
+            '</tr>';
+            $tbody.append(tr);
+        });
+    }
+
+    // Filtros de busqueda de materiales
+    $('#mat-search, #filter-mat-pm').on('input change', function() {
+        var q = $('#mat-search').val().toLowerCase();
+        var pm = $('#filter-mat-pm').val();
+
+        var filtrados = allMaterialesList.filter(function(r) {
+            var matchPm = !pm || r.almacen_pm === pm;
+            var text = (r.incidencia + ' ' + r.crq + ' ' + r.tramo + ' ' + r.descripcion).toLowerCase();
+            var matchQ = !q || text.indexOf(q) > -1;
+            return matchPm && matchQ;
+        });
+
+        renderTablaMateriales(filtrados);
+    });
+
+    // --- ACCIONES SLA ---
+    $('.btn-sla-action').on('click', function() {
+        var type = $(this).data('type');
+        alert('Modulo "' + type + '" seleccionado. Se utilizara para generar el formato estandarizado.');
+    });
+
+    // --- LOGIN AJAX ---
     $(document).on('submit', '.ruteo-auth-login-form, #ruteo-login-form', function(e) {
         e.preventDefault();
         var $form = $(this);
         var $msg = $form.find('.ruteo-message').length ? $form.find('.ruteo-message') : $('#login-message');
         var $btn = $form.find('.ruteo-submit-btn');
-        var isRedirect = $form.data('redirect') === true;
 
-        var usernameVal = $form.find('input[name="username"]').val() || $('#login-username').val();
-        var passwordVal = $form.find('input[name="password"]').val() || $('#login-password').val();
+        var usernameVal = $form.find('input[name="username"]').val();
+        var passwordVal = $form.find('input[name="password"]').val();
 
         $msg.removeClass('success error').hide();
-        $btn.addClass('loading').prop('disabled', true);
+        $btn.prop('disabled', true);
 
         $.ajax({
             url: wpRuteoAjax.ajaxurl,
@@ -229,24 +409,20 @@ jQuery(document).ready(function($) {
                 password: passwordVal
             },
             success: function(res) {
-                $btn.removeClass('loading').prop('disabled', false);
+                $btn.prop('disabled', false);
                 if (res.success) {
                     $msg.addClass('success').text(res.data.message).fadeIn(300);
                     var u = res.data.user;
                     u.isLoggedIn = true;
-                    // Sincronizar estado global
                     wpRuteoAjax.user = u;
                     actualizarInterfazUsuario(u);
-                    
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 500);
+                    setTimeout(function() { window.location.reload(); }, 500);
                 } else {
                     $msg.addClass('error').text(res.data.message || 'Error al iniciar sesion.').fadeIn(300);
                 }
             },
             error: function() {
-                $btn.removeClass('loading').prop('disabled', false);
+                $btn.prop('disabled', false);
                 $msg.addClass('error').text('Error de conexion al servidor.').fadeIn(300);
             }
         });
@@ -255,49 +431,33 @@ jQuery(document).ready(function($) {
     // LOGOUT AJAX
     $('#btn-ruteo-logout').on('click', function() {
         if (!confirm('Deseas cerrar la sesion actual?')) return;
-
         $.ajax({
             url: wpRuteoAjax.ajaxurl,
             type: 'POST',
-            data: {
-                action: 'ruteo_logout',
-                nonce: wpRuteoAjax.nonce
-            },
-            success: function() {
-                window.location.reload();
-            }
+            data: { action: 'ruteo_logout', nonce: wpRuteoAjax.nonce },
+            success: function() { window.location.reload(); }
         });
     });
 
-    // GESTION DE USUARIOS (SOLO ADMIN)
-    $('#btn-toggle-create-user').on('click', function() {
-        $('#user-create-card').slideToggle(200);
-    });
-
-    $('#btn-cancel-create-user').on('click', function() {
-        $('#user-create-card').slideUp(200);
-    });
+    // GESTION DE USUARIOS
+    $('#btn-toggle-create-user').on('click', function() { $('#user-create-card').slideToggle(200); });
+    $('#btn-cancel-create-user').on('click', function() { $('#user-create-card').slideUp(200); });
 
     function cargarUsuarios() {
         $('#users-count-note').text('Cargando usuarios...');
         $.ajax({
             url: wpRuteoAjax.ajaxurl,
             type: 'POST',
-            data: {
-                action: 'ruteo_get_users',
-                nonce: wpRuteoAjax.nonce
-            },
+            data: { action: 'ruteo_get_users', nonce: wpRuteoAjax.nonce },
             success: function(res) {
                 if (res.success && res.data && res.data.users) {
                     var users = res.data.users;
                     $('#users-count-note').text('Total cuentas: ' + users.length);
+                    $('#dash-stat-users').text(users.length);
                     renderTablaUsuarios(users);
                 } else {
                     $('#users-count-note').text('Error al obtener usuarios.');
                 }
-            },
-            error: function() {
-                $('#users-count-note').text('Error de conexion.');
             }
         });
     }
@@ -307,24 +467,26 @@ jQuery(document).ready(function($) {
         $tbody.empty();
 
         if (users.length === 0) {
-            $tbody.append('<tr><td colspan="6" style="text-align:center;">No hay usuarios registrados.</td></tr>');
+            $tbody.append('<tr><td colspan="8" style="text-align:center;">No hay usuarios registrados.</td></tr>');
             return;
         }
 
         users.forEach(function(u) {
             var roleBadge = u.role === 'Admin' ? 
-                '<span class="badge-role-admin">Admin</span>' : 
-                '<span class="badge-role-worker">Worker</span>';
-            
+                '<span class="status-badge-active">Admin</span>' : 
+                '<span class="status-badge-info">Worker</span>';
+
+            var avatarHtml = u.avatar ? '<img src="' + u.avatar + '" alt="Avatar">' : (u.displayName || u.username || '?').charAt(0).toUpperCase();
+
             var tr = '<tr>' +
-                '<td>' + u.id + '</td>' +
+                '<td><div class="user-avatar-table">' + avatarHtml + '</div></td>' +
                 '<td><strong>' + u.username + '</strong></td>' +
                 '<td>' + (u.displayName || u.username) + '</td>' +
                 '<td>' + u.email + '</td>' +
+                '<td>' + (u.phone || '-') + '</td>' +
+                '<td>' + (u.pmAssigned || 'Sin asignar') + '</td>' +
                 '<td>' + roleBadge + '</td>' +
-                '<td>' +
-                    '<button class="btn-danger btn-del-user" data-id="' + u.id + '" data-name="' + u.username + '">Eliminar</button>' +
-                '</td>' +
+                '<td><button class="btn-del-row btn-del-user" data-id="' + u.id + '" data-name="' + u.username + '">Eliminar</button></td>' +
             '</tr>';
             $tbody.append(tr);
         });
@@ -338,24 +500,34 @@ jQuery(document).ready(function($) {
         });
     }
 
-    // CREAR USUARIO
+    // CREAR USUARIO AMPLIADO
     $('#form-create-user').on('submit', function(e) {
         e.preventDefault();
         var $msg = $('#create-user-msg');
         $msg.removeClass('success error').hide();
 
+        var formData = new FormData();
+        formData.append('action', 'ruteo_create_user');
+        formData.append('nonce', wpRuteoAjax.nonce);
+        formData.append('display_name', $('#user-display-name-input').val());
+        formData.append('username', $('#user-username-input').val());
+        formData.append('email', $('#user-email-input').val());
+        formData.append('password', $('#user-password-input').val());
+        formData.append('role', $('#user-role-select').val());
+        formData.append('phone', $('#user-phone-input').val());
+        formData.append('pm_assigned', $('#user-pm-select').val());
+
+        var fileInput = $('#user-avatar-input')[0];
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            formData.append('avatar', fileInput.files[0]);
+        }
+
         $.ajax({
             url: wpRuteoAjax.ajaxurl,
             type: 'POST',
-            data: {
-                action: 'ruteo_create_user',
-                nonce: wpRuteoAjax.nonce,
-                display_name: $('#user-display-name-input').val(),
-                username: $('#user-username-input').val(),
-                email: $('#user-email-input').val(),
-                password: $('#user-password-input').val(),
-                role: $('#user-role-select').val()
-            },
+            data: formData,
+            processData: false,
+            contentType: false,
             success: function(res) {
                 if (res.success) {
                     $msg.addClass('success').text(res.data.message).fadeIn(200);
@@ -376,27 +548,47 @@ jQuery(document).ready(function($) {
         $.ajax({
             url: wpRuteoAjax.ajaxurl,
             type: 'POST',
-            data: {
-                action: 'ruteo_delete_user',
-                nonce: wpRuteoAjax.nonce,
-                user_id: userId
-            },
+            data: { action: 'ruteo_delete_user', nonce: wpRuteoAjax.nonce, user_id: userId },
             success: function(res) {
-                if (res.success) {
-                    cargarUsuarios();
-                } else {
-                    alert(res.data.message || 'No se pudo eliminar el usuario.');
-                }
-            },
-            error: function() {
-                alert('Error de conexion al intentar eliminar el usuario.');
+                if (res.success) cargarUsuarios();
+                else alert(res.data.message || 'No se pudo eliminar el usuario.');
             }
         });
     }
 
-    $('.input-wrapper input, .input-wrapper select, .input-wrapper textarea').on('focus', function() {
-        $(this).parent().addClass('focused');
-    }).on('blur', function() {
-        $(this).parent().removeClass('focused');
+    // ACTUALIZAR PERFIL
+    $('#form-update-profile').on('submit', function(e) {
+        e.preventDefault();
+        var $msg = $('#prof-form-msg');
+        $msg.removeClass('success error').hide();
+
+        var formData = new FormData();
+        formData.append('action', 'ruteo_update_profile');
+        formData.append('nonce', wpRuteoAjax.nonce);
+        formData.append('display_name', $('#prof-display-name').val());
+        formData.append('phone', $('#prof-phone').val());
+        formData.append('pm_assigned', $('#prof-pm').val());
+
+        var fileInput = $('#prof-avatar-file')[0];
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            formData.append('avatar', fileInput.files[0]);
+        }
+
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl,
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                if (res.success) {
+                    $msg.addClass('success').text(res.data.message).fadeIn(200);
+                    setTimeout(function() { window.location.reload(); }, 600);
+                } else {
+                    $msg.addClass('error').text(res.data.message || 'Error al actualizar perfil.').fadeIn(200);
+                }
+            }
+        });
     });
+
 });
