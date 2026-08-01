@@ -91,10 +91,17 @@ function buildResponse(obj) {
 
 function doPost(e) {
   try {
-    var FOLDER_ID = '1m19aeKOuPJYw01yvFPP9_SGmpdJgUg_q';
+    var FOLDER_ID = '1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
 
     var data = JSON.parse(e.postData.contents);
     
+    // Si la peticion es para crear/sincronizar documento Google Docs en Drive
+    if (data.action_type === 'create_doc') {
+      var docUrl = generarGoogleDoc(data.record || data, FOLDER_ID);
+      return ContentService.createTextOutput(JSON.stringify({"status": "success", "doc_url": docUrl}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // Si la peticion es para guardar reporte de materiales
     if (data.action_type === 'save_materiales') {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -145,7 +152,7 @@ function doPost(e) {
         "Fecha", "Tramo", "ID Consol", "Estructura", "Tipo Estructura", "Altura",
         "Ubicacion", "Codigo", "Mufa", "Retencion", "Suspension", "Cruceta",
         "Hebillas", "Fleje", "Amortiguador", "Brazo Extensor", "Kit Retenida",
-        "Observacion", "Foto 1", "Foto 2", "Link KMZ"
+        "Observacion", "Foto 1", "Foto 2", "Link KMZ", "Link Docx"
       ]);
       nextRow = 2;
     }
@@ -171,6 +178,7 @@ function doPost(e) {
     data.foto2_url = saveImageToDrive(data.foto2_base64, "foto2_" + dateString + ".jpg");
 
     var kmzUrl = generarKMZ(data, FOLDER_ID);
+    var docUrl = generarGoogleDoc(data, FOLDER_ID);
     
     var row = [
       new Date(),
@@ -193,17 +201,72 @@ function doPost(e) {
       data.observacion || '',
       data.foto1_url || '',
       data.foto2_url || '',
-      kmzUrl
+      kmzUrl,
+      docUrl
     ];
     
     sheet.appendRow(row);
     
-    return ContentService.createTextOutput(JSON.stringify({"status": "success", "message": "Datos y fotos guardados en Drive, KMZ generado"}))
+    return ContentService.createTextOutput(JSON.stringify({"status": "success", "message": "Datos, fotos, KMZ y Documento Google Docs guardados en Drive", "doc_url": docUrl}))
       .setMimeType(ContentService.MimeType.JSON);
-      
+
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": error.toString()}))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+}
+
+function generarGoogleDoc(data, folderId) {
+  try {
+    var folder = DriveApp.getFolderById(folderId);
+    var docName = "Ficha_Ruteo_" + (data.id_consol || data.codigo || ("Rec_" + new Date().getTime()));
+    var doc = DocumentApp.create(docName);
+    var body = doc.getBody();
+
+    body.appendParagraph("FICHA TECNICA DE REGISTRO DE CAMPO").setHeading(DocumentApp.HeadingLevel.HEADING1);
+    body.appendParagraph("Fecha: " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"));
+    body.appendParagraph("Tramo: " + (data.tramo || "-") + " | Codigo: " + (data.codigo || "-") + " | ID Consol: " + (data.id_consol || "-"));
+    body.appendParagraph("");
+
+    body.appendTable([
+      ["Parametro", "Valor Registrado"],
+      ["Estructura", data.estructura || "-"],
+      ["Tipo Estructura", data.tipo_estructura || "-"],
+      ["Altura", (data.altura_estructura || data.altura || "-") + " m"],
+      ["Ubicacion Coordenadas", data.ubicacion || "-"],
+      ["Codigo", data.codigo || "-"],
+      ["Mufa", data.mufa || "0"],
+      ["Retencion", data.retencion || "0"],
+      ["Suspension", data.suspension || "0"],
+      ["Cruceta", data.cruceta || "0"],
+      ["Hebillas", data.hebillas || "0"],
+      ["Fleje", data.fleje || "0"],
+      ["Amortiguador", data.amortiguador || "0"],
+      ["Brazo Extensor", data.brazo_extensor || "0"],
+      ["Kit Retenida", data.kit_retenida || "0"],
+      ["Observaciones", data.observacion || "-"]
+    ]);
+
+    body.appendParagraph("");
+    if (data.foto1_url || data.foto_1) {
+      body.appendParagraph("Fotografia 1: " + (data.foto1_url || data.foto_1));
+    }
+    if (data.foto2_url || data.foto_2) {
+      body.appendParagraph("Fotografia 2: " + (data.foto2_url || data.foto_2));
+    }
+
+    doc.saveAndClose();
+
+    var docFile = DriveApp.getFileById(doc.getId());
+    folder.addFile(docFile);
+    try {
+      DriveApp.getRootFolder().removeFile(docFile);
+    } catch(err){}
+
+    docFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return docFile.getUrl();
+  } catch (err) {
+    return "";
   }
 }
 

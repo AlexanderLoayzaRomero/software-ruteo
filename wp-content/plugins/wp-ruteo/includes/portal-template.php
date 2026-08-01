@@ -929,7 +929,8 @@ body.admin-bar .ruteo-app-layout {
             observacion: r.observacion || r.observacin || '',
             foto_1: r.foto_1 || r.foto1_url || r.foto1 || '',
             foto_2: r.foto_2 || r.foto2_url || r.foto2 || '',
-            link_kmz: r.link_kmz || r.kmz || ''
+            link_kmz: r.link_kmz || r.kmz || '',
+            link_docx: r.link_docx || r.link_doc || r.doc_url || r.docx || ''
         };
     }
     window.normalizarRegistroRuteo = normalizarRegistro;
@@ -945,7 +946,7 @@ body.admin-bar .ruteo-app-layout {
         var icon = isEarth ? 
             '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10z"/></svg>' :
             '<svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>';
-        return '<a href="' + url + '" target="_blank" class="portal-link portal-link--' + color + '" title="Abrir en Google Earth / Descargar KMZ">' +
+        return '<a href="' + url + '" target="_blank" class="portal-link portal-link--' + color + '" title="Abrir en Google Drive">' +
                icon + ' ' + label + '</a>';
     }
 
@@ -982,8 +983,11 @@ body.admin-bar .ruteo-app-layout {
                 '<td>' + linkIcon(r.foto_2, 'Foto 2', 'blue') + '</td>' +
                 '<td>' + linkIcon(r.link_kmz, 'Earth KMZ', 'green') + '</td>' +
                 '<td>' +
-                '<a href="javascript:void(0)" onclick="window.generarDocumentoPDF(' + idx + ')" title="PDF" class="portal-link portal-link--red" style="margin-right:5px; padding:2px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg></a>' +
-                '<a href="javascript:void(0)" onclick="window.generarDocumentoWord(' + idx + ')" title="Word" class="portal-link portal-link--blue" style="padding:2px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></a>' +
+                '<a href="javascript:void(0)" onclick="window.generarDocumentoPDF(' + idx + ')" title="Descargar PDF" class="portal-link portal-link--red" style="margin-right:4px; padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> PDF</a>' +
+                (r.link_docx ? 
+                  '<a href="' + r.link_docx + '" target="_blank" title="Abrir Google Doc en Drive" class="portal-link portal-link--blue" style="padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Doc Drive</a>' :
+                  '<a href="javascript:void(0)" onclick="window.generarDocumentoWord(' + idx + ')" title="Generar / Descargar DOCX" class="portal-link portal-link--blue" style="padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Docx</a>'
+                ) +
                 '</td>';
             tbody.appendChild(tr);
         });
@@ -1365,14 +1369,65 @@ body.admin-bar .ruteo-app-layout {
         if (pending === 0) _hacer(imgs);
     };
 
-    // Word individual por registro
+    // Word / Google Docs individual por registro
+    function downloadHtmlWordBlobRuteo(r) {
+        var htmlContent = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>" +
+        "<head><meta charset='utf-8'><title>Ficha Tecnica</title><style>body{font-family:Calibri,sans-serif;padding:20px;} table{width:100%;border-collapse:collapse;margin:15px 0;} th,td{border:1px solid #ccc;padding:8px;text-align:left;} th{background:#0097D8;color:#fff;} h1{color:#0097D8;text-align:center;}</style></head>" +
+        "<body>" +
+        "<h1>FICHA TECNICA DE REGISTRO DE CAMPO</h1>" +
+        "<p style='text-align:center;'><b>Fecha:</b> " + (r.fecha || "-") + " | <b>Tramo:</b> " + (r.tramo || "-") + " | <b>Codigo:</b> " + (r.codigo || "-") + "</p>" +
+        "<table>" +
+        "<tr><th>Parametro</th><th>Valor Registrado</th></tr>" +
+        "<tr><td>Estructura</td><td>" + (r.estructura || "-") + "</td></tr>" +
+        "<tr><td>Tipo Estructura</td><td>" + (r.tipo_estructura || "-") + "</td></tr>" +
+        "<tr><td>Altura</td><td>" + (r.altura || "-") + " m</td></tr>" +
+        "<tr><td>Ubicacion</td><td>" + (r.ubicacion || "-") + "</td></tr>" +
+        "<tr><td>ID Consol</td><td>" + (r.id_consol || "-") + "</td></tr>" +
+        "<tr><td>Mufa</td><td>" + (r.mufa || "0") + "</td></tr>" +
+        "<tr><td>Retencion</td><td>" + (r.retencion || "0") + "</td></tr>" +
+        "<tr><td>Suspension</td><td>" + (r.suspension || "0") + "</td></tr>" +
+        "<tr><td>Cruceta</td><td>" + (r.cruceta || "0") + "</td></tr>" +
+        "<tr><td>Hebillas</td><td>" + (r.hebillas || "0") + "</td></tr>" +
+        "<tr><td>Fleje</td><td>" + (r.fleje || "0") + "</td></tr>" +
+        "<tr><td>Amortiguador</td><td>" + (r.amortiguador || "0") + "</td></tr>" +
+        "<tr><td>Brazo Extensor</td><td>" + (r.brazo_extensor || "0") + "</td></tr>" +
+        "<tr><td>Kit Retenida</td><td>" + (r.kit_retenida || "0") + "</td></tr>" +
+        "<tr><td>Observacion</td><td>" + (r.observacion || "-") + "</td></tr>" +
+        "</table>";
+
+        if (r.foto_1) htmlContent += "<p><b>Foto 1:</b> <a href='" + r.foto_1 + "'>" + r.foto_1 + "</a></p>";
+        if (r.foto_2) htmlContent += "<p><b>Foto 2:</b> <a href='" + r.foto_2 + "'>" + r.foto_2 + "</a></p>";
+
+        htmlContent += "</body></html>";
+
+        var blob = new Blob(['\ufeff', htmlContent], { type: 'application/msword' });
+        var fileName = 'Ficha_Ruteo_' + (r.codigo || r.id_consol || 'Registro') + '.doc';
+        if (typeof window.downloadBlobRuteo === 'function') {
+            window.downloadBlobRuteo(blob, fileName);
+        } else {
+            var u = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = u; a.download = fileName;
+            document.body.appendChild(a); a.click();
+            setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(u); }, 500);
+        }
+    }
+
     window.generarDocumentoWord = function(idx) {
         var raw = window._ruteoRegistros[idx]; if (!raw) return;
         var r = window.normalizarRegistroRuteo ? window.normalizarRegistroRuteo(raw) : raw;
         
+        if (r.link_docx) {
+            window.open(r.link_docx, '_blank');
+            return;
+        }
+
         function cargarDocx() {
             if (window.docx) { _hacerWord(); return; }
-            var s = document.createElement("script"); s.src = "https://unpkg.com/docx@8.5.0/build/index.js"; s.onload = _hacerWord; document.head.appendChild(s);
+            var s = document.createElement("script"); s.src = "https://unpkg.com/docx@8.5.0/build/index.js";
+            s.onload = _hacerWord;
+            s.onerror = function() { downloadHtmlWordBlobRuteo(r); };
+            document.head.appendChild(s);
         }
 
         function base64ToArrayBuffer(base64) {
@@ -1385,7 +1440,7 @@ body.admin-bar .ruteo-app-layout {
 
         function _hacerWord() {
             var docx = window.docx;
-            if (!docx) { alert("Libreria docx no disponible."); return; }
+            if (!docx) { downloadHtmlWordBlobRuteo(r); return; }
             
             var imgs = [null, null], pending = 0;
             function checkDone() { pending--; if (pending <= 0) _construir(imgs); }
@@ -1397,62 +1452,67 @@ body.admin-bar .ruteo-app-layout {
             if (pending === 0) _construir(imgs);
             
             function _construir(imgsData) {
-                var paragraphs = [
-                    new docx.Paragraph({ text: "FICHA TECNICA DE REGISTRO", heading: docx.HeadingLevel.HEADING_1, alignment: docx.AlignmentType.CENTER }),
-                    new docx.Paragraph({ text: "Fecha: " + r.fecha, alignment: docx.AlignmentType.CENTER }),
-                    new docx.Paragraph({ text: "Tramo: " + r.tramo + " | Codigo: " + r.codigo, alignment: docx.AlignmentType.CENTER }),
-                    new docx.Paragraph({ text: "" })
-                ];
-                
-                var tableData = [
-                    ["Estructura",r.estructura],["Tipo",r.tipo_estructura],["Altura",r.altura+" m"],["Ubicacion",r.ubicacion],
-                    ["ID Consol",r.id_consol],["Mufa",r.mufa],["Retencion",r.retencion],["Suspension",r.suspension],
-                    ["Cruceta",r.cruceta],["Hebillas",r.hebillas],["Fleje",r.fleje],["Amortiguador",r.amortiguador],
-                    ["Brazo Ext.",r.brazo_extensor],["Kit Ret.",r.kit_retenida],["Obs.",r.observacion]
-                ];
-                
-                var rows = tableData.map(function(item) {
-                    return new docx.TableRow({
-                        children: [
-                            new docx.TableCell({ children: [new docx.Paragraph({ text: item[0] })], width: { size: 30, type: docx.WidthType.PERCENTAGE } }),
-                            new docx.TableCell({ children: [new docx.Paragraph({ text: item[1] || "-" })], width: { size: 70, type: docx.WidthType.PERCENTAGE } })
-                        ]
+                try {
+                    var paragraphs = [
+                        new docx.Paragraph({ text: "FICHA TECNICA DE REGISTRO", heading: docx.HeadingLevel.HEADING_1, alignment: docx.AlignmentType.CENTER }),
+                        new docx.Paragraph({ text: "Fecha: " + r.fecha, alignment: docx.AlignmentType.CENTER }),
+                        new docx.Paragraph({ text: "Tramo: " + r.tramo + " | Codigo: " + r.codigo, alignment: docx.AlignmentType.CENTER }),
+                        new docx.Paragraph({ text: "" })
+                    ];
+                    
+                    var tableData = [
+                        ["Estructura",r.estructura],["Tipo",r.tipo_estructura],["Altura",r.altura+" m"],["Ubicacion",r.ubicacion],
+                        ["ID Consol",r.id_consol],["Mufa",r.mufa],["Retencion",r.retencion],["Suspension",r.suspension],
+                        ["Cruceta",r.cruceta],["Hebillas",r.hebillas],["Fleje",r.fleje],["Amortiguador",r.amortiguador],
+                        ["Brazo Ext.",r.brazo_extensor],["Kit Ret.",r.kit_retenida],["Obs.",r.observacion]
+                    ];
+                    
+                    var rows = tableData.map(function(item) {
+                        return new docx.TableRow({
+                            children: [
+                                new docx.TableCell({ children: [new docx.Paragraph({ text: item[0] })], width: { size: 30, type: docx.WidthType.PERCENTAGE } }),
+                                new docx.TableCell({ children: [new docx.Paragraph({ text: item[1] || "-" })], width: { size: 70, type: docx.WidthType.PERCENTAGE } })
+                            ]
+                        });
                     });
-                });
-                
-                paragraphs.push(new docx.Table({ rows: rows, width: { size: 100, type: docx.WidthType.PERCENTAGE } }));
-                paragraphs.push(new docx.Paragraph({ text: "" }));
-                
-                // Imgs
-                imgsData.forEach(function(imgData, i) {
-                    paragraphs.push(new docx.Paragraph({ text: "FOTOGRAFIA " + (i+1), alignment: docx.AlignmentType.CENTER }));
-                    if (imgData) {
-                        try {
-                            var arrBuffer = base64ToArrayBuffer(imgData);
-                            var image = new docx.ImageRun({
-                                data: arrBuffer,
-                                transformation: { width: 300, height: 200 }
-                            });
-                            paragraphs.push(new docx.Paragraph({ children: [image], alignment: docx.AlignmentType.CENTER }));
-                        } catch(e) {
-                            paragraphs.push(new docx.Paragraph({ text: "[Error al cargar imagen]", alignment: docx.AlignmentType.CENTER }));
-                        }
-                    } else {
-                        paragraphs.push(new docx.Paragraph({ text: "[Sin imagen]", alignment: docx.AlignmentType.CENTER }));
-                    }
+                    
+                    paragraphs.push(new docx.Table({ rows: rows, width: { size: 100, type: docx.WidthType.PERCENTAGE } }));
                     paragraphs.push(new docx.Paragraph({ text: "" }));
-                });
-                
-                var doc = new docx.Document({
-                    sections: [{
-                        properties: {},
-                        children: paragraphs
-                    }]
-                });
-                
-                docx.Packer.toBlob(doc).then(function(blob) {
-                    window.downloadBlobRuteo(blob, "Ficha_Ruteo_"+r.codigo+".docx");
-                });
+                    
+                    imgsData.forEach(function(imgData, i) {
+                        paragraphs.push(new docx.Paragraph({ text: "FOTOGRAFIA " + (i+1), alignment: docx.AlignmentType.CENTER }));
+                        if (imgData) {
+                            try {
+                                var arrBuffer = base64ToArrayBuffer(imgData);
+                                var image = new docx.ImageRun({
+                                    data: arrBuffer,
+                                    transformation: { width: 300, height: 200 }
+                                });
+                                paragraphs.push(new docx.Paragraph({ children: [image], alignment: docx.AlignmentType.CENTER }));
+                            } catch(e) {
+                                paragraphs.push(new docx.Paragraph({ text: "[Error al cargar imagen]", alignment: docx.AlignmentType.CENTER }));
+                            }
+                        } else {
+                            paragraphs.push(new docx.Paragraph({ text: "[Sin imagen]", alignment: docx.AlignmentType.CENTER }));
+                        }
+                        paragraphs.push(new docx.Paragraph({ text: "" }));
+                    });
+                    
+                    var doc = new docx.Document({
+                        sections: [{
+                            properties: {},
+                            children: paragraphs
+                        }]
+                    });
+                    
+                    docx.Packer.toBlob(doc).then(function(blob) {
+                        window.downloadBlobRuteo(blob, "Ficha_Ruteo_"+r.codigo+".docx");
+                    }).catch(function() {
+                        downloadHtmlWordBlobRuteo(r);
+                    });
+                } catch(e) {
+                    downloadHtmlWordBlobRuteo(r);
+                }
             }
         }
         
