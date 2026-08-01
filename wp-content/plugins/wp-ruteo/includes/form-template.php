@@ -27,8 +27,7 @@ $is_logged_in = is_user_logged_in();
 
         <form id="ruteo-form" class="ruteo-form" enctype="multipart/form-data" style="<?php echo $is_logged_in ? '' : 'display:none;'; ?>">
             <div class="ruteo-header animate-slide-up">
-                <h2 style="margin-top:0; font-size:24px;">Datos de Ruteo</h2>
-                <p style="color:var(--text-muted); margin-bottom:24px;">Complete la informacion de la estructura en campo con precision</p>
+                <p style="color:var(--text-muted); margin: 0 0 24px 0;">Complete la informacion de la estructura en campo con precision</p>
             </div>
 
             <div class="ruteo-form-section">

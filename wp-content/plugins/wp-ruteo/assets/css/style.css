@@ -666,41 +666,82 @@ body.admin-bar .ruteo-app-layout {
 }
 
 /* --- TABLAS Y PORTAL --- */
-.portal-actions {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 20px;
-    flex-wrap: wrap;
+.registros-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: var(--shadow-md);
 }
 
-.portal-btn {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-radius: var(--radius);
-    border: none;
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: var(--transition);
-}
-
-.portal-btn--refresh { background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); }
-.portal-btn--refresh:hover { border-color: var(--secondary); color: var(--secondary); }
-
-.portal-btn--download { background: var(--secondary); color: white; }
-.portal-btn--download:hover { background: var(--secondary-hover); }
-
-.portal-btn--excel { background: var(--primary); color: white; }
-.portal-btn--excel:hover { background: var(--primary-hover); }
-
-.portal-filters-row {
+.portal-toolbar-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 20px;
+    flex-wrap: wrap;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.portal-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.portal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: var(--radius);
+    border: none;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.portal-btn--refresh {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+}
+.portal-btn--refresh:hover {
+    border-color: var(--secondary);
+    color: var(--secondary);
+    transform: translateY(-1px);
+}
+
+.portal-btn--download {
+    background: var(--secondary);
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(0, 151, 216, 0.3);
+}
+.portal-btn--download:hover {
+    background: var(--secondary-hover);
+    box-shadow: 0 6px 16px rgba(0, 151, 216, 0.4);
+    transform: translateY(-1px);
+}
+
+.portal-btn--excel {
+    background: var(--primary);
+    color: #FFFFFF;
+    box-shadow: 0 4px 12px rgba(131, 202, 22, 0.3);
+}
+.portal-btn--excel:hover {
+    background: var(--primary-hover);
+    box-shadow: 0 6px 16px rgba(131, 202, 22, 0.4);
+    transform: translateY(-1px);
+}
+
+.portal-filters-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
     flex-wrap: wrap;
 }
 
@@ -716,39 +757,54 @@ body.admin-bar .ruteo-app-layout {
     color: var(--text-muted);
 }
 
-.filter-group select, .portal-search-wrap input {
-    padding: 8px 14px;
+.filter-group select {
+    padding: 9px 14px;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    background: var(--bg-card);
+    background: var(--bg-input);
     color: var(--text-main);
-    font-size: 14px;
+    font-size: 13px;
     outline: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.filter-group select:focus {
+    border-color: var(--secondary);
 }
 
 .portal-search-wrap {
     display: flex;
     align-items: center;
     gap: 8px;
-    background: var(--bg-card);
+    background: var(--bg-input);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 0 12px;
+    padding: 0 14px;
+    transition: var(--transition);
+}
+
+.portal-search-wrap:focus-within {
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 3px rgba(0, 151, 216, 0.15);
 }
 
 .portal-search-wrap input {
     border: none;
     background: transparent;
-    padding: 8px 0;
+    padding: 9px 0;
     width: 240px;
+    color: var(--text-main);
+    font-size: 13px;
+    outline: none;
 }
 
 .portal-table-wrapper {
     background: var(--bg-card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 20px;
-    box-shadow: var(--shadow);
+    padding: 0;
+    box-shadow: none;
 }
 
 .portal-table-scroll {
@@ -766,9 +822,10 @@ body.admin-bar .ruteo-app-layout {
 .portal-table th {
     background: var(--bg-subtle);
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 0.05em;
     padding: 12px 14px;
     border-bottom: 1px solid var(--border);
 }
@@ -777,10 +834,53 @@ body.admin-bar .ruteo-app-layout {
     padding: 12px 14px;
     border-bottom: 1px solid var(--border);
     color: var(--text-main);
+    font-size: 13px;
 }
 
 .portal-table tbody tr:hover {
     background: var(--bg-subtle);
+}
+
+.portal-code {
+    background: rgba(0, 151, 216, 0.1);
+    color: var(--secondary);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.portal-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: var(--transition);
+}
+
+.portal-link--blue {
+    background: rgba(0, 151, 216, 0.12);
+    color: var(--secondary);
+    border: 1px solid rgba(0, 151, 216, 0.25);
+}
+.portal-link--blue:hover {
+    background: var(--secondary);
+    color: #FFFFFF;
+}
+
+.portal-link--green {
+    background: rgba(131, 202, 22, 0.12);
+    color: var(--primary);
+    border: 1px solid rgba(131, 202, 22, 0.25);
+}
+.portal-link--green:hover {
+    background: var(--primary);
+    color: #FFFFFF;
 }
 
 /* --- FORMULARIO DE CONSUMO DE MATERIALES --- */
