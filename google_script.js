@@ -327,3 +327,59 @@ function generarKMZ(data, folderId) {
     return file.getUrl();
   }
 }
+
+// ---------------------------------------------------------------
+// FUNCION MANUAL EN APPS SCRIPT: Genera/Regenera Google Docs para
+// TODOS los registros existentes en la hoja de Google Sheets.
+// Se ejecuta directamente desde el editor seleccionando la funcion.
+// ---------------------------------------------------------------
+function generarDocumentosTodosLosRegistros() {
+  var FOLDER_ID = '1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  if (data.length <= 1) return;
+
+  var headers = data[0];
+  var docxColIndex = -1;
+  for (var h = 0; h < headers.length; h++) {
+    if (headers[h].toString().toLowerCase().indexOf('doc') > -1) {
+      docxColIndex = h;
+      break;
+    }
+  }
+
+  if (docxColIndex === -1) {
+    sheet.getRange(1, headers.length + 1).setValue("Link Docx");
+    docxColIndex = headers.length;
+  }
+
+  for (var i = 1; i < data.length; i++) {
+    var record = {
+      fecha: data[i][0],
+      tramo: data[i][1],
+      id_consol: data[i][2],
+      estructura: data[i][3],
+      tipo_estructura: data[i][4],
+      altura: data[i][5],
+      ubicacion: data[i][6],
+      codigo: data[i][7],
+      mufa: data[i][8],
+      retencion: data[i][9],
+      suspension: data[i][10],
+      cruceta: data[i][11],
+      hebillas: data[i][12],
+      fleje: data[i][13],
+      amortiguador: data[i][14],
+      brazo_extensor: data[i][15],
+      kit_retenida: data[i][16],
+      observacion: data[i][17],
+      foto1_url: data[i][18],
+      foto2_url: data[i][19]
+    };
+
+    var docUrl = generarGoogleDoc(record, FOLDER_ID);
+    if (docUrl) {
+      sheet.getRange(i + 1, docxColIndex + 1).setValue(docUrl);
+    }
+  }
+}
