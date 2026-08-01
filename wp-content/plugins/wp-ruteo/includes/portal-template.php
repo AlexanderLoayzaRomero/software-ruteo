@@ -881,9 +881,11 @@ body.admin-bar .ruteo-app-layout {
 </div>
 
 <script>
+window.AJAX_URL = '<?php echo $ajax_url; ?>';
+window.NONCE    = '<?php echo $nonce; ?>';
 (function() {
-    var AJAX_URL = '<?php echo $ajax_url; ?>';
-    var NONCE    = '<?php echo $nonce; ?>';
+    var AJAX_URL = window.AJAX_URL;
+    var NONCE    = window.NONCE;
     var IS_LOGGED_IN_WP = <?php echo is_user_logged_in() ? 'true' : 'false'; ?>;
     var allRegistros = [];
 
@@ -1424,15 +1426,18 @@ body.admin-bar .ruteo-app-layout {
             win.document.write('<div style="font-family:sans-serif; padding:40px; text-align:center; color:#0097D8;"><h2>Generando documento Google Docs en Drive...</h2><p>Por favor espere unos segundos mientras se abre en Google Drive.</p></div>');
         }
 
+        var activeNonce   = window.NONCE || '';
+        var activeAjaxUrl = window.AJAX_URL || '';
+
         var formData = new FormData();
         formData.append('action', 'ruteo_proxy_post');
-        formData.append('nonce', NONCE);
+        formData.append('nonce', activeNonce);
         formData.append('payload', JSON.stringify({
             action_type: 'create_doc',
             record: r
         }));
 
-        fetch(AJAX_URL, { method: 'POST', body: formData })
+        fetch(activeAjaxUrl, { method: 'POST', body: formData })
         .then(function(res) { return res.json(); })
         .then(function(json) {
             var docUrl = '';
