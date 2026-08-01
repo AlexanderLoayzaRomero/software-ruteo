@@ -216,9 +216,21 @@ function doPost(e) {
   }
 }
 
+function extraerFolderId(input) {
+  var DEFAULT_ID = '1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
+  if (!input || typeof input !== 'string') return DEFAULT_ID;
+  var str = input.trim();
+  if (str.indexOf('/folders/') > -1) {
+    var parts = str.split('/folders/');
+    var idPart = parts[1].split('?')[0].split('/')[0];
+    return idPart || DEFAULT_ID;
+  }
+  return str || DEFAULT_ID;
+}
+
 function generarGoogleDoc(data, folderId) {
   try {
-    var folder = DriveApp.getFolderById(folderId);
+    var validFolderId = extraerFolderId(folderId);
     var docName = "Ficha_Ruteo_" + (data.id_consol || data.codigo || ("Rec_" + new Date().getTime()));
     var doc = DocumentApp.create(docName);
     var body = doc.getBody();
@@ -258,14 +270,19 @@ function generarGoogleDoc(data, folderId) {
     doc.saveAndClose();
 
     var docFile = DriveApp.getFileById(doc.getId());
-    if (folderId) {
+    if (validFolderId) {
       try {
-        var targetFolder = DriveApp.getFolderById(folderId);
+        var targetFolder = DriveApp.getFolderById(validFolderId);
         docFile.moveTo(targetFolder);
-      } catch(fErr) {}
+      } catch(fErr) {
+        Logger.log("Error moviendo archivo a carpeta: " + fErr.toString());
+      }
     }
 
-    docFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    try {
+      docFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(sErr) {}
+
     return docFile.getUrl();
   } catch (err) {
     Logger.log("Error creando Google Doc: " + err.toString());
