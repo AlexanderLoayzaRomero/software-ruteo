@@ -1088,3 +1088,137 @@ body.admin-bar .ruteo-app-layout {
         grid-template-columns: 1fr;
     }
 }
+
+/* --- BOTON PARA REMOVER PREVISUALIZACION DE FOTOS --- */
+.preview {
+    position: relative;
+}
+
+.btn-remove-photo {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 28px;
+    height: 28px;
+    background: var(--error);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 50%;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(217, 38, 37, 0.4);
+    transition: var(--transition);
+    z-index: 10;
+}
+
+.preview.show .btn-remove-photo {
+    display: flex;
+}
+
+.btn-remove-photo:hover {
+    transform: scale(1.1);
+    background: #b81c1c;
+}
+
+/* --- OVERLAY MODAL SLA E INFORMES --- */
+.ruteo-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.ruteo-modal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%;
+    max-width: 520px;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    color: var(--text-main);
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: var(--bg-subtle);
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--menu-title);
+}
+
+.btn-close-modal {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    color: var(--text-muted);
+    cursor: pointer;
+    line-height: 1;
+    transition: var(--transition);
+}
+
+.btn-close-modal:hover {
+    color: var(--error);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+/* --- BOTON TOGGLE MOVIL Y BACKDROP --- */
+.mobile-toggle-btn {
+    display: none;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    color: var(--text-main);
+    padding: 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+}
+
+.ruteo-sidebar-backdrop {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+}
+
+@media (max-width: 768px) {
+    .mobile-toggle-btn {
+        display: flex;
+    }
+    
+    .ruteo-sidebar.open-mobile {
+        transform: translateX(0) !important;
+    }
+
+    .ruteo-sidebar-backdrop.show {
+        display: block;
+    }
+}

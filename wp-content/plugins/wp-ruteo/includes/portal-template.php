@@ -56,6 +56,7 @@ body.admin-bar .ruteo-app-layout {
 </style>
 
 <div class="ruteo-app-layout">
+    <div class="ruteo-sidebar-backdrop" id="ruteo-sidebar-backdrop"></div>
     
     <!-- BARRA LATERAL (SIDEBAR) -->
     <aside class="ruteo-sidebar" id="ruteo-sidebar">
@@ -149,11 +150,18 @@ body.admin-bar .ruteo-app-layout {
         <!-- HEADER SUPERIOR -->
         <header class="ruteo-top-header">
             <div class="header-left">
-                <h1 class="header-title" id="page-header-title">Panel de Administracion</h1>
-                <div class="header-subtitle-row">
-                    <span class="header-date" id="current-date-str">Viernes, 31 de julio de 2026</span>
-                    <span class="bullet-sep">•</span>
-                    <span class="header-subtext">Gestion Ruteo y Mantenimiento</span>
+                <button class="mobile-toggle-btn" id="btn-mobile-sidebar-toggle" type="button" title="Menu Movil">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                </button>
+                <div class="header-title-box">
+                    <h1 class="header-title" id="page-header-title">Panel de Administracion</h1>
+                    <div class="header-subtitle-row">
+                        <span class="header-date" id="current-date-str">--</span>
+                        <span class="bullet-sep">•</span>
+                        <span class="header-subtext">Gestion Ruteo y Mantenimiento</span>
+                    </div>
                 </div>
             </div>
 
@@ -818,6 +826,51 @@ body.admin-bar .ruteo-app-layout {
             </div>
         </section>
 
+        <!-- MODAL DE SLA E INFORMES -->
+        <div class="ruteo-modal-overlay" id="sla-modal-overlay" style="display:none;">
+            <div class="ruteo-modal-card animate-fade-in">
+                <div class="modal-header">
+                    <h3 id="sla-modal-title">Formato SLA / Informe Tecnico</h3>
+                    <button type="button" class="btn-close-modal" id="btn-close-sla-modal" title="Cerrar">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p id="sla-modal-desc" style="color:var(--text-muted); margin-bottom:16px;">Complete los detalles para generar el documento estandarizado.</p>
+                    <form id="form-generar-sla">
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label>Tramo de Intervencion</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="sla-input-tramo" placeholder="Ej: Tramo Cusco - Sicuani" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label>No. de Incidencia / Ticket</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="sla-input-incidencia" placeholder="Ej: INC-90412" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label>Responsable / Tecnico</label>
+                            <div class="input-wrapper">
+                                <input type="text" id="sla-input-tecnico" placeholder="Nombre del responsable" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:20px;">
+                            <label>Detalle o Resumen del Informe</label>
+                            <div class="input-wrapper">
+                                <textarea id="sla-input-detalle" rows="3" placeholder="Escriba los hallazgos o acciones realizadas..."></textarea>
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:12px; justify-content:flex-end;">
+                            <button type="button" class="portal-btn portal-btn--refresh" id="btn-cancel-sla-modal">Cancelar</button>
+                            <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
+                                <span>Generar Documento</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
     </main>
 </div>
 
@@ -963,26 +1016,28 @@ body.admin-bar .ruteo-app-layout {
     }
 
     function calcularStats(registros) {
-        var elTotal = document.getElementById('stat-total');
-        if (elTotal) elTotal.textContent = registros.length;
+        var elTotal = document.getElementById('dash-stat-total');
+        if (elTotal) elTotal.textContent = registros ? registros.length : 0;
 
-        var hoy = new Date();
-        var dd = String(hoy.getDate()).padStart(2, '0');
-        var mm = String(hoy.getMonth() + 1).padStart(2, '0');
-        var yyyy = hoy.getFullYear();
-        var hoyStr = dd + '/' + mm + '/' + yyyy;
-
-        var hoyCount = registros.filter(function(raw) {
-            var r = normalizarRegistro(raw);
-            return r.fecha.indexOf(hoyStr) === 0;
-        }).length;
-        var elHoy = document.getElementById('stat-hoy');
-        if (elHoy) elHoy.textContent = hoyCount;
-
-        var tramos = new Set(registros.map(function(raw) { return normalizarRegistro(raw).tramo; }).filter(Boolean));
-        var elTramos = document.getElementById('stat-tramos');
+        var tramos = new Set((registros || []).map(function(raw) { return normalizarRegistro(raw).tramo; }).filter(Boolean));
+        var elTramos = document.getElementById('dash-stat-tramos');
         if (elTramos) elTramos.textContent = tramos.size;
     }
+
+    function actualizarFechaHeader() {
+        var hoy = new Date();
+        var dias = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+        var meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+        var diaSemana = dias[hoy.getDay()];
+        var diaNum = hoy.getDate();
+        var mesNom = meses[hoy.getMonth()];
+        var anio = hoy.getFullYear();
+        var elDate = document.getElementById('current-date-str');
+        if (elDate) {
+            elDate.textContent = diaSemana + ', ' + diaNum + ' de ' + mesNom + ' de ' + anio;
+        }
+    }
+    actualizarFechaHeader();
 
     var isFetching = false;
     var syncTimer = null;

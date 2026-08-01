@@ -34,22 +34,26 @@ $is_logged_in = is_user_logged_in();
             <div class="ruteo-form-section">
                 <h3 class="form-section-title">1. Fotografias de Campo</h3>
                 <div class="ruteo-photos-grid animate-slide-up">
-                    <div class="ruteo-photo-upload">
+                    <div class="ruteo-photo-upload" id="upload-box-1">
                         <label for="foto1" class="upload-label">
                             <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                             <span class="upload-text">Foto Principal</span>
                         </label>
                         <input type="file" id="foto1" name="foto1" accept="image/*" required>
-                        <div class="preview" id="preview1"></div>
+                        <div class="preview" id="preview1">
+                            <button type="button" class="btn-remove-photo" data-input="foto1" data-preview="preview1" title="Quitar foto">&times;</button>
+                        </div>
                     </div>
                     
-                    <div class="ruteo-photo-upload">
+                    <div class="ruteo-photo-upload" id="upload-box-2">
                         <label for="foto2" class="upload-label">
                             <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
                             <span class="upload-text">Foto Secundaria</span>
                         </label>
                         <input type="file" id="foto2" name="foto2" accept="image/*" required>
-                        <div class="preview" id="preview2"></div>
+                        <div class="preview" id="preview2">
+                            <button type="button" class="btn-remove-photo" data-input="foto2" data-preview="preview2" title="Quitar foto">&times;</button>
+                        </div>
                     </div>
                 </div>
             </div>

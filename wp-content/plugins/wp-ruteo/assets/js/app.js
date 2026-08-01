@@ -29,7 +29,7 @@ jQuery(document).ready(function($) {
         $('#ruteo-sidebar').toggleClass('collapsed');
     });
 
-    // --- PREVISUALIZACION DE FOTOS DE CAMPO ---
+    // --- PREVISUALIZACION Y QUITAR FOTOS DE CAMPO ---
     function readURL(input, previewId) {
         if (input.files && input.files[0]) {
             var reader = new FileReader();
@@ -48,6 +48,27 @@ jQuery(document).ready(function($) {
 
     $('#foto1').change(function() { readURL(this, 'preview1'); });
     $('#foto2').change(function() { readURL(this, 'preview2'); });
+
+    $(document).on('click', '.btn-remove-photo', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var inputId = $(this).data('input');
+        var previewId = $(this).data('preview');
+        $('#' + inputId).val('');
+        $('#' + previewId).removeClass('show').css('background-image', 'none');
+        $('#' + inputId).closest('.ruteo-photo-upload').removeClass('has-file');
+    });
+
+    // --- TOGGLE DE SIDEBAR MOVIL Y OVERLAY BACKDROP ---
+    $('#btn-mobile-sidebar-toggle').on('click', function() {
+        $('#ruteo-sidebar').toggleClass('open-mobile');
+        $('#ruteo-sidebar-backdrop').toggleClass('show');
+    });
+
+    $('#ruteo-sidebar-backdrop').on('click', function() {
+        $('#ruteo-sidebar').removeClass('open-mobile');
+        $('#ruteo-sidebar-backdrop').removeClass('show');
+    });
 
     // --- ENVIO DEL FORMULARIO DE CAMPO ---
     $('#ruteo-form').on('submit', function(e) {
@@ -380,10 +401,126 @@ jQuery(document).ready(function($) {
         renderTablaMateriales(filtrados);
     });
 
-    // --- ACCIONES SLA ---
+    // --- ACCIONES SLA E INFORMES (MODAL E INTERACCION) ---
+    var currentSlaType = 'Formato SLA';
+
     $('.btn-sla-action').on('click', function() {
-        var type = $(this).data('type');
-        alert('Modulo "' + type + '" seleccionado. Se utilizara para generar el formato estandarizado.');
+        currentSlaType = $(this).data('type') || 'Formato SLA';
+        $('#sla-modal-title').text(currentSlaType);
+        $('#sla-modal-desc').text('Complete los detalles requeridos para generar ' + currentSlaType + ' estandarizado.');
+        
+        var user = (window.wpRuteoAjax && window.wpRuteoAjax.user) ? window.wpRuteoAjax.user : {};
+        if (user.displayName || user.username) {
+            $('#sla-input-tecnico').val(user.displayName || user.username);
+        }
+        $('#sla-modal-overlay').fadeIn(200);
+    });
+
+    $('#btn-close-sla-modal, #btn-cancel-sla-modal').on('click', function() {
+        $('#sla-modal-overlay').fadeOut(200);
+    });
+
+    $('#sla-modal-overlay').on('click', function(e) {
+        if ($(e.target).is('#sla-modal-overlay')) {
+            $('#sla-modal-overlay').fadeOut(200);
+        }
+    });
+
+    $('#form-generar-sla').on('submit', function(e) {
+        e.preventDefault();
+        var tramo = $('#sla-input-tramo').val();
+        var incidencia = $('#sla-input-incidencia').val();
+        var tecnico = $('#sla-input-tecnico').val();
+        var detalle = $('#sla-input-detalle').val();
+
+        var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+        if (!jsPDFConstructor) {
+            alert('Cargando libreria PDF, intente de nuevo en un instante.');
+            return;
+        }
+
+        try {
+            var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            var pageW = doc.internal.pageSize.getWidth();
+            var fecha = new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+
+            doc.setFillColor(0, 151, 216);
+            doc.rect(0, 0, pageW, 32, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text(currentSlaType.toUpperCase(), 14, 14);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Fecha: ' + fecha + '  |  Tecnico Responsable: ' + tecnico, 14, 23);
+
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('INFORMACION GENERAL DE ATENCION', 14, 42);
+
+            var dataInfo = [
+                ['Tipo de Documento', currentSlaType],
+                ['Tramo de Intervencion', tramo],
+                ['No. Incidencia / Ticket', incidencia],
+                ['Tecnico / Responsable', tecnico],
+                ['Fecha de Registro', fecha]
+            ];
+
+            var autoTableFn = doc.autoTable || (window.jspdf && window.jspdf.autoTable);
+            if (typeof doc.autoTable === 'function' || typeof autoTableFn === 'function') {
+                var fn = doc.autoTable || autoTableFn;
+                fn.call(doc, {
+                    startY: 46,
+                    body: dataInfo,
+                    theme: 'grid',
+                    headStyles: { fillColor: [0, 151, 216] },
+                    bodyStyles: { fontSize: 9, cellPadding: 3 },
+                    columnStyles: {
+                        0: { fontStyle: 'bold', fillColor: [239, 246, 255], cellWidth: 55 },
+                        1: { cellWidth: 'auto' }
+                    },
+                    margin: { left: 14, right: 14 }
+                });
+
+                var nextY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 90;
+                doc.setFontSize(11);
+                doc.setFont('helvetica', 'bold');
+                doc.setTextColor(0, 151, 216);
+                doc.text('RESUMEN DE ACCIONES Y OBSERVACIONES', 14, nextY);
+
+                fn.call(doc, {
+                    startY: nextY + 4,
+                    body: [
+                        ['Detalle Tecnico', detalle || 'Sin observaciones adicionales registradas.']
+                    ],
+                    theme: 'grid',
+                    bodyStyles: { fontSize: 9, cellPadding: 4 },
+                    columnStyles: {
+                        0: { fontStyle: 'bold', fillColor: [239, 246, 255], cellWidth: 55 },
+                        1: { cellWidth: 'auto' }
+                    },
+                    margin: { left: 14, right: 14 }
+                });
+            }
+
+            var blob = doc.output('blob');
+            var safeName = currentSlaType.replace(/ /g, '_') + '_' + incidencia + '.pdf';
+            if (typeof window.downloadBlobRuteo === 'function') {
+                window.downloadBlobRuteo(blob, safeName);
+            } else {
+                var u = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = u; a.download = safeName;
+                document.body.appendChild(a); a.click();
+                setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(u); }, 500);
+            }
+        } catch(err) {
+            console.error(err);
+            alert('Error generando documento PDF.');
+        }
+
+        $('#sla-modal-overlay').fadeOut(200);
     });
 
     // --- LOGIN AJAX ---
