@@ -235,7 +235,14 @@ function generarGoogleDoc(data, folderId) {
     var doc = DocumentApp.create(docName);
     var body = doc.getBody();
 
-    body.appendParagraph("FICHA TECNICA DE REGISTRO DE CAMPO").setHeading(DocumentApp.HeadingLevel.HEADING1);
+    var titlePara = body.appendParagraph("FICHA TECNICA DE REGISTRO DE CAMPO");
+    titlePara.setBold(true);
+    titlePara.setFontSize(16);
+    try {
+      if (DocumentApp.ParagraphHeading && DocumentApp.ParagraphHeading.HEADING1) {
+        titlePara.setHeading(DocumentApp.ParagraphHeading.HEADING1);
+      }
+    } catch(hErr) {}
     body.appendParagraph("Fecha: " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"));
     body.appendParagraph("Tramo: " + (data.tramo || "-") + " | Codigo: " + (data.codigo || "-") + " | ID Consol: " + (data.id_consol || "-"));
     body.appendParagraph("");
