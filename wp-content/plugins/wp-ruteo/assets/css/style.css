@@ -1,7 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
 /* --- ANULAR RESTRICCIONES DE ANCHO Y HEADER DE WORDPRESS --- */
-header,
+#wpadminbar {
+    display: none !important;
+}
+
+header:not(.ruteo-top-header),
 header.wp-block-template-part,
 .wp-block-header,
 .site-header,
@@ -16,11 +20,16 @@ footer.site-footer,
     display: none !important;
 }
 
+.ruteo-top-header {
+    display: flex !important;
+}
+
 html, body {
     margin: 0 !important;
     padding: 0 !important;
     width: 100% !important;
     overflow-x: hidden !important;
+    top: 0 !important;
 }
 
 /* --- APLICACION DE TEMA A TODA LA PAGINA DE WORDPRESS --- */
@@ -92,13 +101,13 @@ main,
 }
 
 [data-theme="dark"] {
-    --bg-main: #0B0F19;
-    --bg-card: #151D2A;
-    --bg-sidebar: #0B0F19;
+    --bg-main: #090D16;
+    --bg-card: #131A29;
+    --bg-sidebar: #060910;
     --bg-sidebar-active: #0097D8;
-    --bg-sidebar-hover: #1E293B;
-    --bg-input: #0B0F19;
-    --bg-subtle: #1E293B;
+    --bg-sidebar-hover: #1A2338;
+    --bg-input: #0F1726;
+    --bg-subtle: #1A2338;
     --primary: #83CA16;
     --primary-hover: #72B113;
     --secondary: #0097D8;
@@ -106,17 +115,40 @@ main,
     --text-main: #F1F5F9;
     --text-muted: #A5ACB8;
     --text-sidebar: #94A3B8;
-    --border: #263346;
-    --border-hover: #3B4D66;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(0, 151, 216, 0.4);
     --success: #83CA16;
     --error: #D92625;
     --menu-title: #F8FAFC;
+    --shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.5);
 }
 
 /* ESPECIFICOS PARA MODO NOCHE ELEGANTE */
 [data-theme="dark"] select option {
-    background-color: #151D2A !important;
+    background-color: #131A29 !important;
     color: #F1F5F9 !important;
+}
+
+[data-theme="dark"] .dash-stat-card,
+[data-theme="dark"] .dash-panel,
+[data-theme="dark"] .material-card,
+[data-theme="dark"] .sla-card,
+[data-theme="dark"] .portal-table-wrapper {
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: linear-gradient(145deg, #131A29 0%, #0D1320 100%) !important;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="dark"] .action-btn-card {
+    background: #090E18 !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+[data-theme="dark"] .action-btn-card:hover {
+    border-color: var(--secondary) !important;
+    background: #131A29 !important;
+    box-shadow: 0 4px 16px rgba(0, 151, 216, 0.2) !important;
 }
 
 /* --- LAYOUT CON SIDEBAR LATERAL (PANTALLA COMPLETA) --- */

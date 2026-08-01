@@ -40,18 +40,25 @@ $pm_list = array(
 );
 ?>
 <style>
-body, #page, .wp-site-blocks, .entry-content, .wp-block-post-content, main, .site-main, .is-layout-constrained, .is-layout-flow {
+#wpadminbar {
+    display: none !important;
+}
+html, body, #page, .wp-site-blocks, .entry-content, .wp-block-post-content, main, .site-main, .is-layout-constrained, .is-layout-flow {
     max-width: 100% !important;
     width: 100% !important;
     padding: 0 !important;
     margin: 0 !important;
+    top: 0 !important;
 }
-header, header.wp-block-template-part, .wp-block-header, .site-header, .wp-block-navigation, .wp-block-post-title, .entry-title, footer, .wp-block-footer {
+header:not(.ruteo-top-header), header.wp-block-template-part, .wp-block-header, .site-header, .wp-block-navigation, .wp-block-post-title, .entry-title, footer, .wp-block-footer {
     display: none !important;
 }
+.ruteo-top-header {
+    display: flex !important;
+}
 body.admin-bar .ruteo-app-layout {
-    margin-top: 32px !important;
-    min-height: calc(100vh - 32px) !important;
+    margin-top: 0 !important;
+    min-height: 100vh !important;
 }
 </style>
 
