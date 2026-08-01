@@ -883,6 +883,130 @@ body.admin-bar .ruteo-app-layout {
     color: #FFFFFF;
 }
 
+/* --- FORMULARIO NUEVO REGISTRO --- */
+.ruteo-form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: var(--shadow-md);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.ruteo-form-section {
+    background: var(--bg-subtle);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.form-section-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0 0 16px 0;
+    color: var(--menu-title);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.step-badge {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--secondary);
+    color: #FFFFFF;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 151, 216, 0.3);
+}
+
+.ruteo-fields-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.ruteo-photos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+}
+
+.ruteo-photo-upload {
+    background: var(--bg-card);
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    position: relative;
+    transition: var(--transition);
+}
+
+.ruteo-photo-upload:hover {
+    border-color: var(--secondary);
+    background: rgba(0, 151, 216, 0.04);
+}
+
+.upload-label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.upload-icon {
+    width: 38px;
+    height: 38px;
+    color: var(--secondary);
+}
+
+.upload-text {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-main);
+}
+
+.ruteo-photo-upload input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.ruteo-submit-btn {
+    background: var(--primary) !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    padding: 12px 28px !important;
+    border-radius: var(--radius) !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    cursor: pointer !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    box-shadow: 0 4px 14px rgba(131, 202, 22, 0.35) !important;
+    transition: var(--transition) !important;
+    font-family: inherit !important;
+}
+
+.ruteo-submit-btn:hover {
+    background: var(--primary-hover) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 6px 18px rgba(131, 202, 22, 0.45) !important;
+}
+
 /* --- FORMULARIO DE CONSUMO DE MATERIALES --- */
 .material-card {
     background: var(--bg-card);
