@@ -258,14 +258,17 @@ function generarGoogleDoc(data, folderId) {
     doc.saveAndClose();
 
     var docFile = DriveApp.getFileById(doc.getId());
-    folder.addFile(docFile);
-    try {
-      DriveApp.getRootFolder().removeFile(docFile);
-    } catch(err){}
+    if (folderId) {
+      try {
+        var targetFolder = DriveApp.getFolderById(folderId);
+        docFile.moveTo(targetFolder);
+      } catch(fErr) {}
+    }
 
     docFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
     return docFile.getUrl();
   } catch (err) {
+    Logger.log("Error creando Google Doc: " + err.toString());
     return "";
   }
 }

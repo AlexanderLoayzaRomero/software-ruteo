@@ -1229,32 +1229,55 @@ window.NONCE    = '<?php echo $nonce; ?>';
     var _btnDl = document.getElementById("btn-download-pdf");
     var _btnXl = document.getElementById("btn-download-excel");
 
+    function asegurarLibreriasPDF(callback) {
+        var getJ = function() {
+            return (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (typeof window.jsPDF === 'function' ? window.jsPDF : null);
+        };
+        var j = getJ();
+        if (!j) {
+            var s = document.createElement("script");
+            s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+            s.onload = function() { cargarAutoTable(callback); };
+            s.onerror = function() { alert("No se pudo cargar jsPDF desde CDN"); };
+            document.head.appendChild(s);
+            return;
+        }
+        cargarAutoTable(callback);
+
+        function cargarAutoTable(cb) {
+            var jspdfObj = getJ();
+            var hasAutoTable = (jspdfObj && jspdfObj.API && typeof jspdfObj.API.autoTable === "function") || typeof window.autoTable === "function";
+            if (hasAutoTable) {
+                cb(jspdfObj);
+                return;
+            }
+            var s2 = document.createElement("script");
+            s2.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js";
+            s2.onload = function() { cb(getJ()); };
+            s2.onerror = function() { cb(getJ()); };
+            document.head.appendChild(s2);
+        }
+    }
+
     function _generarPDF() {
         var data = window._ruteoRegistros || [];
         if (!data.length) { alert("No hay registros."); return; }
-        function cargarJSPDF() {
-            var j = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-            if (!j) { var s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"; s.onload = cargarAutoTable; document.head.appendChild(s); return; }
-            cargarAutoTable();
-        }
-        function cargarAutoTable() {
-            var j = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-            if (j && j.API && typeof j.API.autoTable === "function") { _hacerPDF(); return; }
-            var s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"; s.onload = _hacerPDF; document.head.appendChild(s);
-        }
-        function _hacerPDF() {
-            var j = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-            var doc = new j({ orientation: "landscape", unit: "mm", format: "a4" });
+        asegurarLibreriasPDF(function(jClass) {
+            if (!jClass) { alert("Libreria PDF no disponible."); return; }
+            var doc = new jClass({ orientation: "landscape", unit: "mm", format: "a4" });
             var w = doc.internal.pageSize.getWidth();
             var f = new Date().toLocaleDateString("es-PE", { day: "2-digit", month: "long", year: "numeric" });
             doc.setFillColor(0,151,216); doc.rect(0,0,w,28,"F"); doc.setTextColor(255,255,255); doc.setFontSize(16); doc.text("REPORTE GENERAL DE RUTEO DE CAMPO",14,13);
             doc.setFontSize(9); doc.text("Fecha: "+f+"  |  Total: "+data.length+" registros",14,21);
             var cols=[{header:"Fecha",dataKey:"fecha"},{header:"Tramo",dataKey:"tramo"},{header:"ID Consol",dataKey:"id_consol"},{header:"Estructura",dataKey:"estructura"},{header:"Tipo",dataKey:"tipo_estructura"},{header:"Alt.(m)",dataKey:"altura"},{header:"Codigo",dataKey:"codigo"},{header:"Ubicacion",dataKey:"ubicacion"},{header:"Mufa",dataKey:"mufa"},{header:"Ret.",dataKey:"retencion"},{header:"Susp.",dataKey:"suspension"},{header:"Cruceta",dataKey:"cruceta"},{header:"Heb.",dataKey:"hebillas"},{header:"Fleje",dataKey:"fleje"},{header:"Amort.",dataKey:"amortiguador"},{header:"Br.Ext.",dataKey:"brazo_extensor"},{header:"Kit Ret.",dataKey:"kit_retenida"},{header:"Obs.",dataKey:"observacion"}];
             var rows=data.map(function(raw){var r=window.normalizarRegistroRuteo?window.normalizarRegistroRuteo(raw):raw;var o={};cols.forEach(function(c){o[c.dataKey]=r[c.dataKey]||""});return o;});
-            try{doc.autoTable({startY:32,columns:cols,body:rows,theme:"grid",headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold",fontSize:7.5,halign:"center"},bodyStyles:{fontSize:7,cellPadding:2},alternateRowStyles:{fillColor:[244,246,249]},margin:{top:32,bottom:12,left:10,right:10},styles:{overflow:"linebreak"}})}catch(e){}
+            try {
+                if (typeof doc.autoTable === "function") {
+                    doc.autoTable({startY:32,columns:cols,body:rows,theme:"grid",headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold",fontSize:7.5,halign:"center"},bodyStyles:{fontSize:7,cellPadding:2},alternateRowStyles:{fillColor:[244,246,249]},margin:{top:32,bottom:12,left:10,right:10},styles:{overflow:"linebreak"}});
+                }
+            } catch(e){}
             var blob=doc.output("blob"), u=URL.createObjectURL(blob), a=document.createElement("a"); a.href=u; a.download="Reporte_Ruteo_"+f.replace(/\//g,"-")+".pdf"; document.body.appendChild(a); a.click(); setTimeout(function(){document.body.removeChild(a);URL.revokeObjectURL(u)},500);
-        }
-        cargarJSPDF();
+        });
     }
 
     function _generarExcel() {
@@ -1306,8 +1329,8 @@ window.NONCE    = '<?php echo $nonce; ?>';
         var m2 = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/);
         var fileId = (m1 && m1[1]) || (m2 && m2[1]);
         if (fileId) { url = 'https://drive.google.com/uc?export=view&id=' + fileId; }
-        var form = new FormData(); form.append('action', 'ruteo_proxy_image'); form.append('nonce', '<?php echo $nonce; ?>');
-        var proxyUrl = '<?php echo $ajax_url; ?>?url=' + encodeURIComponent(url);
+        var form = new FormData(); form.append('action', 'ruteo_proxy_image'); form.append('nonce', window.NONCE || '');
+        var proxyUrl = (window.AJAX_URL || '') + '?url=' + encodeURIComponent(url);
         var fetchP = fetch(proxyUrl, { method: 'POST', body: form })
             .then(function(r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
             .then(function(j) { return (j.success && j.data && j.data.dataUrl) ? j.data.dataUrl : null; });
@@ -1319,10 +1342,10 @@ window.NONCE    = '<?php echo $nonce; ?>';
     window.generarDocumentoPDF = function(idx) {
         var raw = window._ruteoRegistros[idx]; if (!raw) return;
         var r = window.normalizarRegistroRuteo ? window.normalizarRegistroRuteo(raw) : raw;
-        function _hacer(imgs) {
-            var j = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
-            if (!j) { alert("Libreria PDF no disponible."); return; }
-            var doc = new j({ orientation: "portrait", unit: "mm", format: "a4" });
+
+        asegurarLibreriasPDF(function(jClass) {
+            if (!jClass) { alert("Libreria PDF no disponible."); return; }
+            var doc = new jClass({ orientation: "portrait", unit: "mm", format: "a4" });
             var w = doc.internal.pageSize.getWidth();
             var pageH = doc.internal.pageSize.getHeight();
             doc.setFillColor(0,151,216); doc.rect(0,0,w,32,"F"); doc.setTextColor(255,255,255);
@@ -1341,31 +1364,37 @@ window.NONCE    = '<?php echo $nonce; ?>';
                 ["Observacion", r.observacion || '-']
             ];
             var yy = 38;
-            if (typeof doc.autoTable === "function") {
-                doc.autoTable({ startY:yy, body:data, theme:"grid", headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold"}, bodyStyles:{fontSize:8.5,cellPadding:2.5}, margin:{left:12,right:12} });
-                yy = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : yy + 90;
+            try {
+                if (typeof doc.autoTable === "function") {
+                    doc.autoTable({ startY:yy, body:data, theme:"grid", headStyles:{fillColor:[0,151,216],textColor:[255,255,255],fontStyle:"bold"}, bodyStyles:{fontSize:8.5,cellPadding:2.5}, margin:{left:12,right:12} });
+                    yy = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : yy + 90;
+                }
+            } catch(e) { yy += 90; }
+
+            function _hacer(imgs) {
+                var imgW = 75, imgH = 58, gap = 12, x1 = (w - imgW*2 - gap) / 2, x2 = x1 + imgW + gap;
+                if (yy + imgH + 15 > pageH) { doc.addPage(); yy = 20; }
+                doc.setFontSize(10); doc.setTextColor(0,151,216);
+                doc.text("EVIDENCIA FOTOGRAFICA EN CAMPO", w/2, yy, { align: "center" });
+                yy += 6;
+                function addImg(dUrl, x) {
+                    if (!dUrl) { doc.setFillColor(241,245,249); doc.rect(x,yy,imgW,imgH,"F"); doc.setTextColor(165,172,184); doc.setFontSize(9); doc.text("Sin Imagen",x+imgW/2,yy+imgH/2,{align:"center"}); return; }
+                    try { var t = dUrl.indexOf("image/png") !== -1 ? "PNG" : "JPEG"; doc.addImage(dUrl,t,x,yy,imgW,imgH); } catch(e) { doc.setFillColor(241,245,249); doc.rect(x,yy,imgW,imgH,"F"); doc.setTextColor(165,172,184); doc.setFontSize(9); doc.text("No disponible",x+imgW/2,yy+imgH/2,{align:"center"}); }
+                }
+                addImg(imgs[0], x1); addImg(imgs[1], x2);
+                var blob = doc.output("blob");
+                window.downloadBlobRuteo(blob, "Ficha_Ruteo_"+(r.codigo || r.id_consol)+".pdf");
             }
-            var imgW = 75, imgH = 58, gap = 12, x1 = (w - imgW*2 - gap) / 2, x2 = x1 + imgW + gap;
-            if (yy + imgH + 15 > pageH) { doc.addPage(); yy = 20; }
-            doc.setFontSize(10); doc.setTextColor(0,151,216);
-            doc.text("EVIDENCIA FOTOGRAFICA EN CAMPO", w/2, yy, { align: "center" });
-            yy += 6;
-            function addImg(dUrl, x) {
-                if (!dUrl) { doc.setFillColor(241,245,249); doc.rect(x,yy,imgW,imgH,"F"); doc.setTextColor(165,172,184); doc.setFontSize(9); doc.text("Sin Imagen",x+imgW/2,yy+imgH/2,{align:"center"}); return; }
-                try { var t = dUrl.indexOf("image/png") !== -1 ? "PNG" : "JPEG"; doc.addImage(dUrl,t,x,yy,imgW,imgH); } catch(e) { doc.setFillColor(241,245,249); doc.rect(x,yy,imgW,imgH,"F"); doc.setTextColor(165,172,184); doc.setFontSize(9); doc.text("No disponible",x+imgW/2,yy+imgH/2,{align:"center"}); }
-            }
-            addImg(imgs[0], x1); addImg(imgs[1], x2);
-            var blob = doc.output("blob");
-            window.downloadBlobRuteo(blob, "Ficha_Ruteo_"+(r.codigo || r.id_consol)+".pdf");
-        }
-        var imgs = [null, null], pending = 0;
-        function checkDone() { pending--; if (pending <= 0) _hacer(imgs); }
-        [r.foto_1, r.foto_2].forEach(function(url, i) {
-            if (!url) return;
-            pending++;
-            window.fetchImageDataUrlRuteo(url, 8000).then(function(dataUrl) { imgs[i] = dataUrl; checkDone(); }).catch(function() { checkDone(); });
+
+            var imgs = [null, null], pending = 0;
+            function checkDone() { pending--; if (pending <= 0) _hacer(imgs); }
+            [r.foto_1, r.foto_2].forEach(function(url, i) {
+                if (!url) return;
+                pending++;
+                window.fetchImageDataUrlRuteo(url, 8000).then(function(dataUrl) { imgs[i] = dataUrl; checkDone(); }).catch(function() { checkDone(); });
+            });
+            if (pending === 0) _hacer(imgs);
         });
-        if (pending === 0) _hacer(imgs);
     };
 
     // Word / Google Docs individual por registro
