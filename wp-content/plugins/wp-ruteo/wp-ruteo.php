@@ -56,7 +56,7 @@ class WPRuteoApp {
         add_action( 'wp_ajax_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
         add_action( 'wp_ajax_nopriv_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
 
-        $this->crear_cuentas_prueba();
+        add_action( 'init', array( $this, 'crear_cuentas_prueba' ) );
     }
 
     public function register_roles() {
