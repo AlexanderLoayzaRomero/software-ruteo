@@ -699,6 +699,7 @@ jQuery(document).ready(function($) {
         formData.append('email', $('#user-email-input').val());
         formData.append('password', $('#user-password-input').val());
         formData.append('role', $('#user-role-select').val());
+        formData.append('negativa_rol', $('#user-negativa-rol-select').val() || '');
         formData.append('phone', $('#user-phone-input').val());
         formData.append('pm_assigned', $('#user-pm-select').val());
 

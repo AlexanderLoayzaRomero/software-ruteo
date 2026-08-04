@@ -55,6 +55,8 @@ class WPRuteoApp {
         add_action( 'wp_ajax_nopriv_ruteo_save_materiales', array( $this, 'handle_ajax_save_materiales' ) );
         add_action( 'wp_ajax_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
         add_action( 'wp_ajax_nopriv_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
+
+        $this->crear_cuentas_prueba();
     }
 
     public function register_roles() {
@@ -67,6 +69,54 @@ class WPRuteoApp {
             'read'                  => true,
             'ruteo_worker_access'   => true,
         ) );
+    }
+
+    public function crear_cuentas_prueba() {
+        $cuentas = array(
+            array(
+                'user'         => 'tecnico1',
+                'pass'         => 'Tecnico123!',
+                'name'         => 'Juan Perez (Tecnico)',
+                'email'        => 'tecnico1@ruteo.org.pe',
+                'negativa_rol' => 'tecnico',
+            ),
+            array(
+                'user'         => 'supervisor1',
+                'pass'         => 'Supervisor123!',
+                'name'         => 'Carlos Mendoza (Supervisor Op.)',
+                'email'        => 'supervisor1@ruteo.org.pe',
+                'negativa_rol' => 'supervisor_operativo',
+            ),
+            array(
+                'user'         => 'seguridad1',
+                'pass'         => 'Seguridad123!',
+                'name'         => 'Roberto Silva (Supervisor Seg.)',
+                'email'        => 'seguridad1@ruteo.org.pe',
+                'negativa_rol' => 'supervisor_seguridad',
+            ),
+            array(
+                'user'         => 'hse1',
+                'pass'         => 'Hse123!',
+                'name'         => 'Maria Fernandez (Area HSE)',
+                'email'        => 'hse1@ruteo.org.pe',
+                'negativa_rol' => 'hse',
+            ),
+        );
+
+        foreach ( $cuentas as $c ) {
+            $user_id = username_exists( $c['user'] );
+            if ( ! $user_id ) {
+                $user_id = wp_create_user( $c['user'], $c['pass'], $c['email'] );
+                if ( ! is_wp_error( $user_id ) ) {
+                    $u = new WP_User( $user_id );
+                    $u->set_role( 'ruteo_worker' );
+                    wp_update_user( array( 'ID' => $user_id, 'display_name' => $c['name'] ) );
+                }
+            }
+            if ( $user_id && ! is_wp_error( $user_id ) ) {
+                update_user_meta( $user_id, 'ruteo_negativa_rol', $c['negativa_rol'] );
+            }
+        }
     }
 
     public function enqueue_assets() {
@@ -414,6 +464,7 @@ class WPRuteoApp {
                 'pmAssigned'  => get_user_meta( $u->ID, 'ruteo_pm_assigned', true ),
                 'avatar'      => get_user_meta( $u->ID, 'ruteo_avatar', true ),
                 'role'        => $role_label,
+                'negativaRol' => get_user_meta( $u->ID, 'ruteo_negativa_rol', true ) ?: '',
                 'registered'  => $u->user_registered,
             );
         }
@@ -439,6 +490,7 @@ class WPRuteoApp {
         $role         = isset( $_POST['role'] ) ? sanitize_text_field( wp_unslash( $_POST['role'] ) ) : 'worker';
         $phone        = isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '';
         $pm_assigned  = isset( $_POST['pm_assigned'] ) ? sanitize_text_field( wp_unslash( $_POST['pm_assigned'] ) ) : '';
+        $negativa_rol = isset( $_POST['negativa_rol'] ) ? sanitize_text_field( wp_unslash( $_POST['negativa_rol'] ) ) : '';
 
         if ( empty( $username ) || empty( $password ) || empty( $email ) ) {
             wp_send_json_error( array( 'message' => 'Usuario, correo y clave son obligatorios.' ) );
@@ -475,6 +527,9 @@ class WPRuteoApp {
         }
         if ( ! empty( $pm_assigned ) ) {
             update_user_meta( $user_id, 'ruteo_pm_assigned', $pm_assigned );
+        }
+        if ( ! empty( $negativa_rol ) ) {
+            update_user_meta( $user_id, 'ruteo_negativa_rol', $negativa_rol );
         }
 
         if ( ! empty( $_FILES['avatar']['tmp_name'] ) ) {

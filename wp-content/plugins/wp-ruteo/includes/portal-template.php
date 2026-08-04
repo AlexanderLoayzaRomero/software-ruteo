@@ -813,6 +813,18 @@ body.admin-bar .ruteo-app-layout {
                                     </select>
                                 </div>
                             </div>
+                            <div class="form-group">
+                                <label>Rol Negativa al Trabajo</label>
+                                <div class="input-wrapper">
+                                    <select id="user-negativa-rol-select">
+                                        <option value="">-- Sin Rol Especifico --</option>
+                                        <option value="tecnico">Tecnico Reportante</option>
+                                        <option value="supervisor_operativo">Supervisor Operativo</option>
+                                        <option value="supervisor_seguridad">Supervisor de Seguridad</option>
+                                        <option value="hse">Area HSE</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="form-group full-width">
                                 <label>Centro de Mantenimiento / PM Asignado</label>
                                 <div class="input-wrapper">
