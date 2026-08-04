@@ -119,7 +119,6 @@ class WPRuteoApp {
                 'pmAssigned'  => $pm_assigned,
                 'avatar'      => $avatar,
                 'role'        => $user_role,
-                'isAdmin'     => $is_admin,
             ),
         ) );
     }
@@ -351,9 +350,10 @@ class WPRuteoApp {
         $is_admin = in_array( 'administrator', (array) $user->roles, true ) || in_array( 'ruteo_admin', (array) $user->roles, true );
         $role     = $is_admin ? 'admin' : ( in_array( 'ruteo_worker', (array) $user->roles, true ) ? 'worker' : 'user' );
 
-        $phone       = get_user_meta( $user->ID, 'ruteo_phone', true );
-        $pm_assigned = get_user_meta( $user->ID, 'ruteo_pm_assigned', true );
-        $avatar      = get_user_meta( $user->ID, 'ruteo_avatar', true );
+        $phone        = get_user_meta( $user->ID, 'ruteo_phone', true );
+        $pm_assigned  = get_user_meta( $user->ID, 'ruteo_pm_assigned', true );
+        $avatar       = get_user_meta( $user->ID, 'ruteo_avatar', true );
+        $negativa_rol = get_user_meta( $user->ID, 'ruteo_negativa_rol', true );
 
         wp_send_json_success( array(
             'message' => 'Inicio de sesion exitoso.',
@@ -367,6 +367,7 @@ class WPRuteoApp {
                 'avatar'      => $avatar,
                 'role'        => $role,
                 'isAdmin'     => $is_admin,
+                'negativaRol' => $negativa_rol ?: '',
             ),
         ) );
     }
@@ -710,11 +711,6 @@ class WPRuteoApp {
             return;
         }
 
-        if ( ! in_array( $etapa, array( 'tecnico', 'supervisor', 'seguridad', 'hse' ), true ) ) {
-            wp_send_json_error( array( 'message' => 'Etapa invalida.' ) );
-            return;
-        }
-
         if ( $etapa === 'tecnico' ) {
             $campos = array(
                 'proceso'                     => sanitize_text_field( wp_unslash( $_POST['proceso'] ?? '' ) ),
@@ -814,8 +810,8 @@ function ruteo_crear_tabla_negativas() {
         supervisor_operativo_nombre VARCHAR(150),
         trabajador_reportante VARCHAR(150),
         razones_negativa TEXT,
-        foto1_url VARCHAR(500),
-        foto2_url VARCHAR(500),
+        foto1_url LONGTEXT,
+        foto2_url LONGTEXT,
         acciones_correctivas TEXT,
         acuerdo_inseguro VARCHAR(5),
         firma_tecnico_user VARCHAR(150), firma_tecnico_fecha DATETIME,

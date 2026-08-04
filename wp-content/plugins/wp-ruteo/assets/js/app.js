@@ -104,9 +104,17 @@ jQuery(document).ready(function($) {
     });
 
 
-$('#btn-mobile-sidebar-toggle').on('click', function() {
-    $('#ruteo-sidebar').toggleClass('collapsed');
-});
+    // --- TOGGLE DE SIDEBAR MOVIL Y OVERLAY BACKDROP ---
+    $('#btn-mobile-sidebar-toggle').on('click', function() {
+        $('#ruteo-sidebar').toggleClass('open-mobile');
+        $('#ruteo-sidebar-backdrop').toggleClass('show');
+    });
+
+    $('#ruteo-sidebar-backdrop').on('click', function() {
+        $('#ruteo-sidebar').removeClass('open-mobile');
+        $('#ruteo-sidebar-backdrop').removeClass('show');
+    });
+
 
 
     // --- ENVIO DEL FORMULARIO DE CAMPO ---
@@ -242,7 +250,7 @@ $('#btn-mobile-sidebar-toggle').on('click', function() {
             'sla-informes': 'SLA e Informes de Mantenimiento',
             'usuarios': 'Gestion de Cuentas de Usuario',
             'perfil': 'Perfil de Usuario',
-            'login': 'Iniciar Sesion'
+            'login': 'Iniciar Sesion',
             'negativa': 'Negativa al Trabajo por Riesgo Inminente',
         };
 
