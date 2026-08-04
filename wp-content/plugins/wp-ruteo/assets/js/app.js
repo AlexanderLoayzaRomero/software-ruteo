@@ -18,6 +18,50 @@ jQuery(document).ready(function($) {
     var temaGuardado = localStorage.getItem('ruteo_theme') || 'light';
     aplicarTema(temaGuardado);
 
+    // --- LOGO DEL SISTEMA (SIDEBAR) ---
+    function pintarLogoSistema(base64) {
+        if (!base64) return;
+        $('#sidebar-brand-logo, #site-logo-preview').html('<img src="' + base64 + '" alt="Logo" style="width:100%; height:100%; object-fit:cover; border-radius:10px;">');
+    }
+
+    if (typeof wpRuteoAjax !== 'undefined' && wpRuteoAjax.siteLogo) {
+        pintarLogoSistema(wpRuteoAjax.siteLogo);
+    }
+
+    $('#form-site-logo').on('submit', function(e) {
+        e.preventDefault();
+        var fileInput = $('#site-logo-file')[0];
+        if (!fileInput.files.length) return;
+
+        var fd = new FormData();
+        fd.append('action', 'ruteo_update_site_logo');
+        fd.append('nonce', wpRuteoAjax.nonce);
+        fd.append('logo', fileInput.files[0]);
+
+        var $btn = $(this).find('button[type="submit"]');
+        $btn.prop('disabled', true).find('span').text('Guardando...');
+
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
+            success: function(res) {
+                if (res.success) {
+                    pintarLogoSistema(res.data.logo);
+                    wpRuteoAjax.siteLogo = res.data.logo;
+                    $('#site-logo-msg').removeClass('error').addClass('success').text(res.data.message);
+                } else {
+                    $('#site-logo-msg').removeClass('success').addClass('error').text('Error: ' + res.data.message);
+                }
+            },
+            error: function() {
+                $('#site-logo-msg').removeClass('success').addClass('error').text('Error de conexion al subir el logo.');
+            },
+            complete: function() {
+                $btn.prop('disabled', false).find('span').text('Guardar Logo');
+            }
+        });
+    });
+    
+
     $('#btn-theme-toggle').on('click', function() {
         var actual = $('body').attr('data-theme') || 'light';
         var nuevo = (actual === 'dark') ? 'light' : 'dark';
@@ -59,16 +103,11 @@ jQuery(document).ready(function($) {
         $('#' + inputId).closest('.ruteo-photo-upload').removeClass('has-file');
     });
 
-    // --- TOGGLE DE SIDEBAR MOVIL Y OVERLAY BACKDROP ---
-    $('#btn-mobile-sidebar-toggle').on('click', function() {
-        $('#ruteo-sidebar').toggleClass('open-mobile');
-        $('#ruteo-sidebar-backdrop').toggleClass('show');
-    });
 
-    $('#ruteo-sidebar-backdrop').on('click', function() {
-        $('#ruteo-sidebar').removeClass('open-mobile');
-        $('#ruteo-sidebar-backdrop').removeClass('show');
-    });
+$('#btn-mobile-sidebar-toggle').on('click', function() {
+    $('#ruteo-sidebar').toggleClass('collapsed');
+});
+
 
     // --- ENVIO DEL FORMULARIO DE CAMPO ---
     $('#ruteo-form').on('submit', function(e) {
@@ -204,6 +243,7 @@ jQuery(document).ready(function($) {
             'usuarios': 'Gestion de Cuentas de Usuario',
             'perfil': 'Perfil de Usuario',
             'login': 'Iniciar Sesion'
+            'negativa': 'Negativa al Trabajo por Riesgo Inminente',
         };
 
         if (titleMap[targetTab]) {
@@ -727,5 +767,130 @@ jQuery(document).ready(function($) {
             }
         });
     });
+
+    // --- MODULO: NEGATIVA AL TRABAJO POR RIESGO INMINENTE ---
+var negativaActual = null;
+
+function negativaEstadoLabel(estado) {
+    var labels = {
+        'pendiente_tecnico': 'Pendiente: Tecnico',
+        'pendiente_supervisor': 'Pendiente: Supervisor Operativo',
+        'pendiente_seguridad': 'Pendiente: Supervisor de Seguridad',
+        'pendiente_hse': 'Pendiente: Visto Bueno HSE',
+        'completado': 'Completado'
+    };
+    return labels[estado] || estado;
+}
+
+function negativaPuedeActuar(estado) {
+    if (currentUser.isAdmin) return true;
+    var mapa = {
+        'pendiente_tecnico': 'tecnico',
+        'pendiente_supervisor': 'supervisor_operativo',
+        'pendiente_seguridad': 'supervisor_seguridad',
+        'pendiente_hse': 'hse'
+    };
+    return currentUser.negativaRol === mapa[estado];
+}
+
+function renderNegativa(registro) {
+    negativaActual = registro;
+    $('#negativa-resumen').hide().empty();
+    $('#form-negativa-tecnico, #form-negativa-supervisor, #negativa-firma-simple, #btn-negativa-exportar-pdf').hide();
+
+    if (!registro) {
+        $('#negativa-estado-badge').text('');
+        $('#form-negativa-tecnico').show();
+        return;
+    }
+
+    $('#negativa-estado-badge').text(negativaEstadoLabel(registro.estado));
+
+    var resumenHtml = '<strong>' + (registro.proceso || '') + '</strong> - ' + (registro.lugar_trabajo || '') + '<br>';
+    resumenHtml += 'Tecnico: ' + (registro.firma_tecnico_user || '-') + ' | Supervisor Op.: ' + (registro.firma_sup_operativo_user || '-') +
+                   ' | Seguridad: ' + (registro.firma_sup_seguridad_user || '-') + ' | HSE: ' + (registro.firma_hse_user || '-');
+    $('#negativa-resumen').html(resumenHtml).show();
+
+    var puedeActuar = negativaPuedeActuar(registro.estado);
+
+    if (registro.estado === 'pendiente_supervisor') {
+        if (puedeActuar) { $('#form-negativa-supervisor').show(); }
+        else { $('#negativa-firma-simple-texto').text('Esperando accion del Supervisor Operativo.'); $('#negativa-firma-simple').show().find('button').hide(); }
+    } else if (registro.estado === 'pendiente_seguridad') {
+        if (puedeActuar) {
+            $('#negativa-firma-simple-texto').text('Firmar como Supervisor de Seguridad.');
+            $('#negativa-firma-simple').show().find('button').show().data('etapa', 'seguridad');
+        } else { $('#negativa-firma-simple-texto').text('Esperando firma del Supervisor de Seguridad.'); $('#negativa-firma-simple').show().find('button').hide(); }
+    } else if (registro.estado === 'pendiente_hse') {
+        if (puedeActuar) {
+            $('#negativa-firma-simple-texto').text('Otorgar Visto Bueno del Area HSE.');
+            $('#negativa-firma-simple').show().find('button').show().data('etapa', 'hse');
+        } else { $('#negativa-firma-simple-texto').text('Esperando visto bueno de HSE.'); $('#negativa-firma-simple').show().find('button').hide(); }
+    } else if (registro.estado === 'completado') {
+        $('#btn-negativa-exportar-pdf').show();
+    }
+}
+
+function cargarNegativas() {
+    $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_listar', nonce: wpRuteoAjax.nonce }, function(res) {
+        if (!res.success) return;
+        var $sel = $('#negativa-select-registro');
+        $sel.find('option:not(:first)').remove();
+        res.data.registros.forEach(function(r) {
+            $sel.append('<option value="' + r.id + '">' + (r.proceso || 'Sin proceso') + ' - ' + r.fecha + ' (' + negativaEstadoLabel(r.estado) + ')</option>');
+        });
+    });
+}
+
+$('#negativa-select-registro').on('change', function() {
+    var id = $(this).val();
+    if (id === '0') { renderNegativa(null); return; }
+    $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_listar', nonce: wpRuteoAjax.nonce }, function(res) {
+        if (!res.success) return;
+        var reg = res.data.registros.find(function(r) { return String(r.id) === String(id); });
+        renderNegativa(reg);
+    });
+});
+
+$('#form-negativa-tecnico').on('submit', function(e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    fd.append('action', 'ruteo_negativa_guardar');
+    fd.append('nonce', wpRuteoAjax.nonce);
+    fd.append('etapa', 'tecnico');
+    $.ajax({ url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
+        success: function(res) {
+            if (res.success) { alert('Etapa Tecnico guardada.'); cargarNegativas(); renderNegativa(res.data.registro); }
+            else { alert('Error: ' + res.data.message); }
+        }
+    });
+});
+
+$('#form-negativa-supervisor').on('submit', function(e) {
+    e.preventDefault();
+    var fd = new FormData(this);
+    fd.append('action', 'ruteo_negativa_guardar');
+    fd.append('nonce', wpRuteoAjax.nonce);
+    fd.append('etapa', 'supervisor');
+    fd.append('id', negativaActual.id);
+    $.ajax({ url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
+        success: function(res) {
+            if (res.success) { alert('Etapa Supervisor Operativo guardada.'); cargarNegativas(); renderNegativa(res.data.registro); }
+            else { alert('Error: ' + res.data.message); }
+        }
+    });
+});
+
+$('#btn-negativa-firmar-simple').on('click', function() {
+    var etapa = $(this).data('etapa');
+    $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_guardar', nonce: wpRuteoAjax.nonce, etapa: etapa, id: negativaActual.id }, function(res) {
+        if (res.success) { alert('Firmado correctamente.'); cargarNegativas(); renderNegativa(res.data.registro); }
+        else { alert('Error: ' + res.data.message); }
+    });
+});
+
+if ($('.sidebar-item[data-tab="negativa"]').length) {
+    $('.sidebar-item[data-tab="negativa"]').on('click', function() { cargarNegativas(); });
+}
 
 });

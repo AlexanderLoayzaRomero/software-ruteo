@@ -63,13 +63,12 @@ body.admin-bar .ruteo-app-layout {
 </style>
 
 <div class="ruteo-app-layout">
-    <div class="ruteo-sidebar-backdrop" id="ruteo-sidebar-backdrop"></div>
     
     <!-- BARRA LATERAL (SIDEBAR) -->
     <aside class="ruteo-sidebar" id="ruteo-sidebar">
         <div class="sidebar-header">
             <div class="sidebar-brand">
-                <div class="brand-logo-icon">
+               <div class="brand-logo-icon" id="sidebar-brand-logo">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
                     </svg>
@@ -121,6 +120,13 @@ body.admin-bar .ruteo-app-layout {
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
                 <span>SLA e Informes</span>
+            </button>
+
+            <button class="sidebar-item" data-tab="negativa">
+    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+    </svg>
+    <span>Negativa al Trabajo</span>
             </button>
 
             <button class="sidebar-item" data-tab="usuarios" id="tab-btn-usuarios" style="display:none;">
@@ -624,9 +630,133 @@ body.admin-bar .ruteo-app-layout {
             </div>
         </section>
 
+        <!-- SECCION: NEGATIVA AL TRABAJO POR RIESGO INMINENTE -->
+<section class="ruteo-tab-content" id="tab-negativa">
+    <div class="ruteo-form-card animate-fade-in">
+        <p class="form-header-sub">Complete el formato de Negativa al Trabajo por Riesgo Inminente (HSE-RE-NEG-01) segun la etapa que le corresponda.</p>
+
+        <div class="ruteo-form-section" style="margin-bottom:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <label style="font-weight:600;">Registro:</label>
+            <select id="negativa-select-registro" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main); min-width:260px;">
+                <option value="0">+ Nueva Negativa</option>
+            </select>
+            <span id="negativa-estado-badge" class="badge-pill"></span>
+        </div>
+
+        <!-- Resumen de lo ya llenado en etapas anteriores (solo lectura) -->
+        <div id="negativa-resumen" style="display:none; margin-bottom:20px; padding:16px; border-radius:10px; background:var(--bg-subtle); border:1px solid var(--border);"></div>
+
+        <!-- ETAPA 1: TECNICO (puntos 1 a 4) -->
+        <form id="form-negativa-tecnico" class="ruteo-form">
+            <div class="ruteo-form-section">
+                <h3 class="form-section-title"><span class="step-badge">1</span> Datos Generales</h3>
+                <div class="ruteo-fields-grid">
+                    <div class="form-group"><label>Proceso</label><div class="input-wrapper"><input type="text" name="proceso" placeholder="Ej: Perdida de enlace..." required></div></div>
+                    <div class="form-group"><label>CM / Localidad</label><div class="input-wrapper"><input type="text" name="cm_localidad" required></div></div>
+                    <div class="form-group"><label>Contratista</label><div class="input-wrapper"><input type="text" name="contratista" required></div></div>
+                    <div class="form-group"><label>Sub Contratista</label><div class="input-wrapper"><input type="text" name="sub_contratista"></div></div>
+                    <div class="form-group"><label>Relacionado a</label><div class="input-wrapper">
+                        <select name="relacionado_a" required><option value="PEXT">PEXT</option><option value="PINT">PINT</option></select>
+                    </div></div>
+                    <div class="form-group"><label>Lugar de Trabajo</label><div class="input-wrapper"><input type="text" name="lugar_trabajo" required></div></div>
+                    <div class="form-group"><label>Fecha</label><div class="input-wrapper"><input type="date" name="fecha" required></div></div>
+                    <div class="form-group"><label>Hora Inicio</label><div class="input-wrapper"><input type="time" name="hora_inicio" required></div></div>
+                    <div class="form-group"><label>Hora Fin</label><div class="input-wrapper"><input type="time" name="hora_fin"></div></div>
+                    <div class="form-group"><label>Total de Horas</label><div class="input-wrapper"><input type="text" name="total_horas" placeholder="Ej: 08 horas, 43 minutos"></div></div>
+                </div>
+            </div>
+
+            <div class="ruteo-form-section">
+                <h3 class="form-section-title"><span class="step-badge">2</span> Investigacion del Supervisor Operativo</h3>
+                <div class="ruteo-fields-grid">
+                    <div class="form-group"><label>Nombre del Supervisor Operativo</label><div class="input-wrapper"><input type="text" name="supervisor_operativo_nombre" required></div></div>
+                    <div class="form-group"><label>Trabajador Reportante</label><div class="input-wrapper"><input type="text" name="trabajador_reportante" required></div></div>
+                </div>
+            </div>
+
+            <div class="ruteo-form-section">
+                <h3 class="form-section-title"><span class="step-badge">3</span> Razones para la Negativa</h3>
+                <div class="form-group"><textarea name="razones_negativa" rows="5" placeholder="Describa las condiciones adversas y la base legal..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div>
+            </div>
+
+            <div class="ruteo-form-section">
+                <h3 class="form-section-title"><span class="step-badge">4</span> Evidencias Fotograficas</h3>
+                <div class="ruteo-photos-grid">
+                    <div class="ruteo-photo-upload" id="neg-upload-box-1">
+                        <label for="neg-foto1" class="upload-label">
+                            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                            <span class="upload-text">Evidencia 1</span>
+                        </label>
+                        <input type="file" id="neg-foto1" name="foto1" accept="image/*">
+                        <div class="preview" id="neg-preview1"><button type="button" class="btn-remove-photo" data-input="neg-foto1" data-preview="neg-preview1">&times;</button></div>
+                    </div>
+                    <div class="ruteo-photo-upload" id="neg-upload-box-2">
+                        <label for="neg-foto2" class="upload-label">
+                            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            <span class="upload-text">Evidencia 2</span>
+                        </label>
+                        <input type="file" id="neg-foto2" name="foto2" accept="image/*">
+                        <div class="preview" id="neg-preview2"><button type="button" class="btn-remove-photo" data-input="neg-foto2" data-preview="neg-preview2">&times;</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Tecnico</button>
+        </form>
+
+        <!-- ETAPA 2: SUPERVISOR OPERATIVO (punto 5 y 6) -->
+        <form id="form-negativa-supervisor" class="ruteo-form" style="display:none;">
+            <div class="ruteo-form-section">
+                <h3 class="form-section-title"><span class="step-badge">5</span> Acciones Correctivas</h3>
+                <div class="form-group"><textarea name="acciones_correctivas" rows="4" placeholder="Detalle las acciones correctivas realizadas..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div>
+            </div>
+            <div class="ruteo-form-section">
+                <h3 class="form-section-title"><span class="step-badge">6</span> Acuerdo de Condiciones Inseguras</h3>
+                <div class="form-group">
+                    <label style="margin-right:20px;"><input type="radio" name="acuerdo_inseguro" value="SI" required> Si</label>
+                    <label><input type="radio" name="acuerdo_inseguro" value="NO"> No</label>
+                </div>
+            </div>
+            <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Supervisor Operativo</button>
+        </form>
+
+        <!-- ETAPA 3 y 4: SOLO FIRMA (Seguridad / HSE) -->
+        <div id="negativa-firma-simple" style="display:none;">
+            <p id="negativa-firma-simple-texto" style="margin-bottom:14px; font-weight:500;"></p>
+            <button type="button" id="btn-negativa-firmar-simple" class="btn-primary ruteo-submit-btn">Firmar</button>
+        </div>
+
+        <button type="button" id="btn-negativa-exportar-pdf" class="btn-secondary" style="display:none; margin-top:16px;">Exportar a PDF</button>
+    </div>
+</section>
+
         <!-- SECCION 6: GESTION DE USUARIOS (SOLO ADMIN) -->
         <section class="ruteo-tab-content" id="tab-usuarios">
             <div class="users-container">
+
+                <!-- LOGO DEL SISTEMA -->
+                <div class="user-create-card" id="site-logo-card" style="margin-bottom:20px;">
+                    <h4>Logo del Sistema</h4>
+                    <p class="users-sub" style="margin-bottom:14px;">Esta imagen se muestra en la barra lateral para todos los usuarios.</p>
+                    <form id="form-site-logo" enctype="multipart/form-data" style="display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
+                        <div class="brand-logo-icon" id="site-logo-preview" style="width:56px; height:56px;">
+                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                            </svg>
+                        </div>
+                        <div class="form-group" style="flex:1; min-width:220px; margin-bottom:0;">
+                            <label>Subir nueva imagen (PNG, JPG, WEBP o SVG - max 2MB)</label>
+                            <div class="input-wrapper">
+                                <input type="file" id="site-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
+                            <span>Guardar Logo</span>
+                        </button>
+                        <div id="site-logo-msg" class="ruteo-message"></div>
+                    </form>
+                </div>
+
                 <div class="users-header-row">
                     <div>
                         <p class="users-sub">Administra accesos para Administradores y Operarios Workers con foto y sede asignada.</p>

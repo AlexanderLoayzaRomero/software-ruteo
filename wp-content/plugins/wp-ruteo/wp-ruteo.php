@@ -42,6 +42,13 @@ class WPRuteoApp {
         add_action( 'wp_ajax_ruteo_create_user', array( $this, 'handle_ajax_create_user' ) );
         add_action( 'wp_ajax_ruteo_delete_user', array( $this, 'handle_ajax_delete_user' ) );
         add_action( 'wp_ajax_ruteo_update_profile', array( $this, 'handle_ajax_update_profile' ) );
+        add_action( 'wp_ajax_ruteo_negativa_guardar', array( $this, 'handle_ajax_negativa_guardar' ) );
+        add_action( 'wp_ajax_nopriv_ruteo_negativa_guardar', array( $this, 'handle_ajax_negativa_guardar' ) );
+        add_action( 'wp_ajax_ruteo_negativa_listar', array( $this, 'handle_ajax_negativa_listar' ) );
+        add_action( 'wp_ajax_nopriv_ruteo_negativa_listar', array( $this, 'handle_ajax_negativa_listar' ) );
+        
+        // Logo del sistema (solo Admin)
+        add_action( 'wp_ajax_ruteo_update_site_logo', array( $this, 'handle_ajax_update_site_logo' ) );
 
         // Consumo de Materiales AJAX Endpoints
         add_action( 'wp_ajax_ruteo_save_materiales', array( $this, 'handle_ajax_save_materiales' ) );
@@ -77,6 +84,8 @@ class WPRuteoApp {
         $phone       = '';
         $pm_assigned = '';
         $avatar      = '';
+        $avatar      = get_user_meta( $current_user->ID, 'ruteo_avatar', true );
+        $negativa_rol = get_user_meta( $current_user->ID, 'ruteo_negativa_rol', true );
 
         if ( $is_logged_in ) {
             $phone       = get_user_meta( $current_user->ID, 'ruteo_phone', true );
@@ -94,13 +103,16 @@ class WPRuteoApp {
         }
 
         wp_localize_script( 'wp-ruteo-app', 'wpRuteoAjax', array(
-            'ajaxurl' => admin_url( 'admin-ajax.php' ),
-            'nonce'   => wp_create_nonce( 'ruteo_submit_nonce' ),
-            'webhook' => $this->webhook_url,
+            'ajaxurl'  => admin_url( 'admin-ajax.php' ),
+            'nonce'    => wp_create_nonce( 'ruteo_submit_nonce' ),
+            'webhook'  => $this->webhook_url,
+            'siteLogo' => get_option( 'ruteo_site_logo', '' ),
             'user'    => array(
                 'id'          => $is_logged_in ? $current_user->ID : 0,
                 'isLoggedIn'  => $is_logged_in,
                 'username'    => $is_logged_in ? $current_user->user_login : '',
+                'isAdmin'     => $is_admin,
+                'negativaRol' => $negativa_rol ?: '',
                 'displayName' => $is_logged_in ? $current_user->display_name : 'Invitado',
                 'email'       => $is_logged_in ? $current_user->user_email : '',
                 'phone'       => $phone,
@@ -532,6 +544,48 @@ class WPRuteoApp {
 
         wp_send_json_success( array( 'message' => 'Perfil actualizado correctamente.' ) );
     }
+    
+    public function handle_ajax_update_site_logo() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
+        $current_user = wp_get_current_user();
+        $is_admin     = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+
+        if ( ! $is_admin ) {
+            wp_send_json_error( array( 'message' => 'Solo un Administrador puede actualizar el logo del sistema.' ) );
+            return;
+        }
+
+        if ( empty( $_FILES['logo']['tmp_name'] ) ) {
+            wp_send_json_error( array( 'message' => 'No se recibio ningun archivo de imagen.' ) );
+            return;
+        }
+
+        $tmp_file = $_FILES['logo']['tmp_name'];
+        $type     = mime_content_type( $tmp_file );
+
+        $tipos_permitidos = array( 'image/png', 'image/jpeg', 'image/svg+xml', 'image/webp' );
+        if ( ! in_array( $type, $tipos_permitidos, true ) ) {
+            wp_send_json_error( array( 'message' => 'Formato no valido. Usa PNG, JPG, WEBP o SVG.' ) );
+            return;
+        }
+
+        if ( filesize( $tmp_file ) > 2 * 1024 * 1024 ) {
+            wp_send_json_error( array( 'message' => 'La imagen es muy pesada. Maximo 2MB.' ) );
+            return;
+        }
+
+        $content = file_get_contents( $tmp_file );
+        $base64  = 'data:' . $type . ';base64,' . base64_encode( $content );
+        @unlink( $tmp_file );
+
+        update_option( 'ruteo_site_logo', $base64, false );
+
+        wp_send_json_success( array(
+            'message' => 'Logo actualizado correctamente.',
+            'logo'    => $base64,
+        ) );
+    }
 
     public function handle_ajax_save_materiales() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
@@ -618,6 +672,164 @@ class WPRuteoApp {
             'total'      => count($materiales)
         ) );
     }
+
+    public function handle_ajax_negativa_guardar() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado. Debes iniciar sesion.' ) );
+            return;
+        }
+        
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ruteo_negativas';
+        $current_user = wp_get_current_user();
+        $now = current_time( 'mysql' );
+
+        $id    = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
+        $etapa = isset( $_POST['etapa'] ) ? sanitize_text_field( wp_unslash( $_POST['etapa'] ) ) : '';
+
+        $is_admin = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+        $negativa_rol = get_user_meta( $current_user->ID, 'ruteo_negativa_rol', true );
+
+        $rol_requerido = array(
+            'tecnico'    => 'tecnico',
+            'supervisor' => 'supervisor_operativo',
+            'seguridad'  => 'supervisor_seguridad',
+            'hse'        => 'hse',
+        );
+
+        if ( ! $is_admin && ( ! isset( $rol_requerido[ $etapa ] ) || $negativa_rol !== $rol_requerido[ $etapa ] ) ) {
+            wp_send_json_error( array( 'message' => 'No tienes permiso para firmar esta etapa.' ) );
+            return;
+        }
+
+        if ( ! in_array( $etapa, array( 'tecnico', 'supervisor', 'seguridad', 'hse' ), true ) ) {
+            wp_send_json_error( array( 'message' => 'Etapa invalida.' ) );
+            return;
+        }
+
+        if ( ! in_array( $etapa, array( 'tecnico', 'supervisor', 'seguridad', 'hse' ), true ) ) {
+            wp_send_json_error( array( 'message' => 'Etapa invalida.' ) );
+            return;
+        }
+
+        if ( $etapa === 'tecnico' ) {
+            $campos = array(
+                'proceso'                     => sanitize_text_field( wp_unslash( $_POST['proceso'] ?? '' ) ),
+                'cm_localidad'                => sanitize_text_field( wp_unslash( $_POST['cm_localidad'] ?? '' ) ),
+                'contratista'                 => sanitize_text_field( wp_unslash( $_POST['contratista'] ?? '' ) ),
+                'sub_contratista'             => sanitize_text_field( wp_unslash( $_POST['sub_contratista'] ?? '' ) ),
+                'relacionado_a'               => sanitize_text_field( wp_unslash( $_POST['relacionado_a'] ?? '' ) ),
+                'lugar_trabajo'               => sanitize_text_field( wp_unslash( $_POST['lugar_trabajo'] ?? '' ) ),
+                'fecha'                       => sanitize_text_field( wp_unslash( $_POST['fecha'] ?? '' ) ),
+                'hora_inicio'                 => sanitize_text_field( wp_unslash( $_POST['hora_inicio'] ?? '' ) ),
+                'hora_fin'                    => sanitize_text_field( wp_unslash( $_POST['hora_fin'] ?? '' ) ),
+                'total_horas'                 => sanitize_text_field( wp_unslash( $_POST['total_horas'] ?? '' ) ),
+                'supervisor_operativo_nombre' => sanitize_text_field( wp_unslash( $_POST['supervisor_operativo_nombre'] ?? '' ) ),
+                'trabajador_reportante'       => sanitize_text_field( wp_unslash( $_POST['trabajador_reportante'] ?? '' ) ),
+                'razones_negativa'            => sanitize_textarea_field( wp_unslash( $_POST['razones_negativa'] ?? '' ) ),
+                'firma_tecnico_user'          => $current_user->display_name,
+                'firma_tecnico_fecha'         => $now,
+                'estado'                      => 'pendiente_supervisor',
+                'creado_por'                  => $current_user->display_name,
+            );
+
+            foreach ( array( 'foto1', 'foto2' ) as $i => $file_key ) {
+                if ( ! empty( $_FILES[ $file_key ]['tmp_name'] ) ) {
+                    $tmp     = $_FILES[ $file_key ]['tmp_name'];
+                    $type    = mime_content_type( $tmp );
+                    $content = file_get_contents( $tmp );
+                    $campos[ 'foto' . ( $i + 1 ) . '_url' ] = 'data:' . $type . ';base64,' . base64_encode( $content );
+                    @unlink( $tmp );
+                }
+            }
+
+            $wpdb->insert( $table, $campos );
+            $id = $wpdb->insert_id;
+
+        } elseif ( $etapa === 'supervisor' ) {
+            $wpdb->update( $table, array(
+                'acciones_correctivas'      => sanitize_textarea_field( wp_unslash( $_POST['acciones_correctivas'] ?? '' ) ),
+                'acuerdo_inseguro'          => sanitize_text_field( wp_unslash( $_POST['acuerdo_inseguro'] ?? '' ) ),
+                'firma_sup_operativo_user'  => $current_user->display_name,
+                'firma_sup_operativo_fecha' => $now,
+                'estado'                    => 'pendiente_seguridad',
+            ), array( 'id' => $id ) );
+
+        } elseif ( $etapa === 'seguridad' ) {
+            $wpdb->update( $table, array(
+                'firma_sup_seguridad_user'  => $current_user->display_name,
+                'firma_sup_seguridad_fecha' => $now,
+                'estado'                    => 'pendiente_hse',
+            ), array( 'id' => $id ) );
+
+        } elseif ( $etapa === 'hse' ) {
+            $wpdb->update( $table, array(
+                'firma_hse_user'  => $current_user->display_name,
+                'firma_hse_fecha' => $now,
+                'estado'          => 'completado',
+            ), array( 'id' => $id ) );
+        }
+
+        $registro = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ), ARRAY_A );
+
+        wp_send_json_success( array(
+            'message'  => 'Etapa guardada correctamente.',
+            'registro' => $registro,
+        ) );
+    }
+
+    public function handle_ajax_negativa_listar() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+            return;
+        }
+        global $wpdb;
+        $table     = $wpdb->prefix . 'ruteo_negativas';
+        $registros = $wpdb->get_results( "SELECT * FROM $table ORDER BY id DESC", ARRAY_A );
+        wp_send_json_success( array( 'registros' => $registros ) );
+    }
 }
+
+function ruteo_crear_tabla_negativas() {
+    global $wpdb;
+    $table = $wpdb->prefix . 'ruteo_negativas';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE IF NOT EXISTS $table (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        proceso VARCHAR(255),
+        cm_localidad VARCHAR(100),
+        contratista VARCHAR(150),
+        sub_contratista VARCHAR(150),
+        relacionado_a VARCHAR(10),
+        lugar_trabajo VARCHAR(150),
+        fecha DATE,
+        hora_inicio VARCHAR(20),
+        hora_fin VARCHAR(20),
+        total_horas VARCHAR(30),
+        supervisor_operativo_nombre VARCHAR(150),
+        trabajador_reportante VARCHAR(150),
+        razones_negativa TEXT,
+        foto1_url VARCHAR(500),
+        foto2_url VARCHAR(500),
+        acciones_correctivas TEXT,
+        acuerdo_inseguro VARCHAR(5),
+        firma_tecnico_user VARCHAR(150), firma_tecnico_fecha DATETIME,
+        firma_sup_operativo_user VARCHAR(150), firma_sup_operativo_fecha DATETIME,
+        firma_sup_seguridad_user VARCHAR(150), firma_sup_seguridad_fecha DATETIME,
+        firma_hse_user VARCHAR(150), firma_hse_fecha DATETIME,
+        estado VARCHAR(30) DEFAULT 'pendiente_tecnico',
+        creado_por VARCHAR(150),
+        fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) $charset_collate;";
+
+    require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+    dbDelta( $sql );
+}
+register_activation_hook( __FILE__, 'ruteo_crear_tabla_negativas' );
 
 new WPRuteoApp();
