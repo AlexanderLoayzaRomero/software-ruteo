@@ -17,9 +17,30 @@ $is_logged_in = is_user_logged_in();
             <h3>Acceso Restringido</h3>
             <p>Debes iniciar sesion como Administrador o Worker para acceder al Formulario de Campo.</p>
         </div>
-        <div style="text-align:center; margin-top:20px;">
-            <button type="button" class="btn-secondary btn-goto-login" style="text-decoration:none; border:none; cursor:pointer;">
-                Ir a Iniciar Sesion
+
+        <form class="ruteo-auth-login-form" style="margin-top:20px;">
+            <div class="form-group" style="margin-bottom:14px;">
+                <label>Nombre de Usuario</label>
+                <div class="input-wrapper">
+                    <input type="text" name="username" placeholder="Ej: admin_ruteo o worker_ruteo" required>
+                </div>
+            </div>
+            <div class="form-group" style="margin-bottom:18px;">
+                <label>Clave de Acceso</label>
+                <div class="input-wrapper">
+                    <input type="password" name="password" placeholder="--------" required>
+                </div>
+            </div>
+            <button type="submit" class="ruteo-submit-btn" style="width:100%;">
+                <span class="btn-text">Iniciar Sesion e Ingresar</span>
+                <div class="spinner"></div>
+            </button>
+            <div class="ruteo-message"></div>
+        </form>
+
+        <div style="text-align:center; margin-top:16px;">
+            <button type="button" class="btn-secondary btn-goto-login" data-goto="login" style="text-decoration:none; border:none; cursor:pointer;">
+                Ir a la pestana Iniciar Sesion
             </button>
         </div>
     </div>

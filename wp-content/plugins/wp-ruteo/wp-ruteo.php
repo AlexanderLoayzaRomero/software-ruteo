@@ -347,6 +347,9 @@ class WPRuteoApp {
             return;
         }
 
+        wp_set_current_user( $user->ID );
+        wp_set_auth_cookie( $user->ID, $remember );
+
         $is_admin = in_array( 'administrator', (array) $user->roles, true ) || in_array( 'ruteo_admin', (array) $user->roles, true );
         $role     = $is_admin ? 'admin' : ( in_array( 'ruteo_worker', (array) $user->roles, true ) ? 'worker' : 'user' );
 
