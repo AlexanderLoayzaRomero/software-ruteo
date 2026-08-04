@@ -92,6 +92,8 @@ jQuery(document).ready(function($) {
 
     $('#foto1').change(function() { readURL(this, 'preview1'); });
     $('#foto2').change(function() { readURL(this, 'preview2'); });
+    $('#neg-foto1').change(function() { readURL(this, 'neg-preview1'); });
+    $('#neg-foto2').change(function() { readURL(this, 'neg-preview2'); });
 
     $(document).on('click', '.btn-remove-photo', function(e) {
         e.preventDefault();
@@ -809,6 +811,8 @@ function renderNegativa(registro) {
 
     if (!registro) {
         $('#negativa-estado-badge').text('');
+        $('#neg-preview1, #neg-preview2').removeClass('show').css('background-image', 'none');
+        $('#neg-foto1, #neg-foto2').val('').closest('.ruteo-photo-upload').removeClass('has-file');
         $('#form-negativa-tecnico').show();
         return;
     }
@@ -818,6 +822,18 @@ function renderNegativa(registro) {
     var resumenHtml = '<strong>' + (registro.proceso || '') + '</strong> - ' + (registro.lugar_trabajo || '') + '<br>';
     resumenHtml += 'Tecnico: ' + (registro.firma_tecnico_user || '-') + ' | Supervisor Op.: ' + (registro.firma_sup_operativo_user || '-') +
                    ' | Seguridad: ' + (registro.firma_sup_seguridad_user || '-') + ' | HSE: ' + (registro.firma_hse_user || '-');
+
+    if (registro.foto1_url || registro.foto2_url) {
+        resumenHtml += '<div style="display:flex; gap:12px; margin-top:12px;">';
+        if (registro.foto1_url) {
+            resumenHtml += '<div style="width:120px; height:120px; border-radius:8px; border:1px solid var(--border); overflow:hidden;"><img src="' + registro.foto1_url + '" style="width:100%; height:100%; object-fit:cover;"></div>';
+        }
+        if (registro.foto2_url) {
+            resumenHtml += '<div style="width:120px; height:120px; border-radius:8px; border:1px solid var(--border); overflow:hidden;"><img src="' + registro.foto2_url + '" style="width:100%; height:100%; object-fit:cover;"></div>';
+        }
+        resumenHtml += '</div>';
+    }
+
     $('#negativa-resumen').html(resumenHtml).show();
 
     var puedeActuar = negativaPuedeActuar(registro.estado);
