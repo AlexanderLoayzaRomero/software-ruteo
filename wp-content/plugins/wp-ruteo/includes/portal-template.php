@@ -1258,7 +1258,7 @@ window.NONCE    = '<?php echo $nonce; ?>';
             }
         }
 
-        // METODO 1: Proxy via PHP (intento principal, timeout 12s)
+        // METODO 1: Proxy via PHP (intento principal, timeout 25s)
         var formData = new FormData();
         formData.append('action', 'ruteo_get_registros');
         formData.append('nonce', NONCE);
@@ -1276,11 +1276,11 @@ window.NONCE    = '<?php echo $nonce; ?>';
             return true;
         });
 
-        // Timeout 12s para el proxy PHP
+        // Timeout 25s para el proxy PHP
         var phpPromise = Promise.race([
             phpProxyPromise,
             new Promise(function(_, reject) {
-                setTimeout(function() { reject(new Error('proxy_timeout')); }, 12000);
+                setTimeout(function() { reject(new Error('proxy_timeout')); }, 25000);
             })
         ]);
 
@@ -1294,7 +1294,7 @@ window.NONCE    = '<?php echo $nonce; ?>';
                 var timeoutId = setTimeout(function() {
                     if (script.parentNode) script.parentNode.removeChild(script);
                     mostrarErrorProxy(silent);
-                }, 10000);
+                }, 20000);
                 window._ruteoJsonpCallback = function(data) {
                     clearTimeout(timeoutId);
                     if (script.parentNode) script.parentNode.removeChild(script);

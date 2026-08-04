@@ -156,7 +156,7 @@ class WPRuteoApp {
             return;
         }
 
-        set_time_limit( 25 );
+        set_time_limit( 35 );
         nocache_headers();
         header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
         header( 'Pragma: no-cache' );
@@ -165,7 +165,7 @@ class WPRuteoApp {
         $target_url = add_query_arg( '_ts', microtime( true ), $this->webhook_url );
 
         $response = wp_remote_get( $target_url, array(
-            'timeout'     => 20,
+            'timeout'     => 30,
             'redirection' => 5,
             'httpversion' => '1.1',
             'sslverify'   => false,
