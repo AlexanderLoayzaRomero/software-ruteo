@@ -982,6 +982,7 @@ body.admin-bar .ruteo-app-layout {
     height: 100%;
     opacity: 0;
     cursor: pointer;
+    z-index: 3;
 }
 
 .ruteo-submit-btn {
@@ -1435,7 +1436,8 @@ body.admin-bar .ruteo-app-layout {
     background-position: center;
     background-repeat: no-repeat;
     display: none;
-    z-index: 5;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .preview.show {
@@ -1461,6 +1463,7 @@ body.admin-bar .ruteo-app-layout {
     box-shadow: 0 2px 6px rgba(217, 38, 37, 0.4);
     transition: var(--transition);
     z-index: 10;
+    pointer-events: auto;
 }
 
 .preview.show .btn-remove-photo {

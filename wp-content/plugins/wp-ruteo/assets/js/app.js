@@ -75,25 +75,29 @@ jQuery(document).ready(function($) {
 
     // --- PREVISUALIZACION Y QUITAR FOTOS DE CAMPO ---
     function readURL(input, previewId) {
+        var $preview = $('#' + previewId);
         if (input.files && input.files[0]) {
             var reader = new FileReader();
             reader.onload = function(e) {
-                const previewElement = $('#' + previewId);
-                previewElement.css('background-image', 'url(' + e.target.result + ')');
-                previewElement.addClass('show'); 
+                $preview.find('img.preview-img').remove();
+                $preview.prepend('<img src="' + e.target.result + '" class="preview-img" style="width:100%; height:100%; object-fit:cover; border-radius:10px; position:absolute; top:0; left:0; pointer-events:none; z-index:1;">');
+                $preview.css('background-image', 'url(' + e.target.result + ')').addClass('show'); 
                 $(input).closest('.ruteo-photo-upload').addClass('has-file');
-            }
+            };
             reader.readAsDataURL(input.files[0]);
         } else {
-            $('#' + previewId).removeClass('show').css('background-image', 'none');
+            $preview.find('img.preview-img').remove();
+            $preview.removeClass('show').css('background-image', 'none');
             $(input).closest('.ruteo-photo-upload').removeClass('has-file');
         }
     }
 
-    $('#foto1').change(function() { readURL(this, 'preview1'); });
-    $('#foto2').change(function() { readURL(this, 'preview2'); });
-    $('#neg-foto1').change(function() { readURL(this, 'neg-preview1'); });
-    $('#neg-foto2').change(function() { readURL(this, 'neg-preview2'); });
+    $(document).on('change', '#foto1, #foto2, #neg-foto1, #neg-foto2', function() {
+        var previewId = $(this).attr('id') === 'neg-foto1' ? 'neg-preview1' :
+                        $(this).attr('id') === 'neg-foto2' ? 'neg-preview2' :
+                        $(this).attr('id') === 'foto1' ? 'preview1' : 'preview2';
+        readURL(this, previewId);
+    });
 
     $(document).on('click', '.btn-remove-photo', function(e) {
         e.preventDefault();
@@ -101,7 +105,9 @@ jQuery(document).ready(function($) {
         var inputId = $(this).data('input');
         var previewId = $(this).data('preview');
         $('#' + inputId).val('');
-        $('#' + previewId).removeClass('show').css('background-image', 'none');
+        var $preview = $('#' + previewId);
+        $preview.find('img.preview-img').remove();
+        $preview.removeClass('show').css('background-image', 'none');
         $('#' + inputId).closest('.ruteo-photo-upload').removeClass('has-file');
     });
 
