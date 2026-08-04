@@ -698,8 +698,39 @@ body.admin-bar .ruteo-app-layout {
                         <input type="file" id="neg-foto2" name="foto2" accept="image/*">
                         <div class="preview" id="neg-preview2"><button type="button" class="btn-remove-photo" data-input="neg-foto2" data-preview="neg-preview2">&times;</button></div>
                     </div>
-                </div>
             </div>
+
+            <script>
+            (function() {
+                function bindNegPhoto(inputId, previewId) {
+                    var el = document.getElementById(inputId);
+                    if (!el) return;
+                    el.addEventListener('change', function(e) {
+                        var file = e.target.files && e.target.files[0];
+                        var prev = document.getElementById(previewId);
+                        if (file && prev) {
+                            var reader = new FileReader();
+                            reader.onload = function(evt) {
+                                var old = prev.querySelector('img.preview-img');
+                                if (old) old.remove();
+                                var img = document.createElement('img');
+                                img.src = evt.target.result;
+                                img.className = 'preview-img';
+                                img.style.cssText = 'width:100%; height:100%; object-fit:cover; border-radius:10px; position:absolute; top:0; left:0; pointer-events:none; z-index:1;';
+                                prev.insertBefore(img, prev.firstChild);
+                                prev.classList.add('show');
+                                prev.style.display = 'block';
+                                var box = el.closest('.ruteo-photo-upload');
+                                if (box) box.classList.add('has-file');
+                            };
+                            reader.readAsDataURL(file);
+                        }
+                    });
+                }
+                bindNegPhoto('neg-foto1', 'neg-preview1');
+                bindNegPhoto('neg-foto2', 'neg-preview2');
+            })();
+            </script>
 
             <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Tecnico</button>
         </form>
