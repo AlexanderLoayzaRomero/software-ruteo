@@ -1033,6 +1033,9 @@ body.admin-bar .ruteo-app-layout {
                         <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
                         <span>Exportar Negativa a PDF (Formato HSE-RE-NEG-01)</span>
                     </button>
+                    <div id="negativa-pdf-notice" style="display:none; font-size:12.5px; color:var(--text-muted); background:var(--bg-subtle); padding:10px 14px; border-radius:8px; border:1px solid var(--border); margin-top:16px;">
+                        La exportacion a PDF (Formato HSE-RE-NEG-01) estara disponible cuando se tengan todas las firmas completas (Visto Bueno final del Area HSE).
+                    </div>
                 </div>
             </div>
         </section>
@@ -1238,6 +1241,12 @@ body.admin-bar .ruteo-app-layout {
                                     </div>
                                 </div>
                                 <div class="form-group full-width">
+                                    <label>Puesto de Trabajo</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="user-position-input" placeholder="Ej: Especialista Fibra Optica / Supervisor SST / Tecnico PEXT">
+                                    </div>
+                                </div>
+                                <div class="form-group full-width">
                                     <label>Centro de Mantenimiento / PM Asignado</label>
                                     <div class="input-wrapper">
                                         <select id="user-pm-select">
@@ -1370,6 +1379,13 @@ body.admin-bar .ruteo-app-layout {
                                     <label>Numero Telefonico</label>
                                     <div class="input-wrapper">
                                         <input type="tel" id="prof-phone" placeholder="+51 987 654 321">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Puesto de Trabajo</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="prof-position" placeholder="Ej: Especialista Fibra Optica / Supervisor SST">
                                     </div>
                                 </div>
 

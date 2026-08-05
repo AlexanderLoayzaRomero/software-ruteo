@@ -210,10 +210,12 @@ jQuery(document).ready(function($) {
 
             // Llenar datos de perfil
             $('#profile-name-heading').text(user.displayName || user.username);
-            $('#profile-role-heading').text(roleText + ' - ' + (user.pmAssigned || 'Sin PM asignado'));
+            var headerSub = roleText + (user.position ? ' | ' + user.position : '') + ' - ' + (user.pmAssigned || 'Sin PM asignado');
+            $('#profile-role-heading').text(headerSub);
             $('#prof-display-name').val(user.displayName || user.username);
             $('#prof-email').val(user.email || '');
             $('#prof-phone').val(user.phone || '');
+            $('#prof-position').val(user.position || '');
             $('#prof-pm').val(user.pmAssigned || '');
 
             if (typeof window.cargarDatosPortal === 'function' && (!window._ruteoRegistros || window._ruteoRegistros.length === 0)) {
@@ -691,7 +693,7 @@ jQuery(document).ready(function($) {
                 '<td><strong>' + u.username + '</strong></td>' +
                 '<td>' + (u.displayName || u.username) + '</td>' +
                 '<td>' + u.email + '</td>' +
-                '<td>' + (u.phone || '-') + '</td>' +
+                '<td>' + (u.position || '-') + '</td>' +
                 '<td>' + (u.pmAssigned || 'Sin asignar') + '</td>' +
                 '<td>' + roleBadge + '</td>' +
                 '<td><button class="btn-del-row btn-del-user" data-id="' + u.id + '" data-name="' + u.username + '">Eliminar</button></td>' +
@@ -723,6 +725,7 @@ jQuery(document).ready(function($) {
         formData.append('password', $('#user-password-input').val());
         formData.append('role', $('#user-role-select').val());
         formData.append('negativa_rol', $('#user-negativa-rol-select').val() || '');
+        formData.append('position', $('#user-position-input').val() || '');
         formData.append('phone', $('#user-phone-input').val());
         formData.append('pm_assigned', $('#user-pm-select').val());
 
@@ -776,6 +779,7 @@ jQuery(document).ready(function($) {
         formData.append('nonce', wpRuteoAjax.nonce);
         formData.append('display_name', $('#prof-display-name').val());
         formData.append('phone', $('#prof-phone').val());
+        formData.append('position', $('#prof-position').val() || '');
         formData.append('pm_assigned', $('#prof-pm').val());
 
         var fileInput = $('#prof-avatar-file')[0];
@@ -989,9 +993,13 @@ jQuery(document).ready(function($) {
                 $('#negativa-firma-simple-texto').text('Esperando visto bueno del Area HSE.');
                 $('#negativa-firma-simple').show().find('button').hide();
             }
-        } else if (registro.estado === 'completado') {
+        } else if (registro.estado === 'completado' || (registro.firma_hse_user && registro.firma_hse_user.length > 0)) {
             // SOLO cuando se tengan todas las firmas completas (Firma HSE) se habilita exportar PDF
             $('#btn-negativa-exportar-pdf').show();
+            $('#negativa-pdf-notice').hide();
+        } else {
+            $('#btn-negativa-exportar-pdf').hide();
+            $('#negativa-pdf-notice').show();
         }
     }
 

@@ -456,6 +456,7 @@ class WPRuteoApp {
         $pm_assigned  = get_user_meta( $user->ID, 'ruteo_pm_assigned', true );
         $avatar       = get_user_meta( $user->ID, 'ruteo_avatar', true );
         $negativa_rol = get_user_meta( $user->ID, 'ruteo_negativa_rol', true );
+        $position     = get_user_meta( $user->ID, 'ruteo_position', true );
 
         wp_send_json_success( array(
             'message' => 'Inicio de sesion exitoso.',
@@ -470,6 +471,7 @@ class WPRuteoApp {
                 'role'        => $role,
                 'isAdmin'     => $is_admin,
                 'negativaRol' => $negativa_rol ?: '',
+                'position'    => $position ?: '',
             ),
         ) );
     }
@@ -514,6 +516,7 @@ class WPRuteoApp {
                 'avatar'      => get_user_meta( $u->ID, 'ruteo_avatar', true ),
                 'role'        => $role_label,
                 'negativaRol' => get_user_meta( $u->ID, 'ruteo_negativa_rol', true ) ?: '',
+                'position'    => get_user_meta( $u->ID, 'ruteo_position', true ) ?: '',
                 'registered'  => $u->user_registered,
             );
         }
@@ -540,6 +543,7 @@ class WPRuteoApp {
         $phone        = isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '';
         $pm_assigned  = isset( $_POST['pm_assigned'] ) ? sanitize_text_field( wp_unslash( $_POST['pm_assigned'] ) ) : '';
         $negativa_rol = isset( $_POST['negativa_rol'] ) ? sanitize_text_field( wp_unslash( $_POST['negativa_rol'] ) ) : '';
+        $position     = isset( $_POST['position'] ) ? sanitize_text_field( wp_unslash( $_POST['position'] ) ) : '';
 
         if ( empty( $username ) || empty( $password ) || empty( $email ) ) {
             wp_send_json_error( array( 'message' => 'Usuario, correo y clave son obligatorios.' ) );
@@ -579,6 +583,9 @@ class WPRuteoApp {
         }
         if ( ! empty( $negativa_rol ) ) {
             update_user_meta( $user_id, 'ruteo_negativa_rol', $negativa_rol );
+        }
+        if ( ! empty( $position ) ) {
+            update_user_meta( $user_id, 'ruteo_position', $position );
         }
 
         if ( ! empty( $_FILES['avatar']['tmp_name'] ) ) {
@@ -634,12 +641,14 @@ class WPRuteoApp {
         $display_name = isset( $_POST['display_name'] ) ? sanitize_text_field( wp_unslash( $_POST['display_name'] ) ) : '';
         $phone        = isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '';
         $pm_assigned  = isset( $_POST['pm_assigned'] ) ? sanitize_text_field( wp_unslash( $_POST['pm_assigned'] ) ) : '';
+        $position     = isset( $_POST['position'] ) ? sanitize_text_field( wp_unslash( $_POST['position'] ) ) : '';
 
         if ( ! empty( $display_name ) ) {
             wp_update_user( array( 'ID' => $user_id, 'display_name' => $display_name ) );
         }
         update_user_meta( $user_id, 'ruteo_phone', $phone );
         update_user_meta( $user_id, 'ruteo_pm_assigned', $pm_assigned );
+        update_user_meta( $user_id, 'ruteo_position', $position );
 
         if ( ! empty( $_FILES['avatar']['tmp_name'] ) ) {
             $tmp_file = $_FILES['avatar']['tmp_name'];
