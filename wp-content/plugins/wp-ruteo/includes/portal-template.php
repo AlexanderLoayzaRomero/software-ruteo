@@ -1294,14 +1294,107 @@ body.admin-bar .ruteo-app-layout {
 
         <!-- SECCION 7: PERFIL DE USUARIO -->
         <section class="ruteo-tab-content" id="tab-perfil">
+            <div class="ruteo-tab-protected-notice" style="display:none;">
+                <div class="login-card-container" style="max-width:520px; margin: 30px auto; text-align:center; padding:32px 24px; background:var(--bg-glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(10px);">
+                    <div style="width:64px; height:64px; margin:0 auto 16px auto; background:rgba(0, 151, 216, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="32" height="32" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                    </div>
+                    <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
+                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 24px 0;">Debes iniciar sesion con tu cuenta para consultar y editar tu Perfil de Usuario.</p>
 
-                        <div class="form-footer-actions">
-                            <button type="submit" class="ruteo-submit-btn">
-                                <span>Guardar Cambios de Perfil</span>
-                            </button>
-                            <div id="prof-form-msg" class="ruteo-message"></div>
+                    <form class="ruteo-auth-login-form" style="text-align:left; margin-bottom:20px;">
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label style="font-size:13px; font-weight:600;">Nombre de Usuario o Correo Electronico</label>
+                            <div class="input-wrapper">
+                                <input type="text" name="username" placeholder="Usuario o correo@dominio.com" required>
+                            </div>
                         </div>
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <label style="font-size:13px; font-weight:600;">Clave de Acceso</label>
+                            <div class="input-wrapper">
+                                <input type="password" name="password" placeholder="--------" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="ruteo-submit-btn" style="width:100%;">
+                            <span class="btn-text">Iniciar Sesion e Ingresar</span>
+                            <div class="spinner"></div>
+                        </button>
+                        <div class="ruteo-message"></div>
                     </form>
+
+                    <div class="demo-accounts-box" style="padding:12px; background:var(--bg-light); border:1px solid var(--border); border-radius:10px;">
+                        <p style="font-size:12px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary);">Cuentas Rapidas de Prueba (Click para ingresar):</p>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="admingeneral" data-pass="AdminGeneral123!" style="font-size:11px; padding:4px 8px;">Admin General</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="tecnico1" data-pass="Tecnico123!" style="font-size:11px; padding:4px 8px;">Tecnico</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="supervisor1" data-pass="Supervisor123!" style="font-size:11px; padding:4px 8px;">Supervisor Op.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="seguridad1" data-pass="Seguridad123!" style="font-size:11px; padding:4px 8px;">Supervisor Seg.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="hse1" data-pass="Hse123!" style="font-size:11px; padding:4px 8px;">Area HSE</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ruteo-tab-protected-content">
+                <div class="profile-container">
+                    <div class="profile-card">
+                        <div class="profile-header-banner">
+                            <div class="profile-avatar-large" id="profile-avatar-img-box">
+                                <span id="profile-avatar-large-text">?</span>
+                            </div>
+                            <div class="profile-header-info">
+                                <h2 id="profile-name-heading">Nombre de Usuario</h2>
+                                <p id="profile-role-heading">Cargando perfil...</p>
+                            </div>
+                        </div>
+
+                        <form id="form-update-profile" class="profile-form">
+                            <div class="form-grid-2">
+                                <div class="form-group">
+                                    <label>Nombre Completo</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="prof-display-name" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Correo Electronico (Solo Lectura)</label>
+                                    <div class="input-wrapper">
+                                        <input type="email" id="prof-email" disabled readonly>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Numero Telefonico</label>
+                                    <div class="input-wrapper">
+                                        <input type="tel" id="prof-phone" placeholder="+51 987 654 321">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Centro de Mantenimiento / PM Asignado</label>
+                                    <div class="input-wrapper">
+                                        <select id="prof-pm">
+                                            <option value="">-- Seleccionar PM --</option>
+                                            <?php foreach ($pm_list as $pm_item) : ?>
+                                                <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-footer-actions">
+                                <button type="submit" class="ruteo-submit-btn" style="min-width: 180px;">
+                                    <span class="btn-text">Actualizar Perfil</span>
+                                    <div class="spinner"></div>
+                                </button>
+                                <div id="profile-form-msg" class="ruteo-message"></div>
+                            </div>
+                        </form>
+                    </div>
                 </div>
             </div>
         </section>
