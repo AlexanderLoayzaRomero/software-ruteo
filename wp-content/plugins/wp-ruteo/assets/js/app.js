@@ -1145,15 +1145,38 @@ jQuery(document).ready(function($) {
         doc.text('FORMATO DE NEGATIVA AL TRABAJO POR RIESGO INMINENTE (HSE-RE-NEG-01)', 14, 19);
 
         // Cliente y Logo en derecha
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text('CLIENTE: ' + clienteNombre.toUpperCase(), pageW - 14, 14, { align: 'right' });
-
-        if (clienteLogo) {
+        if (clienteLogo && clienteLogo.indexOf('data:image') === 0) {
             try {
-                var mime = clienteLogo.indexOf('image/png') !== -1 ? 'PNG' : 'JPEG';
-                doc.addImage(clienteLogo, mime, pageW - 48, 2, 34, 11);
-            } catch(e) {}
+                var mime = clienteLogo.indexOf('image/png') !== -1 ? 'PNG' : (clienteLogo.indexOf('image/svg') !== -1 ? 'SVG' : 'JPEG');
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(pageW - 52, 3, 38, 20, 2, 2, 'F');
+                doc.addImage(clienteLogo, mime, pageW - 50, 4, 34, 18);
+            } catch(e) {
+                renderLogoInsignia(doc, pageW, clienteNombre);
+            }
+        } else {
+            renderLogoInsignia(doc, pageW, clienteNombre);
+        }
+
+        function renderLogoInsignia(pdf, pw, nombreCli) {
+            pdf.setFillColor(255, 255, 255);
+            pdf.roundedRect(pw - 52, 3, 38, 20, 2, 2, 'F');
+            pdf.setDrawColor(200, 215, 230);
+            pdf.setLineWidth(0.3);
+            pdf.roundedRect(pw - 52, 3, 38, 20, 2, 2, 'S');
+
+            // Icono corporativo cian y verde
+            pdf.setFillColor(0, 151, 216);
+            pdf.rect(pw - 48, 6.5, 6, 6, 'F');
+            pdf.setFillColor(131, 202, 22);
+            pdf.rect(pw - 45, 9.5, 5, 5, 'F');
+
+            // Nombre de la Empresa Cliente
+            pdf.setFontSize(9); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(0, 151, 216);
+            pdf.text(String(nombreCli).toUpperCase(), pw - 37, 11);
+
+            pdf.setFontSize(5.5); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(131, 202, 22);
+            pdf.text('EMPRESA CLIENTE', pw - 37, 16);
         }
 
         var y = 32;
