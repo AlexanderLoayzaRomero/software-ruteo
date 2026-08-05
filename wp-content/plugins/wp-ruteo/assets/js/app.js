@@ -1570,18 +1570,62 @@ jQuery(document).ready(function($) {
     };
     window.generarDocumentoWord = window.abrirODocumentoGoogleDocs;
 
+    window.generarReportePDFGeneral = function(registros) {
+        var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || window.jspdf);
+        if (!jsPDFConstructor) {
+            alert('Libreria PDF no disponible. Por favor recargue la pagina.');
+            return;
+        }
+        var doc = new jsPDFConstructor({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        var w = doc.internal.pageSize.getWidth();
+        doc.setFillColor(0, 151, 216); doc.rect(0,0,w,24,'F'); doc.setTextColor(255,255,255);
+        doc.setFontSize(14); doc.setFont('helvetica', 'bold');
+        doc.text('SOFTWARE O&M - REPORTE CONSOLIDADO DE REGISTROS DE CAMPO', 14, 12);
+        doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+        doc.text('Total Registros: ' + (registros ? registros.length : 0) + ' | Fecha de Emision: ' + new Date().toLocaleDateString('es-PE'), 14, 18);
+
+        var rows = (registros || []).map(function(raw) {
+            var r = normalizarRegistro(raw);
+            return [r.tramo || '-', r.id_consol || '-', r.codigo || '-', r.estructura || '-', r.tipo_estructura || '-', r.altura || '-', r.ubicacion || '-', r.mufa || '0', r.retencion || '0', r.suspension || '0', r.cruceta || '0'];
+        });
+
+        var autoTableFn = (typeof doc.autoTable === 'function') ? doc.autoTable : (window.jspdf && window.jspdf.autoTable);
+        if (typeof autoTableFn === 'function') {
+            autoTableFn.call(doc, {
+                startY: 28,
+                head: [['Tramo', 'ID Consol', 'Codigo', 'Estructura', 'Tipo', 'Alt', 'Ubicacion', 'Mufa', 'Ret', 'Susp', 'Cruceta']],
+                body: rows,
+                theme: 'grid',
+                headStyles: { fillColor: [0, 151, 216], fontSize: 8, fontStyle: 'bold' },
+                bodyStyles: { fontSize: 7.5, cellPadding: 2 },
+                margin: { left: 10, right: 10 }
+            });
+        }
+
+        doc.save('Reporte_Registros_OM_' + new Date().toISOString().slice(0,10) + '.pdf');
+    };
+
+    $('#btn-download-pdf').on('click', function() {
+        var registros = window._ruteoRegistros || [];
+        if (!registros.length) {
+            alert('No hay registros disponibles para exportar.');
+            return;
+        }
+        window.generarReportePDFGeneral(registros);
+    });
+
     window.generarDocumentoPDF = function(idx) {
         var raw = window._ruteoRegistros ? window._ruteoRegistros[idx] : null; if (!raw) return;
         var r = normalizarRegistro(raw);
-        var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+        var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || window.jspdf);
         if (!jsPDFConstructor) {
-            alert('Libreria PDF no disponible.');
+            alert('Libreria PDF no disponible. Por favor recargue la pagina.');
             return;
         }
         var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         var w = doc.internal.pageSize.getWidth();
         doc.setFillColor(0, 151, 216); doc.rect(0,0,w,28,'F'); doc.setTextColor(255,255,255);
-        doc.setFontSize(16); doc.text('FICHA TECNICA DE REGISTRO', w/2, 13, { align: 'center' });
+        doc.setFontSize(16); doc.text('FICHA TECNICA DE REGISTRO - O&M', w/2, 13, { align: 'center' });
         doc.setFontSize(9); doc.text('Fecha: ' + r.fecha + ' | Tramo: ' + r.tramo, w/2, 21, { align: 'center' });
         var data = [
             ['ID Consol', r.id_consol || '-'],
@@ -1594,8 +1638,9 @@ jQuery(document).ready(function($) {
             ['Cruceta / Accesorios', 'Cruceta: ' + r.cruceta + ' | Hebillas: ' + r.hebillas + ' | Fleje: ' + r.fleje],
             ['Observacion', r.observacion || '-']
         ];
-        if (typeof doc.autoTable === 'function') {
-            doc.autoTable({ startY: 34, body: data, theme: 'grid', headStyles: { fillColor: [0, 151, 216] }, bodyStyles: { fontSize: 8.5, cellPadding: 2.5 }, margin: { left: 12, right: 12 } });
+        var autoTableFn = (typeof doc.autoTable === 'function') ? doc.autoTable : (window.jspdf && window.jspdf.autoTable);
+        if (typeof autoTableFn === 'function') {
+            autoTableFn.call(doc, { startY: 34, body: data, theme: 'grid', headStyles: { fillColor: [0, 151, 216] }, bodyStyles: { fontSize: 8.5, cellPadding: 2.5 }, margin: { left: 12, right: 12 } });
         }
         doc.save('Ficha_Ruteo_' + (r.codigo || r.id_consol || 'Registro') + '.pdf');
     };
