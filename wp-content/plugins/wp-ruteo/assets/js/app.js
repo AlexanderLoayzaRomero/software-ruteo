@@ -785,143 +785,504 @@ jQuery(document).ready(function($) {
         });
     });
 
-    // --- MODULO: NEGATIVA AL TRABAJO POR RIESGO INMINENTE ---
-var negativaActual = null;
-
-function negativaEstadoLabel(estado) {
-    var labels = {
-        'pendiente_tecnico': 'Pendiente: Tecnico',
-        'pendiente_supervisor': 'Pendiente: Supervisor Operativo',
-        'pendiente_seguridad': 'Pendiente: Supervisor de Seguridad',
-        'pendiente_hse': 'Pendiente: Visto Bueno HSE',
-        'completado': 'Completado'
-    };
-    return labels[estado] || estado;
-}
-
-function negativaPuedeActuar(estado) {
-    if (currentUser.isAdmin) return true;
-    var mapa = {
-        'pendiente_tecnico': 'tecnico',
-        'pendiente_supervisor': 'supervisor_operativo',
-        'pendiente_seguridad': 'supervisor_seguridad',
-        'pendiente_hse': 'hse'
-    };
-    return currentUser.negativaRol === mapa[estado];
-}
-
-function renderNegativa(registro) {
-    negativaActual = registro;
-    $('#negativa-resumen').hide().empty();
-    $('#form-negativa-tecnico, #form-negativa-supervisor, #negativa-firma-simple, #btn-negativa-exportar-pdf').hide();
-
-    if (!registro) {
-        $('#negativa-estado-badge').text('');
-        $('#neg-preview1, #neg-preview2').removeClass('show').css('background-image', 'none');
-        $('#neg-foto1, #neg-foto2').val('').closest('.ruteo-photo-upload').removeClass('has-file');
-        $('#form-negativa-tecnico').show();
-        return;
-    }
-
-    $('#negativa-estado-badge').text(negativaEstadoLabel(registro.estado));
-
-    var resumenHtml = '<strong>' + (registro.proceso || '') + '</strong> - ' + (registro.lugar_trabajo || '') + '<br>';
-    resumenHtml += 'Tecnico: ' + (registro.firma_tecnico_user || '-') + ' | Supervisor Op.: ' + (registro.firma_sup_operativo_user || '-') +
-                   ' | Seguridad: ' + (registro.firma_sup_seguridad_user || '-') + ' | HSE: ' + (registro.firma_hse_user || '-');
-
-    if (registro.foto1_url || registro.foto2_url) {
-        resumenHtml += '<div style="display:flex; gap:12px; margin-top:12px;">';
-        if (registro.foto1_url) {
-            resumenHtml += '<div style="width:120px; height:120px; border-radius:8px; border:1px solid var(--border); overflow:hidden;"><img src="' + registro.foto1_url + '" style="width:100%; height:100%; object-fit:cover;"></div>';
+    // --- MODULO: GESTION DE CLIENTES Y LOGOS ---
+    function renderTablaClientes(clientes) {
+        var $tbody = $('#clientes-tbody');
+        if (!$tbody.length) return;
+        $tbody.empty();
+        if (!clientes || !clientes.length) {
+            $tbody.append('<tr><td colspan="6" style="text-align:center; padding:12px;">No hay clientes registrados.</td></tr>');
+            return;
         }
-        if (registro.foto2_url) {
-            resumenHtml += '<div style="width:120px; height:120px; border-radius:8px; border:1px solid var(--border); overflow:hidden;"><img src="' + registro.foto2_url + '" style="width:100%; height:100%; object-fit:cover;"></div>';
+        clientes.forEach(function(c) {
+            var logoImg = c.logo ? '<img src="' + c.logo + '" style="height:32px; max-width:80px; object-fit:contain;">' : '<span style="color:var(--text-muted); font-size:12px;">Sin logo</span>';
+            var tr = '<tr>' +
+                '<td>' + logoImg + '</td>' +
+                '<td><strong>' + c.nombre + '</strong></td>' +
+                '<td>' + (c.ruc || '-') + '</td>' +
+                '<td>' + (c.direccion || '-') + '</td>' +
+                '<td>' + (c.contacto || '-') + '</td>' +
+                '<td><button type="button" class="btn-del-row btn-del-cliente" data-id="' + c.id + '" data-name="' + c.nombre + '">Eliminar</button></td>' +
+            '</tr>';
+            $tbody.append(tr);
+        });
+
+        var $selects = $('.neg-select-cliente');
+        $selects.empty();
+        clientes.forEach(function(c) {
+            $selects.append('<option value="' + c.nombre + '">' + c.nombre + '</option>');
+        });
+
+        $('.btn-del-cliente').off('click').on('click', function() {
+            var cid = $(this).data('id');
+            var cname = $(this).data('name');
+            if (confirm('Deseas eliminar al cliente ' + cname + '?')) {
+                $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_delete_cliente', nonce: wpRuteoAjax.nonce, id: cid }, function(res) {
+                    if (res.success) {
+                        wpRuteoAjax.clientes = res.data.clientes;
+                        renderTablaClientes(res.data.clientes);
+                    }
+                });
+            }
+        });
+    }
+
+    if (window.wpRuteoAjax && window.wpRuteoAjax.clientes) {
+        renderTablaClientes(window.wpRuteoAjax.clientes);
+    }
+
+    $('#form-cliente').on('submit', function(e) {
+        e.preventDefault();
+        var fd = new FormData();
+        fd.append('action', 'ruteo_save_cliente');
+        fd.append('nonce', wpRuteoAjax.nonce);
+        fd.append('nombre', $('#cli-nombre-input').val());
+        fd.append('ruc', $('#cli-ruc-input').val());
+        fd.append('direccion', $('#cli-direccion-input').val());
+        fd.append('contacto', $('#cli-contacto-input').val());
+
+        var fileInput = $('#cli-logo-file')[0];
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            fd.append('logo', fileInput.files[0]);
         }
-        resumenHtml += '</div>';
-    }
 
-    $('#negativa-resumen').html(resumenHtml).show();
+        var $msg = $('#cli-msg');
+        $msg.removeClass('success error').hide();
 
-    var puedeActuar = negativaPuedeActuar(registro.estado);
-
-    if (registro.estado === 'pendiente_supervisor') {
-        if (puedeActuar) { $('#form-negativa-supervisor').show(); }
-        else { $('#negativa-firma-simple-texto').text('Esperando accion del Supervisor Operativo.'); $('#negativa-firma-simple').show().find('button').hide(); }
-    } else if (registro.estado === 'pendiente_seguridad') {
-        if (puedeActuar) {
-            $('#negativa-firma-simple-texto').text('Firmar como Supervisor de Seguridad.');
-            $('#negativa-firma-simple').show().find('button').show().data('etapa', 'seguridad');
-        } else { $('#negativa-firma-simple-texto').text('Esperando firma del Supervisor de Seguridad.'); $('#negativa-firma-simple').show().find('button').hide(); }
-    } else if (registro.estado === 'pendiente_hse') {
-        if (puedeActuar) {
-            $('#negativa-firma-simple-texto').text('Otorgar Visto Bueno del Area HSE.');
-            $('#negativa-firma-simple').show().find('button').show().data('etapa', 'hse');
-        } else { $('#negativa-firma-simple-texto').text('Esperando visto bueno de HSE.'); $('#negativa-firma-simple').show().find('button').hide(); }
-    } else if (registro.estado === 'completado') {
-        $('#btn-negativa-exportar-pdf').show();
-    }
-}
-
-function cargarNegativas() {
-    $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_listar', nonce: wpRuteoAjax.nonce }, function(res) {
-        if (!res.success) return;
-        var $sel = $('#negativa-select-registro');
-        $sel.find('option:not(:first)').remove();
-        res.data.registros.forEach(function(r) {
-            $sel.append('<option value="' + r.id + '">' + (r.proceso || 'Sin proceso') + ' - ' + r.fecha + ' (' + negativaEstadoLabel(r.estado) + ')</option>');
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl,
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                if (res.success) {
+                    $msg.addClass('success').text(res.data.message).fadeIn(200);
+                    $('#form-cliente')[0].reset();
+                    wpRuteoAjax.clientes = res.data.clientes;
+                    renderTablaClientes(res.data.clientes);
+                    setTimeout(function() { $msg.fadeOut(300); }, 4000);
+                } else {
+                    $msg.addClass('error').text(res.data.message || 'Error al guardar cliente.').fadeIn(200);
+                }
+            }
         });
     });
-}
 
-$('#negativa-select-registro').on('change', function() {
-    var id = $(this).val();
-    if (id === '0') { renderNegativa(null); return; }
-    $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_listar', nonce: wpRuteoAjax.nonce }, function(res) {
-        if (!res.success) return;
-        var reg = res.data.registros.find(function(r) { return String(r.id) === String(id); });
-        renderNegativa(reg);
-    });
-});
+    // --- MODULO: NEGATIVA AL TRABAJO POR RIESGO INMINENTE ---
+    var negativaActual = null;
 
-$('#form-negativa-tecnico').on('submit', function(e) {
-    e.preventDefault();
-    var fd = new FormData(this);
-    fd.append('action', 'ruteo_negativa_guardar');
-    fd.append('nonce', wpRuteoAjax.nonce);
-    fd.append('etapa', 'tecnico');
-    $.ajax({ url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
-        success: function(res) {
-            if (res.success) { alert('Etapa Tecnico guardada.'); cargarNegativas(); renderNegativa(res.data.registro); }
-            else { alert('Error: ' + res.data.message); }
+    function negativaEstadoLabel(estado) {
+        var labels = {
+            'pendiente_tecnico': 'Pendiente: Tecnico',
+            'pendiente_supervisor': 'Pendiente: Supervisor Operativo',
+            'pendiente_seguridad': 'Pendiente: Supervisor de Seguridad',
+            'pendiente_hse': 'Pendiente: Visto Bueno HSE',
+            'completado': 'Completado (Firmas completas)'
+        };
+        return labels[estado] || estado;
+    }
+
+    function negativaPuedeActuar(estado) {
+        if (currentUser.isAdmin) return true;
+        var mapa = {
+            'pendiente_tecnico': 'tecnico',
+            'pendiente_supervisor': 'supervisor_operativo',
+            'pendiente_seguridad': 'supervisor_seguridad',
+            'pendiente_hse': 'hse'
+        };
+        return currentUser.negativaRol === mapa[estado];
+    }
+
+    function renderNegativa(registro) {
+        negativaActual = registro;
+        $('#negativa-resumen').hide().empty();
+        $('#form-negativa-tecnico, #form-negativa-supervisor, #negativa-firma-simple, #btn-negativa-exportar-pdf').hide();
+
+        if (!registro) {
+            $('#negativa-estado-badge').text('');
+            $('#neg-preview1, #neg-preview2').removeClass('show').css('background-image', 'none');
+            $('#neg-foto1, #neg-foto2').val('').closest('.ruteo-photo-upload').removeClass('has-file');
+            $('#form-negativa-tecnico').show();
+            return;
         }
-    });
-});
 
-$('#form-negativa-supervisor').on('submit', function(e) {
-    e.preventDefault();
-    var fd = new FormData(this);
-    fd.append('action', 'ruteo_negativa_guardar');
-    fd.append('nonce', wpRuteoAjax.nonce);
-    fd.append('etapa', 'supervisor');
-    fd.append('id', negativaActual.id);
-    $.ajax({ url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
-        success: function(res) {
-            if (res.success) { alert('Etapa Supervisor Operativo guardada.'); cargarNegativas(); renderNegativa(res.data.registro); }
-            else { alert('Error: ' + res.data.message); }
+        $('#negativa-estado-badge').text(negativaEstadoLabel(registro.estado));
+
+        var resumenHtml = '<div style="font-size:13px; line-height:1.6;">';
+        resumenHtml += '<strong>Cliente:</strong> ' + (registro.cliente_nombre || 'CYMTEL') + ' | <strong>Proceso:</strong> ' + (registro.proceso || '') + ' | <strong>Lugar:</strong> ' + (registro.lugar_trabajo || '') + '<br>';
+        resumenHtml += '<strong>Firmas:</strong> Tecnico: <span style="color:#0097D8;">' + (registro.firma_tecnico_user || 'Pendiente') + '</span>';
+        resumenHtml += ' | Supervisor Op.: <span style="color:#0097D8;">' + (registro.firma_sup_operativo_user || 'Pendiente') + '</span>';
+        resumenHtml += ' | Seguridad: <span style="color:#0097D8;">' + (registro.firma_sup_seguridad_user || 'Pendiente') + '</span>';
+        resumenHtml += ' | HSE: <span style="color:#83CA16;">' + (registro.firma_hse_user || 'Pendiente') + '</span>';
+        resumenHtml += '</div>';
+
+        if (registro.foto1_url || registro.foto2_url) {
+            resumenHtml += '<div style="display:flex; gap:12px; margin-top:12px;">';
+            if (registro.foto1_url) {
+                resumenHtml += '<div style="width:120px; height:120px; border-radius:8px; border:1px solid var(--border); overflow:hidden;"><img src="' + registro.foto1_url + '" style="width:100%; height:100%; object-fit:cover;"></div>';
+            }
+            if (registro.foto2_url) {
+                resumenHtml += '<div style="width:120px; height:120px; border-radius:8px; border:1px solid var(--border); overflow:hidden;"><img src="' + registro.foto2_url + '" style="width:100%; height:100%; object-fit:cover;"></div>';
+            }
+            resumenHtml += '</div>';
         }
+
+        $('#negativa-resumen').html(resumenHtml).show();
+
+        var puedeActuar = negativaPuedeActuar(registro.estado);
+
+        if (registro.estado === 'pendiente_supervisor') {
+            if (puedeActuar) {
+                var $fs = $('#form-negativa-supervisor');
+                $fs.find('select[name="cliente_nombre"]').val(registro.cliente_nombre || 'CYMTEL');
+                $fs.find('input[name="proceso"]').val(registro.proceso || '');
+                $fs.find('input[name="cm_localidad"]').val(registro.cm_localidad || '');
+                $fs.find('input[name="contratista"]').val(registro.contratista || '');
+                $fs.find('input[name="sub_contratista"]').val(registro.sub_contratista || '');
+                $fs.find('select[name="relacionado_a"]').val(registro.relacionado_a || 'PEXT');
+                $fs.find('input[name="lugar_trabajo"]').val(registro.lugar_trabajo || '');
+                $fs.find('input[name="fecha"]').val(registro.fecha || '');
+                $fs.find('input[name="hora_inicio"]').val(registro.hora_inicio || '');
+                $fs.find('input[name="hora_fin"]').val(registro.hora_fin || '');
+                $fs.find('input[name="total_horas"]').val(registro.total_horas || '');
+                $fs.find('input[name="supervisor_operativo_nombre"]').val(registro.supervisor_operativo_nombre || '');
+                $fs.find('input[name="trabajador_reportante"]').val(registro.trabajador_reportante || '');
+                $fs.find('textarea[name="razones_negativa"]').val(registro.razones_negativa || '');
+                $fs.find('textarea[name="acciones_correctivas"]').val(registro.acciones_correctivas || '');
+                if (registro.acuerdo_inseguro) {
+                    $fs.find('input[name="acuerdo_inseguro"][value="' + registro.acuerdo_inseguro + '"]').prop('checked', true);
+                }
+                $fs.show();
+            } else {
+                $('#negativa-firma-simple-texto').text('Esperando revision y firma del Supervisor Operativo.');
+                $('#negativa-firma-simple').show().find('button').hide();
+            }
+        } else if (registro.estado === 'pendiente_seguridad') {
+            if (puedeActuar) {
+                $('#negativa-firma-simple-texto').text('Firmar como Supervisor de Seguridad.');
+                $('#negativa-firma-simple').show().find('button').show().data('etapa', 'seguridad');
+            } else {
+                $('#negativa-firma-simple-texto').text('Esperando firma del Supervisor de Seguridad.');
+                $('#negativa-firma-simple').show().find('button').hide();
+            }
+        } else if (registro.estado === 'pendiente_hse') {
+            if (puedeActuar) {
+                $('#negativa-firma-simple-texto').text('Otorgar Visto Bueno del Area HSE.');
+                $('#negativa-firma-simple').show().find('button').show().data('etapa', 'hse');
+            } else {
+                $('#negativa-firma-simple-texto').text('Esperando visto bueno del Area HSE.');
+                $('#negativa-firma-simple').show().find('button').hide();
+            }
+        } else if (registro.estado === 'completado') {
+            // SOLO cuando se tengan todas las firmas completas (Firma HSE) se habilita exportar PDF
+            $('#btn-negativa-exportar-pdf').show();
+        }
+    }
+
+    function cargarNegativas() {
+        $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_listar', nonce: wpRuteoAjax.nonce }, function(res) {
+            if (!res.success) return;
+            var $sel = $('#negativa-select-registro');
+            $sel.find('option:not(:first)').remove();
+            res.data.registros.forEach(function(r) {
+                $sel.append('<option value="' + r.id + '">' + (r.proceso || 'Sin proceso') + ' - ' + r.fecha + ' (' + negativaEstadoLabel(r.estado) + ')</option>');
+            });
+        });
+    }
+
+    $('#negativa-select-registro').on('change', function() {
+        var id = $(this).val();
+        if (id === '0') { renderNegativa(null); return; }
+        $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_listar', nonce: wpRuteoAjax.nonce }, function(res) {
+            if (!res.success) return;
+            var reg = res.data.registros.find(function(r) { return String(r.id) === String(id); });
+            renderNegativa(reg);
+        });
     });
-});
 
-$('#btn-negativa-firmar-simple').on('click', function() {
-    var etapa = $(this).data('etapa');
-    $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_guardar', nonce: wpRuteoAjax.nonce, etapa: etapa, id: negativaActual.id }, function(res) {
-        if (res.success) { alert('Firmado correctamente.'); cargarNegativas(); renderNegativa(res.data.registro); }
-        else { alert('Error: ' + res.data.message); }
+    $('#form-negativa-tecnico').on('submit', function(e) {
+        e.preventDefault();
+        var $f = $(this);
+        var invalido = false;
+        $f.find('[required]').each(function() {
+            if (!$(this).val() || !$(this).val().trim()) {
+                invalido = true;
+                $(this).addClass('is-invalid').css('border-color', '#D92625');
+            } else {
+                $(this).removeClass('is-invalid').css('border-color', '');
+            }
+        });
+        if (invalido) {
+            alert('Por favor complete todos los campos obligatorios antes de firmar.');
+            return;
+        }
+
+        var fd = new FormData(this);
+        fd.append('action', 'ruteo_negativa_guardar');
+        fd.append('nonce', wpRuteoAjax.nonce);
+        fd.append('etapa', 'tecnico');
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
+            success: function(res) {
+                if (res.success) {
+                    alert('Etapa Tecnico guardada y firmada exitosamente.');
+                    cargarNegativas();
+                    renderNegativa(res.data.registro);
+                } else {
+                    alert('Error: ' + res.data.message);
+                }
+            }
+        });
     });
+
+    $('#form-negativa-supervisor').on('submit', function(e) {
+        e.preventDefault();
+        var $f = $(this);
+        var invalido = false;
+        $f.find('[required]').each(function() {
+            if ($(this).is(':radio')) {
+                var name = $(this).attr('name');
+                if (!$f.find('input[name="' + name + '"]:checked').length) invalido = true;
+            } else if (!$(this).val() || !$(this).val().trim()) {
+                invalido = true;
+                $(this).addClass('is-invalid').css('border-color', '#D92625');
+            } else {
+                $(this).removeClass('is-invalid').css('border-color', '');
+            }
+        });
+        if (invalido) {
+            alert('Por favor complete todos los datos antes de firmar como Supervisor Operativo.');
+            return;
+        }
+
+        var fd = new FormData(this);
+        fd.append('action', 'ruteo_negativa_guardar');
+        fd.append('nonce', wpRuteoAjax.nonce);
+        fd.append('etapa', 'supervisor');
+        fd.append('id', negativaActual.id);
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
+            success: function(res) {
+                if (res.success) {
+                    alert('Etapa Supervisor Operativo actualizada y firmada correctamente.');
+                    cargarNegativas();
+                    renderNegativa(res.data.registro);
+                } else {
+                    alert('Error: ' + res.data.message);
+                }
+            }
+        });
+    });
+
+    $('#btn-negativa-firmar-simple').on('click', function() {
+        var etapa = $(this).data('etapa');
+        $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_guardar', nonce: wpRuteoAjax.nonce, etapa: etapa, id: negativaActual.id }, function(res) {
+            if (res.success) {
+                alert('Etapa firmada correctamente.');
+                cargarNegativas();
+                renderNegativa(res.data.registro);
+            } else {
+                alert('Error: ' + res.data.message);
+            }
+        });
+    });
+
+    // GENERACION DE PDF FORMATO HSE-RE-NEG-01 CON LOGO DE CYMTEL / CLIENTE Y 4 FIRMAS
+    function generarPDFNegativa(r) {
+        if (!r) { alert('No hay registro seleccionado.'); return; }
+
+        var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+        if (!jsPDFConstructor) {
+            alert('Cargando libreria PDF, intente de nuevo en un instante.');
+            return;
+        }
+
+        var clienteNombre = r.cliente_nombre || 'CYMTEL';
+        var clienteObj = (window.wpRuteoAjax && window.wpRuteoAjax.clientes) ? window.wpRuteoAjax.clientes.find(function(c) { return c.nombre === clienteNombre; }) : null;
+        var clienteLogo = r.cliente_logo || (clienteObj ? clienteObj.logo : '');
+
+        var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        var pageW = doc.internal.pageSize.getWidth();
+        var pageH = doc.internal.pageSize.getHeight();
+
+        // Cabecera principal azul
+        doc.setFillColor(0, 151, 216);
+        doc.rect(0, 0, pageW, 26, 'F');
+        doc.setFillColor(0, 90, 140);
+        doc.rect(0, 0, 6, 26, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SOFTWARE O&M', 14, 11);
+
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text('FORMATO DE NEGATIVA AL TRABAJO POR RIESGO INMINENTE (HSE-RE-NEG-01)', 14, 19);
+
+        // Cliente y Logo en derecha
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('CLIENTE: ' + clienteNombre.toUpperCase(), pageW - 14, 14, { align: 'right' });
+
+        if (clienteLogo) {
+            try {
+                var mime = clienteLogo.indexOf('image/png') !== -1 ? 'PNG' : 'JPEG';
+                doc.addImage(clienteLogo, mime, pageW - 48, 2, 34, 11);
+            } catch(e) {}
+        }
+
+        var y = 32;
+
+        // Seccion 1: Datos Generales
+        doc.setFillColor(239, 246, 255);
+        doc.rect(14, y, pageW - 28, 6, 'F');
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 80, 130);
+        doc.text('1. DATOS GENERALES', 16, y + 4.5);
+        y += 8;
+
+        var datosGen = [
+            ['Proceso:', r.proceso || '-', 'CM / Localidad:', r.cm_localidad || '-'],
+            ['Contratista:', r.contratista || '-', 'Sub Contratista:', r.sub_contratista || '-'],
+            ['Relacionado a:', r.relacionado_a || '-', 'Lugar de Trabajo:', r.lugar_trabajo || '-'],
+            ['Fecha:', r.fecha || '-', 'Horario:', (r.hora_inicio || '-') + ' a ' + (r.hora_fin || '-')],
+            ['Total Horas:', r.total_horas || '-', 'Cliente Principal:', clienteNombre]
+        ];
+
+        doc.autoTable({
+            startY: y,
+            body: datosGen,
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2 },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: 32, fillColor: [248, 250, 252] },
+                1: { cellWidth: 58 },
+                2: { fontStyle: 'bold', cellWidth: 32, fillColor: [248, 250, 252] },
+                3: { cellWidth: 'auto' }
+            },
+            margin: { left: 14, right: 14 }
+        });
+        y = doc.lastAutoTable.finalY + 6;
+
+        // Seccion 2: Investigacion
+        doc.setFillColor(239, 246, 255);
+        doc.rect(14, y, pageW - 28, 6, 'F');
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 80, 130);
+        doc.text('2. INVESTIGACION DEL SUPERVISOR OPERATIVO', 16, y + 4.5);
+        y += 8;
+
+        doc.autoTable({
+            startY: y,
+            body: [
+                ['Supervisor Operativo:', r.supervisor_operativo_nombre || '-', 'Trabajador Reportante:', r.trabajador_reportante || '-']
+            ],
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2.5 },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: 36, fillColor: [248, 250, 252] },
+                1: { cellWidth: 54 },
+                2: { fontStyle: 'bold', cellWidth: 36, fillColor: [248, 250, 252] },
+                3: { cellWidth: 'auto' }
+            },
+            margin: { left: 14, right: 14 }
+        });
+        y = doc.lastAutoTable.finalY + 6;
+
+        // Seccion 3: Razones para la Negativa
+        doc.setFillColor(239, 246, 255);
+        doc.rect(14, y, pageW - 28, 6, 'F');
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 80, 130);
+        doc.text('3. RAZONES PARA LA NEGATIVA (CONDICIONES ADVERSAS / BASE LEGAL)', 16, y + 4.5);
+        y += 8;
+
+        doc.autoTable({
+            startY: y,
+            body: [ [ r.razones_negativa || '-' ] ],
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 3 },
+            margin: { left: 14, right: 14 }
+        });
+        y = doc.lastAutoTable.finalY + 6;
+
+        // Seccion 4: Acciones Correctivas y Acuerdo
+        doc.setFillColor(239, 246, 255);
+        doc.rect(14, y, pageW - 28, 6, 'F');
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 80, 130);
+        doc.text('4. ACCIONES CORRECTIVAS Y ACUERDO DE CONDICIONES', 16, y + 4.5);
+        y += 8;
+
+        doc.autoTable({
+            startY: y,
+            body: [
+                ['Acciones Correctivas:', r.acciones_correctivas || '-'],
+                ['Acuerdo de Condiciones Inseguras:', (r.acuerdo_inseguro || 'NO') === 'SI' ? 'SI - Se acuerdo corregir la condicion antes de reiniciar.' : 'NO - No hay acuerdo de reinicio.']
+            ],
+            theme: 'grid',
+            styles: { fontSize: 8, cellPadding: 2.5 },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: 50, fillColor: [248, 250, 252] },
+                1: { cellWidth: 'auto' }
+            },
+            margin: { left: 14, right: 14 }
+        });
+        y = doc.lastAutoTable.finalY + 8;
+
+        // Seccion 5: Cuadro de Firmas (4 Firmas Digitales)
+        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 151, 216);
+        doc.text('REGISTRO DE FIRMAS Y VALIDADORES', 14, y);
+        y += 4;
+
+        var colW = (pageW - 28) / 4;
+        var boxH = 26;
+
+        var firmas = [
+            { titulo: 'TECNICO REPORTANTE', user: r.firma_tecnico_user, fecha: r.firma_tecnico_fecha },
+            { titulo: 'SUPERVISOR OPERATIVO', user: r.firma_sup_operativo_user, fecha: r.firma_sup_operativo_fecha },
+            { titulo: 'SUPERVISOR SEGURIDAD', user: r.firma_sup_seguridad_user, fecha: r.firma_sup_seguridad_fecha },
+            { titulo: 'VISTO BUENO HSE', user: r.firma_hse_user, fecha: r.firma_hse_fecha }
+        ];
+
+        firmas.forEach(function(f, i) {
+            var xBox = 14 + (i * colW);
+            doc.setFillColor(255, 255, 255);
+            doc.setDrawColor(200, 210, 225);
+            doc.rect(xBox, y, colW - 2, boxH, 'FD');
+
+            doc.setFillColor(0, 151, 216);
+            doc.rect(xBox, y, colW - 2, 5, 'F');
+            doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+            doc.text(f.titulo, xBox + (colW - 2)/2, y + 3.5, { align: 'center' });
+
+            if (f.user) {
+                doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 23, 42);
+                doc.text(f.user, xBox + (colW - 2)/2, y + 13, { align: 'center' });
+                doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+                doc.text('Fecha: ' + (f.fecha || '-'), xBox + (colW - 2)/2, y + 19, { align: 'center' });
+                doc.setFontSize(6); doc.setTextColor(131, 202, 22);
+                doc.text('[FIRMA DIGITAL CONFIRMADA]', xBox + (colW - 2)/2, y + 23, { align: 'center' });
+            } else {
+                doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(165, 172, 184);
+                doc.text('Pendiente de Firma', xBox + (colW - 2)/2, y + 16, { align: 'center' });
+            }
+        });
+
+        // Pie de pagina
+        doc.setFontSize(7); doc.setTextColor(148, 163, 184);
+        doc.line(14, pageH - 8, pageW - 14, pageH - 8);
+        doc.text('Software O&M  -  Formatos Oficiales  -  Cliente: ' + clienteNombre, 14, pageH - 4);
+        doc.text('Pagina 1 de 1', pageW - 14, pageH - 4, { align: 'right' });
+
+        doc.save('Negativa_' + (r.id || 'HSE') + '_' + (r.proceso || 'Trabajo').replace(/ /g, '_') + '.pdf');
+    }
+
+    $('#btn-negativa-exportar-pdf').on('click', function() {
+        generarPDFNegativa(negativaActual);
+    });
+
+    if ($('.sidebar-item[data-tab="negativa"]').length) {
+        $('.sidebar-item[data-tab="negativa"]').on('click', function() { cargarNegativas(); });
+    }
+
 });
 
-if ($('.sidebar-item[data-tab="negativa"]').length) {
-    $('.sidebar-item[data-tab="negativa"]').on('click', function() { cargarNegativas(); });
-}
-
-});

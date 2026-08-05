@@ -56,6 +56,12 @@ class WPRuteoApp {
         add_action( 'wp_ajax_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
         add_action( 'wp_ajax_nopriv_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
 
+        // Clientes AJAX Endpoints
+        add_action( 'wp_ajax_ruteo_get_clientes', array( $this, 'handle_ajax_get_clientes' ) );
+        add_action( 'wp_ajax_nopriv_ruteo_get_clientes', array( $this, 'handle_ajax_get_clientes' ) );
+        add_action( 'wp_ajax_ruteo_save_cliente', array( $this, 'handle_ajax_save_cliente' ) );
+        add_action( 'wp_ajax_ruteo_delete_cliente', array( $this, 'handle_ajax_delete_cliente' ) );
+
         add_action( 'init', array( $this, 'crear_cuentas_prueba' ) );
     }
 
@@ -74,10 +80,19 @@ class WPRuteoApp {
     public function crear_cuentas_prueba() {
         $cuentas = array(
             array(
+                'user'         => 'admingeneral',
+                'pass'         => 'AdminGeneral123!',
+                'name'         => 'Administrador General O&M',
+                'email'        => 'admin@software-om.org.pe',
+                'role'         => 'ruteo_admin',
+                'negativa_rol' => 'admin_general',
+            ),
+            array(
                 'user'         => 'tecnico1',
                 'pass'         => 'Tecnico123!',
                 'name'         => 'Juan Perez (Tecnico)',
                 'email'        => 'tecnico1@ruteo.org.pe',
+                'role'         => 'ruteo_worker',
                 'negativa_rol' => 'tecnico',
             ),
             array(
@@ -85,6 +100,7 @@ class WPRuteoApp {
                 'pass'         => 'Supervisor123!',
                 'name'         => 'Carlos Mendoza (Supervisor Op.)',
                 'email'        => 'supervisor1@ruteo.org.pe',
+                'role'         => 'ruteo_worker',
                 'negativa_rol' => 'supervisor_operativo',
             ),
             array(
@@ -92,6 +108,7 @@ class WPRuteoApp {
                 'pass'         => 'Seguridad123!',
                 'name'         => 'Roberto Silva (Supervisor Seg.)',
                 'email'        => 'seguridad1@ruteo.org.pe',
+                'role'         => 'ruteo_worker',
                 'negativa_rol' => 'supervisor_seguridad',
             ),
             array(
@@ -99,6 +116,7 @@ class WPRuteoApp {
                 'pass'         => 'Hse123!',
                 'name'         => 'Maria Fernandez (Area HSE)',
                 'email'        => 'hse1@ruteo.org.pe',
+                'role'         => 'ruteo_worker',
                 'negativa_rol' => 'hse',
             ),
         );
@@ -109,7 +127,7 @@ class WPRuteoApp {
                 $user_id = wp_create_user( $c['user'], $c['pass'], $c['email'] );
                 if ( ! is_wp_error( $user_id ) ) {
                     $u = new WP_User( $user_id );
-                    $u->set_role( 'ruteo_worker' );
+                    $u->set_role( isset( $c['role'] ) ? $c['role'] : 'ruteo_worker' );
                     wp_update_user( array( 'ID' => $user_id, 'display_name' => $c['name'] ) );
                 }
             }
@@ -151,11 +169,25 @@ class WPRuteoApp {
             }
         }
 
+        $clientes_list = get_option( 'ruteo_clientes_list', array() );
+        if ( empty( $clientes_list ) || ! is_array( $clientes_list ) ) {
+            $clientes_list = array(
+                array(
+                    'id'     => 'CLI-CYMTEL',
+                    'nombre' => 'CYMTEL',
+                    'ruc'    => '20512345678',
+                    'logo'   => '',
+                )
+            );
+            update_option( 'ruteo_clientes_list', $clientes_list );
+        }
+
         wp_localize_script( 'wp-ruteo-app', 'wpRuteoAjax', array(
-            'ajaxurl'  => admin_url( 'admin-ajax.php' ),
-            'nonce'    => wp_create_nonce( 'ruteo_submit_nonce' ),
-            'webhook'  => $this->webhook_url,
-            'siteLogo' => get_option( 'ruteo_site_logo', '' ),
+            'ajaxurl'   => admin_url( 'admin-ajax.php' ),
+            'nonce'     => wp_create_nonce( 'ruteo_submit_nonce' ),
+            'webhook'   => $this->webhook_url,
+            'siteLogo'  => get_option( 'ruteo_site_logo', '' ),
+            'clientes'  => $clientes_list,
             'user'    => array(
                 'id'          => $is_logged_in ? $current_user->ID : 0,
                 'isLoggedIn'  => $is_logged_in,
@@ -731,6 +763,124 @@ class WPRuteoApp {
         ) );
     }
 
+    public function handle_ajax_get_clientes() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+            return;
+        }
+        $clientes = get_option( 'ruteo_clientes_list', array() );
+        if ( empty( $clientes ) || ! is_array( $clientes ) ) {
+            $clientes = array(
+                array(
+                    'id'     => 'CLI-CYMTEL',
+                    'nombre' => 'CYMTEL',
+                    'ruc'    => '20512345678',
+                    'logo'   => '',
+                )
+            );
+            update_option( 'ruteo_clientes_list', $clientes );
+        }
+        wp_send_json_success( array( 'clientes' => $clientes ) );
+    }
+
+    public function handle_ajax_save_cliente() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+        $current_user = wp_get_current_user();
+        $is_admin     = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+
+        if ( ! $is_admin ) {
+            wp_send_json_error( array( 'message' => 'Solo administradores pueden gestionar clientes.' ) );
+            return;
+        }
+
+        $id        = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
+        $nombre    = isset( $_POST['nombre'] ) ? sanitize_text_field( wp_unslash( $_POST['nombre'] ) ) : '';
+        $ruc       = isset( $_POST['ruc'] ) ? sanitize_text_field( wp_unslash( $_POST['ruc'] ) ) : '';
+        $direccion = isset( $_POST['direccion'] ) ? sanitize_text_field( wp_unslash( $_POST['direccion'] ) ) : '';
+        $contacto  = isset( $_POST['contacto'] ) ? sanitize_text_field( wp_unslash( $_POST['contacto'] ) ) : '';
+        $logo      = isset( $_POST['logo_base64'] ) ? $_POST['logo_base64'] : '';
+
+        if ( empty( $nombre ) ) {
+            wp_send_json_error( array( 'message' => 'El nombre del cliente es obligatorio.' ) );
+            return;
+        }
+
+        if ( ! empty( $_FILES['logo']['tmp_name'] ) ) {
+            $tmp     = $_FILES['logo']['tmp_name'];
+            $type    = mime_content_type( $tmp );
+            $content = file_get_contents( $tmp );
+            $logo    = 'data:' . $type . ';base64,' . base64_encode( $content );
+            @unlink( $tmp );
+        }
+
+        $clientes = get_option( 'ruteo_clientes_list', array() );
+        if ( ! is_array( $clientes ) ) {
+            $clientes = array();
+        }
+
+        if ( ! empty( $id ) ) {
+            foreach ( $clientes as &$c ) {
+                if ( isset( $c['id'] ) && $c['id'] === $id ) {
+                    $c['nombre']    = $nombre;
+                    $c['ruc']       = $ruc;
+                    $c['direccion'] = $direccion;
+                    $c['contacto']  = $contacto;
+                    if ( ! empty( $logo ) ) {
+                        $c['logo'] = $logo;
+                    }
+                    break;
+                }
+            }
+        } else {
+            $new_id = 'CLI-' . time();
+            $clientes[] = array(
+                'id'        => $new_id,
+                'nombre'    => $nombre,
+                'ruc'       => $ruc,
+                'direccion' => $direccion,
+                'contacto'  => $contacto,
+                'logo'      => $logo,
+            );
+        }
+
+        update_option( 'ruteo_clientes_list', $clientes );
+        wp_send_json_success( array(
+            'message'  => 'Cliente guardado con exito.',
+            'clientes' => $clientes
+        ) );
+    }
+
+    public function handle_ajax_delete_cliente() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+        $current_user = wp_get_current_user();
+        $is_admin     = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+
+        if ( ! $is_admin ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+            return;
+        }
+
+        $id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
+        if ( empty( $id ) ) {
+            wp_send_json_error( array( 'message' => 'ID invalido.' ) );
+            return;
+        }
+
+        $clientes = get_option( 'ruteo_clientes_list', array() );
+        if ( is_array( $clientes ) ) {
+            $clientes = array_values( array_filter( $clientes, function( $c ) use ( $id ) {
+                return isset( $c['id'] ) && $c['id'] !== $id;
+            } ) );
+            update_option( 'ruteo_clientes_list', $clientes );
+        }
+
+        wp_send_json_success( array(
+            'message'  => 'Cliente eliminado correctamente.',
+            'clientes' => $clientes
+        ) );
+    }
+
     public function handle_ajax_negativa_guardar() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
 
@@ -768,6 +918,9 @@ class WPRuteoApp {
             return;
         }
 
+        $cliente_nombre = sanitize_text_field( wp_unslash( $_POST['cliente_nombre'] ?? 'CYMTEL' ) );
+        $cliente_logo   = isset( $_POST['cliente_logo'] ) ? $_POST['cliente_logo'] : '';
+
         if ( $etapa === 'tecnico' ) {
             $campos = array(
                 'proceso'                     => sanitize_text_field( wp_unslash( $_POST['proceso'] ?? '' ) ),
@@ -783,6 +936,8 @@ class WPRuteoApp {
                 'supervisor_operativo_nombre' => sanitize_text_field( wp_unslash( $_POST['supervisor_operativo_nombre'] ?? '' ) ),
                 'trabajador_reportante'       => sanitize_text_field( wp_unslash( $_POST['trabajador_reportante'] ?? '' ) ),
                 'razones_negativa'            => sanitize_textarea_field( wp_unslash( $_POST['razones_negativa'] ?? '' ) ),
+                'cliente_nombre'              => $cliente_nombre,
+                'cliente_logo'                => $cliente_logo,
                 'firma_tecnico_user'          => $current_user->display_name,
                 'firma_tecnico_fecha'         => $now,
                 'estado'                      => 'pendiente_supervisor',
@@ -804,11 +959,26 @@ class WPRuteoApp {
 
         } elseif ( $etapa === 'supervisor' ) {
             $wpdb->update( $table, array(
-                'acciones_correctivas'      => sanitize_textarea_field( wp_unslash( $_POST['acciones_correctivas'] ?? '' ) ),
-                'acuerdo_inseguro'          => sanitize_text_field( wp_unslash( $_POST['acuerdo_inseguro'] ?? '' ) ),
-                'firma_sup_operativo_user'  => $current_user->display_name,
-                'firma_sup_operativo_fecha' => $now,
-                'estado'                    => 'pendiente_seguridad',
+                'proceso'                     => sanitize_text_field( wp_unslash( $_POST['proceso'] ?? '' ) ),
+                'cm_localidad'                => sanitize_text_field( wp_unslash( $_POST['cm_localidad'] ?? '' ) ),
+                'contratista'                 => sanitize_text_field( wp_unslash( $_POST['contratista'] ?? '' ) ),
+                'sub_contratista'             => sanitize_text_field( wp_unslash( $_POST['sub_contratista'] ?? '' ) ),
+                'relacionado_a'               => sanitize_text_field( wp_unslash( $_POST['relacionado_a'] ?? '' ) ),
+                'lugar_trabajo'               => sanitize_text_field( wp_unslash( $_POST['lugar_trabajo'] ?? '' ) ),
+                'fecha'                       => sanitize_text_field( wp_unslash( $_POST['fecha'] ?? '' ) ),
+                'hora_inicio'                 => sanitize_text_field( wp_unslash( $_POST['hora_inicio'] ?? '' ) ),
+                'hora_fin'                    => sanitize_text_field( wp_unslash( $_POST['hora_fin'] ?? '' ) ),
+                'total_horas'                 => sanitize_text_field( wp_unslash( $_POST['total_horas'] ?? '' ) ),
+                'supervisor_operativo_nombre' => sanitize_text_field( wp_unslash( $_POST['supervisor_operativo_nombre'] ?? '' ) ),
+                'trabajador_reportante'       => sanitize_text_field( wp_unslash( $_POST['trabajador_reportante'] ?? '' ) ),
+                'razones_negativa'            => sanitize_textarea_field( wp_unslash( $_POST['razones_negativa'] ?? '' ) ),
+                'acciones_correctivas'        => sanitize_textarea_field( wp_unslash( $_POST['acciones_correctivas'] ?? '' ) ),
+                'acuerdo_inseguro'            => sanitize_text_field( wp_unslash( $_POST['acuerdo_inseguro'] ?? '' ) ),
+                'cliente_nombre'              => $cliente_nombre,
+                'cliente_logo'                => $cliente_logo,
+                'firma_sup_operativo_user'    => $current_user->display_name,
+                'firma_sup_operativo_fecha'   => $now,
+                'estado'                      => 'pendiente_seguridad',
             ), array( 'id' => $id ) );
 
         } elseif ( $etapa === 'seguridad' ) {
@@ -867,6 +1037,8 @@ function ruteo_crear_tabla_negativas() {
         supervisor_operativo_nombre VARCHAR(150),
         trabajador_reportante VARCHAR(150),
         razones_negativa TEXT,
+        cliente_nombre VARCHAR(150),
+        cliente_logo LONGTEXT,
         foto1_url LONGTEXT,
         foto2_url LONGTEXT,
         acciones_correctivas TEXT,

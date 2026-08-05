@@ -1572,4 +1572,61 @@ body.admin-bar .ruteo-app-layout {
     .ruteo-sidebar-backdrop.show {
         display: block;
     }
+
+    .ruteo-top-header {
+        flex-wrap: wrap;
+        gap: 12px;
+        padding: 12px 16px !important;
+    }
+
+    .ruteo-fields-grid,
+    .user-form-grid,
+    .ruteo-photos-grid,
+    .dash-stats-grid,
+    .material-card-grid,
+    .sla-cards-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .ruteo-form-card,
+    .user-create-card,
+    .material-card,
+    .sla-card {
+        padding: 16px !important;
+    }
+
+    .ruteo-submit-btn,
+    .btn-primary,
+    .btn-secondary,
+    #btn-negativa-exportar-pdf {
+        width: 100% !important;
+        justify-content: center !important;
+    }
+
+    .portal-table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        white-space: nowrap;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ruteo-photo-upload {
+        min-height: 140px !important;
+    }
 }
+
+@media (max-width: 480px) {
+    .ruteo-main-content {
+        padding: 12px !important;
+    }
+
+    .brand-title {
+        font-size: 16px !important;
+    }
+
+    .sidebar-item span {
+        font-size: 13px !important;
+    }
+}
+

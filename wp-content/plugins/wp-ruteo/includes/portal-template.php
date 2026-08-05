@@ -74,8 +74,8 @@ body.admin-bar .ruteo-app-layout {
                     </svg>
                 </div>
                 <div class="brand-text">
-                    <span class="brand-title">Software Ruteo</span>
-                    <span class="brand-subtitle">Gestion y Ruteo</span>
+                    <span class="brand-title">Software O&M</span>
+                    <span class="brand-subtitle">Gestion Operaciones y Mantenimiento</span>
                 </div>
             </div>
             <button class="sidebar-collapse-btn" id="btn-sidebar-collapse" title="Contraer panel">
@@ -649,8 +649,13 @@ body.admin-bar .ruteo-app-layout {
         <!-- ETAPA 1: TECNICO (puntos 1 a 4) -->
         <form id="form-negativa-tecnico" class="ruteo-form">
             <div class="ruteo-form-section">
-                <h3 class="form-section-title"><span class="step-badge">1</span> Datos Generales</h3>
+                <h3 class="form-section-title"><span class="step-badge">1</span> Datos Generales y Empresa Cliente</h3>
                 <div class="ruteo-fields-grid">
+                    <div class="form-group"><label>Cliente / Empresa Principal</label><div class="input-wrapper">
+                        <select name="cliente_nombre" class="neg-select-cliente" required>
+                            <option value="CYMTEL">CYMTEL</option>
+                        </select>
+                    </div></div>
                     <div class="form-group"><label>Proceso</label><div class="input-wrapper"><input type="text" name="proceso" placeholder="Ej: Perdida de enlace..." required></div></div>
                     <div class="form-group"><label>CM / Localidad</label><div class="input-wrapper"><input type="text" name="cm_localidad" required></div></div>
                     <div class="form-group"><label>Contratista</label><div class="input-wrapper"><input type="text" name="contratista" required></div></div>
@@ -698,6 +703,7 @@ body.admin-bar .ruteo-app-layout {
                         <input type="file" id="neg-foto2" name="foto2" accept="image/*">
                         <div class="preview" id="neg-preview2"><button type="button" class="btn-remove-photo" data-input="neg-foto2" data-preview="neg-preview2">&times;</button></div>
                     </div>
+                </div>
             </div>
 
             <script>
@@ -735,8 +741,44 @@ body.admin-bar .ruteo-app-layout {
             <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Tecnico</button>
         </form>
 
-        <!-- ETAPA 2: SUPERVISOR OPERATIVO (punto 5 y 6) -->
+        <!-- ETAPA 2: SUPERVISOR OPERATIVO (Edicion completa Puntos 1, 2, 3 + Puntos 5 y 6) -->
         <form id="form-negativa-supervisor" class="ruteo-form" style="display:none;">
+            <div class="ruteo-form-section">
+                <h3 class="form-section-title"><span class="step-badge">1</span> Revision y Edicion de Datos Generales</h3>
+                <div class="ruteo-fields-grid">
+                    <div class="form-group"><label>Cliente / Empresa Principal</label><div class="input-wrapper">
+                        <select name="cliente_nombre" class="neg-select-cliente" required>
+                            <option value="CYMTEL">CYMTEL</option>
+                        </select>
+                    </div></div>
+                    <div class="form-group"><label>Proceso</label><div class="input-wrapper"><input type="text" name="proceso" required></div></div>
+                    <div class="form-group"><label>CM / Localidad</label><div class="input-wrapper"><input type="text" name="cm_localidad" required></div></div>
+                    <div class="form-group"><label>Contratista</label><div class="input-wrapper"><input type="text" name="contratista" required></div></div>
+                    <div class="form-group"><label>Sub Contratista</label><div class="input-wrapper"><input type="text" name="sub_contratista"></div></div>
+                    <div class="form-group"><label>Relacionado a</label><div class="input-wrapper">
+                        <select name="relacionado_a" required><option value="PEXT">PEXT</option><option value="PINT">PINT</option></select>
+                    </div></div>
+                    <div class="form-group"><label>Lugar de Trabajo</label><div class="input-wrapper"><input type="text" name="lugar_trabajo" required></div></div>
+                    <div class="form-group"><label>Fecha</label><div class="input-wrapper"><input type="date" name="fecha" required></div></div>
+                    <div class="form-group"><label>Hora Inicio</label><div class="input-wrapper"><input type="time" name="hora_inicio" required></div></div>
+                    <div class="form-group"><label>Hora Fin</label><div class="input-wrapper"><input type="time" name="hora_fin"></div></div>
+                    <div class="form-group"><label>Total de Horas</label><div class="input-wrapper"><input type="text" name="total_horas"></div></div>
+                </div>
+            </div>
+
+            <div class="ruteo-form-section">
+                <h3 class="form-section-title"><span class="step-badge">2</span> Investigacion y Datos de Reporte</h3>
+                <div class="ruteo-fields-grid">
+                    <div class="form-group"><label>Nombre del Supervisor Operativo</label><div class="input-wrapper"><input type="text" name="supervisor_operativo_nombre" required></div></div>
+                    <div class="form-group"><label>Trabajador Reportante</label><div class="input-wrapper"><input type="text" name="trabajador_reportante" required></div></div>
+                </div>
+            </div>
+
+            <div class="ruteo-form-section">
+                <h3 class="form-section-title"><span class="step-badge">3</span> Edicion de Razones para la Negativa (Punto 3)</h3>
+                <div class="form-group"><textarea name="razones_negativa" rows="5" placeholder="Corriga o complemente las razones indicadas por el tecnico..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div>
+            </div>
+
             <div class="ruteo-form-section">
                 <h3 class="form-section-title"><span class="step-badge">5</span> Acciones Correctivas</h3>
                 <div class="form-group"><textarea name="acciones_correctivas" rows="4" placeholder="Detalle las acciones correctivas realizadas..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div>
@@ -748,7 +790,7 @@ body.admin-bar .ruteo-app-layout {
                     <label><input type="radio" name="acuerdo_inseguro" value="NO"> No</label>
                 </div>
             </div>
-            <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Supervisor Operativo</button>
+            <button type="submit" class="btn-primary ruteo-submit-btn">Guardar Cambios y Firmar como Supervisor Operativo</button>
         </form>
 
         <!-- ETAPA 3 y 4: SOLO FIRMA (Seguridad / HSE) -->
@@ -757,17 +799,81 @@ body.admin-bar .ruteo-app-layout {
             <button type="button" id="btn-negativa-firmar-simple" class="btn-primary ruteo-submit-btn">Firmar</button>
         </div>
 
-        <button type="button" id="btn-negativa-exportar-pdf" class="btn-secondary" style="display:none; margin-top:16px;">Exportar a PDF</button>
+        <button type="button" id="btn-negativa-exportar-pdf" class="btn-secondary" style="display:none; margin-top:16px; gap:8px;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            <span>Exportar Negativa a PDF (Formato HSE-RE-NEG-01)</span>
+        </button>
     </div>
 </section>
 
-        <!-- SECCION 6: GESTION DE USUARIOS (SOLO ADMIN) -->
+        <!-- SECCION 6: GESTION DE USUARIOS Y CONFIGURACION (SOLO ADMIN) -->
         <section class="ruteo-tab-content" id="tab-usuarios">
             <div class="users-container">
 
+                <!-- GESTION DE CLIENTES Y LOGOS -->
+                <div class="user-create-card" id="clientes-card" style="margin-bottom:20px;">
+                    <h4>Empresas Clientes y Logos para Reportes (Ej: CYMTEL)</h4>
+                    <p class="users-sub" style="margin-bottom:14px;">Registra los clientes del software, sus logos y datos de contacto para los formatos oficiales.</p>
+                    <form id="form-cliente" enctype="multipart/form-data" style="margin-bottom:20px;">
+                        <div class="user-form-grid">
+                            <div class="form-group">
+                                <label>Nombre del Cliente</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="cli-nombre-input" placeholder="Ej: CYMTEL" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>RUC / Identificacion</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="cli-ruc-input" placeholder="Ej: 20512345678">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Direccion / Sede</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="cli-direccion-input" placeholder="Ej: Av. Central 123 - Lima">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Contacto / Telefono</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="cli-contacto-input" placeholder="Ej: Ing. Juan Lopez - 987654321">
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Logo del Cliente (PNG, JPG, WEBP - max 2MB)</label>
+                                <input type="file" id="cli-logo-file" accept="image/*">
+                            </div>
+                        </div>
+                        <div style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
+                            <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
+                                <span>Guardar Cliente</span>
+                            </button>
+                        </div>
+                        <div id="cli-msg" class="ruteo-message"></div>
+                    </form>
+
+                    <h5 style="margin-bottom:10px;">Clientes Registrados</h5>
+                    <div style="overflow-x:auto;">
+                        <table class="portal-table" style="width:100%;">
+                            <thead>
+                                <tr>
+                                    <th>Logo</th>
+                                    <th>Nombre Cliente</th>
+                                    <th>RUC</th>
+                                    <th>Direccion / Sede</th>
+                                    <th>Contacto</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientes-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- LOGO DEL SISTEMA -->
                 <div class="user-create-card" id="site-logo-card" style="margin-bottom:20px;">
-                    <h4>Logo del Sistema</h4>
+                    <h4>Logo del Sistema (Software O&M)</h4>
                     <p class="users-sub" style="margin-bottom:14px;">Esta imagen se muestra en la barra lateral para todos los usuarios.</p>
                     <form id="form-site-logo" enctype="multipart/form-data" style="display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
                         <div class="brand-logo-icon" id="site-logo-preview" style="width:56px; height:56px;">
