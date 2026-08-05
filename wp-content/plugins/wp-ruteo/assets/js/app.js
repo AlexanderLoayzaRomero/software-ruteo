@@ -1284,5 +1284,295 @@ jQuery(document).ready(function($) {
         $('.sidebar-item[data-tab="negativa"]').on('click', function() { cargarNegativas(); });
     }
 
+    // --- BINDING FOTOS NEGATIVA ---
+    function bindNegPhoto(inputId, previewId) {
+        var el = document.getElementById(inputId);
+        if (!el) return;
+        el.addEventListener('change', function(e) {
+            var file = e.target.files && e.target.files[0];
+            var prev = document.getElementById(previewId);
+            if (file && prev) {
+                var reader = new FileReader();
+                reader.onload = function(evt) {
+                    var old = prev.querySelector('img.preview-img');
+                    if (old) old.remove();
+                    var img = document.createElement('img');
+                    img.src = evt.target.result;
+                    img.className = 'preview-img';
+                    img.style.cssText = 'width:100%; height:100%; object-fit:cover; border-radius:10px; position:absolute; top:0; left:0; pointer-events:none; z-index:1;';
+                    prev.insertBefore(img, prev.firstChild);
+                    prev.classList.add('show');
+                    prev.style.display = 'block';
+                    var box = el.closest('.ruteo-photo-upload');
+                    if (box) box.classList.add('has-file');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    bindNegPhoto('neg-foto1', 'neg-preview1');
+    bindNegPhoto('neg-foto2', 'neg-preview2');
+
+    // --- MODULO: REGISTROS DE CAMPO Y TABLA PORTAL ---
+    function downloadBlob(blob, filename) {
+        if (typeof window.saveAs === 'function') {
+            window.saveAs(blob, filename);
+        } else {
+            var url = window.URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(function() {
+                if (a.parentNode) a.parentNode.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 500);
+        }
+    }
+    window.downloadBlobRuteo = downloadBlob;
+
+    function normalizarRegistro(r) {
+        if (!r) return {};
+        return {
+            fecha: r.fecha || r.date || '',
+            tramo: r.tramo || '',
+            id_consol: r.id_consol || r.id_consol_ || '',
+            estructura: r.estructura || '',
+            tipo_estructura: r.tipo_estructura || r.tipo || '',
+            altura: r.altura || r.altura_estructura || '',
+            codigo: r.codigo || r.cdigo_estructura || r.codigo_estructura || '',
+            ubicacion: r.ubicacion || r.ubicacin || '',
+            mufa: r.mufa || '0',
+            retencion: r.retencion || r.retencin || '0',
+            suspension: r.suspension || r.suspensin || '0',
+            cruceta: r.cruceta || '0',
+            hebillas: r.hebillas || '0',
+            fleje: r.fleje || '0',
+            amortiguador: r.amortiguador || '0',
+            brazo_extensor: r.brazo_extensor || '0',
+            kit_retenida: r.kit_retenida || '0',
+            observacion: r.observacion || r.observacin || '',
+            foto_1: r.foto_1 || r.foto1_url || r.foto1 || '',
+            foto_2: r.foto_2 || r.foto2_url || r.foto2 || '',
+            link_kmz: r.link_kmz || r.kmz || '',
+            link_docx: r.link_docx || r.link_doc || r.doc_url || r.docx || ''
+        };
+    }
+    window.normalizarRegistroRuteo = normalizarRegistro;
+
+    function linkIcon(url, label, color) {
+        if (!url) return '<span class="portal-cell-empty">-</span>';
+        var isEarth = label.indexOf('Earth') > -1 || label.indexOf('KMZ') > -1;
+        var icon = isEarth ? 
+            '<svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10z"/></svg>' :
+            '<svg width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>';
+        return '<a href="' + url + '" target="_blank" class="portal-link portal-link--' + color + '" title="Abrir en Google Drive">' +
+               icon + ' ' + label + '</a>';
+    }
+
+    function renderTabla(registros) {
+        var tbody = document.getElementById('portal-tbody');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+
+        var empty = document.getElementById('portal-empty');
+        if (!registros || registros.length === 0) {
+            if (empty) empty.style.display = 'flex';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+
+        registros.forEach(function(raw, idx) {
+            var r = normalizarRegistro(raw);
+            var tr = document.createElement('tr');
+            tr.className = idx % 2 === 0 ? 'row-even' : 'row-odd';
+            tr.innerHTML =
+                '<td class="td-fecha">' + (r.fecha || '-') + '</td>' +
+                '<td class="td-tramo">' + (r.tramo || '-') + '</td>' +
+                '<td class="td-id"><strong>' + (r.id_consol || '-') + '</strong></td>' +
+                '<td>' + (r.estructura || '-') + '</td>' +
+                '<td>' + (r.tipo_estructura || '-') + '</td>' +
+                '<td class="td-center">' + (r.altura || '-') + ' m</td>' +
+                '<td><code class="portal-code">' + (r.codigo || '-') + '</code></td>' +
+                '<td class="td-ubicacion">' + (r.ubicacion || '-') + '</td>' +
+                '<td class="td-center">' + (r.mufa || '0') + '</td>' +
+                '<td class="td-center">' + (r.retencion || '0') + '</td>' +
+                '<td class="td-center">' + (r.suspension || '0') + '</td>' +
+                '<td class="td-center">' + (r.cruceta || '0') + '</td>' +
+                '<td>' + linkIcon(r.foto_1, 'Foto 1', 'blue') + '</td>' +
+                '<td>' + linkIcon(r.foto_2, 'Foto 2', 'blue') + '</td>' +
+                '<td>' + linkIcon(r.link_kmz, 'Earth KMZ', 'green') + '</td>' +
+                '<td>' +
+                '<a href="javascript:void(0)" onclick="window.generarDocumentoPDF(' + idx + ')" title="Descargar PDF" class="portal-link portal-link--red" style="margin-right:4px; padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> PDF</a>' +
+                '<a href="javascript:void(0)" onclick="window.abrirODocumentoGoogleDocs(' + idx + ')" title="Abrir Google Doc en Drive" class="portal-link portal-link--blue" style="padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Doc Drive</a>' +
+                '</td>';
+            tbody.appendChild(tr);
+        });
+    }
+
+    function poblarFiltroTramo(registros) {
+        var select = document.getElementById('filter-tramo');
+        if (!select) return;
+        var actual = select.value;
+        var tramos = new Set(registros.map(function(raw) { return normalizarRegistro(raw).tramo; }).filter(Boolean));
+        var tramosArr = Array.from(tramos).sort();
+        select.innerHTML = '<option value="">Todos los tramos</option>';
+        tramosArr.forEach(function(t) {
+            var opt = document.createElement('option');
+            opt.value = t;
+            opt.textContent = t;
+            if (t === actual) opt.selected = true;
+            select.appendChild(opt);
+        });
+    }
+
+    function filtrarRegistros() {
+        var tramoFiltro = document.getElementById('filter-tramo') ? document.getElementById('filter-tramo').value : '';
+        var textoBusqueda = document.getElementById('portal-search') ? document.getElementById('portal-search').value.toLowerCase().trim() : '';
+
+        var allRegistros = window._ruteoRegistros || [];
+        var filtrados = allRegistros.filter(function(raw) {
+            var r = normalizarRegistro(raw);
+            if (tramoFiltro && r.tramo !== tramoFiltro) return false;
+            if (textoBusqueda) {
+                var haystack = (r.tramo + ' ' + r.id_consol + ' ' + r.codigo + ' ' + r.ubicacion + ' ' + r.estructura + ' ' + r.tipo_estructura + ' ' + r.observacion).toLowerCase();
+                if (haystack.indexOf(textoBusqueda) === -1) return false;
+            }
+            return true;
+        });
+        renderTabla(filtrados);
+    }
+
+    function calcularStats(registros) {
+        var elTotal = document.getElementById('dash-stat-total');
+        if (elTotal) elTotal.textContent = registros ? registros.length : 0;
+
+        var tramos = new Set((registros || []).map(function(raw) { return normalizarRegistro(raw).tramo; }).filter(Boolean));
+        var elTramos = document.getElementById('dash-stat-tramos');
+        if (elTramos) elTramos.textContent = tramos.size;
+    }
+
+    var isFetchingPortal = false;
+
+    function procesarRegistrosPortal(payload, silent) {
+        var loader = document.getElementById('portal-loading');
+        var section = document.getElementById('portal-data-section');
+        if (loader) loader.style.display = 'none';
+        if (section) section.style.display = 'block';
+
+        var allRegistros = payload.registros || [];
+        window._ruteoRegistros = allRegistros;
+        poblarFiltroTramo(allRegistros);
+        renderTabla(allRegistros);
+        calcularStats(allRegistros);
+
+        var ahora = new Date();
+        var elUpdate = document.getElementById('portal-last-update');
+        if (elUpdate) {
+            elUpdate.textContent = 'Actualizado: ' + ahora.toLocaleTimeString('es-PE');
+        }
+        isFetchingPortal = false;
+    }
+
+    function cargarDatosPortal(silent) {
+        if (isFetchingPortal) return;
+        if (!currentUser.isLoggedIn) return;
+        isFetchingPortal = true;
+
+        var loader = document.getElementById('portal-loading');
+        var section = document.getElementById('portal-data-section');
+        var error = document.getElementById('portal-error');
+
+        if (!silent) {
+            if (loader) loader.style.display = 'flex';
+            if (section) section.style.display = 'none';
+            if (error) error.style.display = 'none';
+        }
+
+        $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_get_registros', nonce: wpRuteoAjax.nonce }, function(res) {
+            isFetchingPortal = false;
+            if (res.success && res.data) {
+                procesarRegistrosPortal(res.data, silent);
+            } else {
+                if (loader) loader.style.display = 'none';
+                if (error) error.style.display = 'flex';
+            }
+        }).fail(function() {
+            isFetchingPortal = false;
+            if (loader) loader.style.display = 'none';
+            if (error) error.style.display = 'flex';
+        });
+    }
+
+    window.cargarDatosPortal = cargarDatosPortal;
+
+    $('#portal-search').on('input', filtrarRegistros);
+    $('#filter-tramo').on('change', filtrarRegistros);
+    $('#btn-refresh-portal').on('click', function() { cargarDatosPortal(false); });
+
+    if (currentUser.isLoggedIn) {
+        cargarDatosPortal(false);
+    }
+
+    window.abrirODocumentoGoogleDocs = function(idx) {
+        var raw = window._ruteoRegistros ? window._ruteoRegistros[idx] : null; if (!raw) return;
+        var r = normalizarRegistro(raw);
+        if (r.link_docx && r.link_docx.length > 5) {
+            window.open(r.link_docx, '_blank');
+            return;
+        }
+        var win = window.open('about:blank', '_blank');
+        if (win) {
+            win.document.write('<div style="font-family:sans-serif; padding:40px; text-align:center; color:#0097D8;"><h2>Generando documento Google Docs en Drive...</h2><p>Por favor espere unos segundos mientras se abre en Google Drive.</p></div>');
+        }
+        var fd = new FormData();
+        fd.append('action', 'ruteo_proxy_post');
+        fd.append('nonce', wpRuteoAjax.nonce);
+        fd.append('payload', JSON.stringify({ action_type: 'create_doc', record: r }));
+        fetch(wpRuteoAjax.ajaxurl, { method: 'POST', body: fd })
+        .then(function(res) { return res.json(); })
+        .then(function(json) {
+            var docUrl = (json.success && json.data) ? (typeof json.data === 'string' ? JSON.parse(json.data).doc_url : json.data.doc_url) : '';
+            if (win) win.location.href = docUrl || 'https://drive.google.com/drive/folders/1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
+        })
+        .catch(function() {
+            if (win) win.location.href = 'https://drive.google.com/drive/folders/1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
+        });
+    };
+    window.generarDocumentoWord = window.abrirODocumentoGoogleDocs;
+
+    window.generarDocumentoPDF = function(idx) {
+        var raw = window._ruteoRegistros ? window._ruteoRegistros[idx] : null; if (!raw) return;
+        var r = normalizarRegistro(raw);
+        var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
+        if (!jsPDFConstructor) {
+            alert('Libreria PDF no disponible.');
+            return;
+        }
+        var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        var w = doc.internal.pageSize.getWidth();
+        doc.setFillColor(0, 151, 216); doc.rect(0,0,w,28,'F'); doc.setTextColor(255,255,255);
+        doc.setFontSize(16); doc.text('FICHA TECNICA DE REGISTRO', w/2, 13, { align: 'center' });
+        doc.setFontSize(9); doc.text('Fecha: ' + r.fecha + ' | Tramo: ' + r.tramo, w/2, 21, { align: 'center' });
+        var data = [
+            ['ID Consol', r.id_consol || '-'],
+            ['Codigo Estructura', r.codigo || '-'],
+            ['Estructura', r.estructura || '-'],
+            ['Tipo Estructura', r.tipo_estructura || '-'],
+            ['Altura', (r.altura || '-') + ' m'],
+            ['Ubicacion', r.ubicacion || '-'],
+            ['Mufa / Herrajes', 'Mufa: ' + r.mufa + ' | Ret: ' + r.retencion + ' | Susp: ' + r.suspension],
+            ['Cruceta / Accesorios', 'Cruceta: ' + r.cruceta + ' | Hebillas: ' + r.hebillas + ' | Fleje: ' + r.fleje],
+            ['Observacion', r.observacion || '-']
+        ];
+        if (typeof doc.autoTable === 'function') {
+            doc.autoTable({ startY: 34, body: data, theme: 'grid', headStyles: { fillColor: [0, 151, 216] }, bodyStyles: { fontSize: 8.5, cellPadding: 2.5 }, margin: { left: 12, right: 12 } });
+        }
+        doc.save('Ficha_Ruteo_' + (r.codigo || r.id_consol || 'Registro') + '.pdf');
+    };
+
 });
+
 
