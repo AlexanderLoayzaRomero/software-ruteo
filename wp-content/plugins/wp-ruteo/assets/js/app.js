@@ -1499,6 +1499,7 @@ jQuery(document).ready(function($) {
         var loader = document.getElementById('portal-loading');
         var section = document.getElementById('portal-data-section');
         var error = document.getElementById('portal-error');
+        var errorMsg = document.getElementById('portal-error-msg');
 
         if (!silent) {
             if (loader) loader.style.display = 'flex';
@@ -1512,11 +1513,14 @@ jQuery(document).ready(function($) {
                 procesarRegistrosPortal(res.data, silent);
             } else {
                 if (loader) loader.style.display = 'none';
+                if (errorMsg) errorMsg.textContent = (res && res.data && res.data.message) ? res.data.message : 'No se pudo conectar con Google Sheets.';
                 if (error) error.style.display = 'flex';
             }
-        }).fail(function() {
+        }).fail(function(jqXHR, textStatus) {
             isFetchingPortal = false;
+            if (textStatus === 'abort') return;
             if (loader) loader.style.display = 'none';
+            if (errorMsg) errorMsg.textContent = 'Error de conexion con el servidor. Por favor reintente.';
             if (error) error.style.display = 'flex';
         });
     }
@@ -1525,7 +1529,7 @@ jQuery(document).ready(function($) {
 
     $('#portal-search').on('input', filtrarRegistros);
     $('#filter-tramo').on('change', filtrarRegistros);
-    $('#btn-refresh-portal').on('click', function() { cargarDatosPortal(false); });
+    $('#btn-refresh-portal, #btn-retry-portal-fetch').on('click', function() { cargarDatosPortal(false); });
 
     if (currentUser.isLoggedIn) {
         cargarDatosPortal(false);

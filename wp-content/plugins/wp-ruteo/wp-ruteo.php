@@ -237,7 +237,7 @@ class WPRuteoApp {
             return;
         }
 
-        set_time_limit( 35 );
+        set_time_limit( 45 );
         nocache_headers();
         header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
         header( 'Pragma: no-cache' );
@@ -246,7 +246,7 @@ class WPRuteoApp {
         $target_url = add_query_arg( '_ts', microtime( true ), $this->webhook_url );
 
         $response = wp_remote_get( $target_url, array(
-            'timeout'     => 30,
+            'timeout'     => 35,
             'redirection' => 5,
             'httpversion' => '1.1',
             'sslverify'   => false,
@@ -259,13 +259,21 @@ class WPRuteoApp {
             if ( $code === 200 && ! empty( $body ) ) {
                 $json = json_decode( $body, true );
                 if ( json_last_error() === JSON_ERROR_NONE ) {
+                    update_option( 'ruteo_cache_registros', $json, false );
                     wp_send_json_success( $json );
                     return;
                 }
             }
         }
 
-        wp_send_json_error( array( 'message' => 'No se pudo conectar con el servidor de registros.' ) );
+        // Fallback a registros cacheados si falla la conexion con Google Sheets
+        $cached = get_option( 'ruteo_cache_registros' );
+        if ( ! empty( $cached ) && is_array( $cached ) ) {
+            wp_send_json_success( $cached );
+            return;
+        }
+
+        wp_send_json_error( array( 'message' => 'No se pudo conectar con Google Sheets. Reintente en unos segundos.' ) );
     }
 
     public function handle_proxy_image() {

@@ -433,11 +433,17 @@ body.admin-bar .ruteo-app-layout {
                             <span>Cargando registros de campo...</span>
                         </div>
 
-                        <div class="portal-error" id="portal-error" style="display:none;">
-                            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div class="portal-error" id="portal-error" style="display:none; flex-direction:column; align-items:center; gap:10px; padding:30px 20px; text-align:center;">
+                            <svg width="36" height="36" fill="none" stroke="#D92625" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                             </svg>
-                            <p id="portal-error-msg">No se pudo conectar con Google Sheets.</p>
+                            <p id="portal-error-msg" style="margin:0; font-weight:600; color:var(--text-main);">No se pudo conectar con Google Sheets.</p>
+                            <button type="button" class="portal-btn portal-btn--refresh" id="btn-retry-portal-fetch" style="font-size:12px; padding:6px 14px; margin-top:4px;">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                <span>Reintentar Conexion</span>
+                            </button>
                         </div>
 
                         <div id="portal-data-section" style="display:none;">
