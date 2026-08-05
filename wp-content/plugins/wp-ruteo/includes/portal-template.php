@@ -490,547 +490,758 @@ body.admin-bar .ruteo-app-layout {
 
         <!-- SECCION 4: CONSUMO DE MATERIALES -->
         <section class="ruteo-tab-content" id="tab-materiales">
-            <div class="materiales-container">
-                
-                <!-- TARJETA FORMULARIO MATERIALES -->
-                <div class="material-card">
-                    <div class="card-header">
-                        <p style="color:var(--text-muted); margin: 0 0 20px 0;">Registre los materiales utilizados en incidencias o mantenimientos por Almacen / PM</p>
+            <div class="ruteo-tab-protected-notice" style="display:none;">
+                <div class="login-card-container" style="max-width:520px; margin: 30px auto; text-align:center; padding:32px 24px; background:var(--bg-glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(10px);">
+                    <div style="width:64px; height:64px; margin:0 auto 16px auto; background:rgba(0, 151, 216, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="32" height="32" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
                     </div>
+                    <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
+                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 24px 0;">Debes iniciar sesion con tu cuenta para registrar el Consumo de Materiales.</p>
 
-                    <form id="form-consumo-materiales" class="ruteo-materiales-form">
-                        <div class="form-grid-3">
-                            <div class="form-group">
-                                <label>No. Incidencia / INC</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="mat-incidencia" placeholder="Ej: INC 78093" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>CRQ (Opcional)</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="mat-crq" placeholder="Ej: CRQ-90272">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Almacen / PM (Centro Mantenimiento)</label>
-                                <div class="input-wrapper">
-                                    <select id="mat-almacen-pm" required>
-                                        <option value="">-- Seleccionar Almacen / PM --</option>
-                                        <?php foreach ($pm_list as $pm_item) : ?>
-                                            <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Tramo</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="mat-tramo" placeholder="Ej: Urubamba - Quillabamba" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Fecha de Intervencion</label>
-                                <div class="input-wrapper">
-                                    <input type="date" id="mat-fecha" value="<?php echo date('Y-m-d'); ?>" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label>Descripcion de Incidencia / Trabajo</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="mat-descripcion" placeholder="Ej: Perdida de enlace Cusco - Quillabamba / Preventivo PEXT" required>
-                                </div>
+                    <form class="ruteo-auth-login-form" style="text-align:left; margin-bottom:20px;">
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label style="font-size:13px; font-weight:600;">Nombre de Usuario o Correo Electronico</label>
+                            <div class="input-wrapper">
+                                <input type="text" name="username" placeholder="Usuario o correo@dominio.com" required>
                             </div>
                         </div>
-
-                        <!-- TABLA DINAMICA DE MATERIALES -->
-                        <div class="materials-items-section">
-                            <div class="items-section-header">
-                                <h4>Materiales Utilizados</h4>
-                                <button type="button" class="btn-add-item" id="btn-add-material-row">
-                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                    </svg>
-                                    <span>Agregar Material</span>
-                                </button>
-                            </div>
-
-                            <div class="portal-table-scroll">
-                                <table class="items-table" id="table-material-items">
-                                    <thead>
-                                        <tr>
-                                            <th style="width: 50px;">Item</th>
-                                            <th>Descripcion del Material</th>
-                                            <th style="width: 120px;">Unidad</th>
-                                            <th style="width: 100px;">Cantidad</th>
-                                            <th style="width: 160px;">Codigo SAP</th>
-                                            <th style="width: 140px;">No. Drum</th>
-                                            <th style="width: 60px;">Accion</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tbody-material-items">
-                                        <!-- Filas dinamicas JS -->
-                                    </tbody>
-                                </table>
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <label style="font-size:13px; font-weight:600;">Clave de Acceso</label>
+                            <div class="input-wrapper">
+                                <input type="password" name="password" placeholder="--------" required>
                             </div>
                         </div>
-
-                        <div class="form-footer-actions">
-                            <button type="submit" class="ruteo-submit-btn" style="min-width: 220px;">
-                                <span class="btn-text">Guardar Reporte Materiales</span>
-                                <div class="spinner"></div>
-                            </button>
-                            <div id="mat-form-msg" class="ruteo-message"></div>
-                        </div>
+                        <button type="submit" class="ruteo-submit-btn" style="width:100%;">
+                            <span class="btn-text">Iniciar Sesion e Ingresar</span>
+                            <div class="spinner"></div>
+                        </button>
+                        <div class="ruteo-message"></div>
                     </form>
-                </div>
 
-                <!-- HISTORIAL DE MATERIALES -->
-                <div class="material-card" style="margin-top: 24px;">
-                    <div class="card-header">
-                        <h3>Historial de Reportes de Materiales</h3>
-                    </div>
-
-                    <div class="portal-filters-row">
-                        <div class="filter-group">
-                            <label for="filter-mat-pm">Filtrar por PM</label>
-                            <select id="filter-mat-pm">
-                                <option value="">Todos los PMs</option>
-                                <?php foreach ($pm_list as $pm_item) : ?>
-                                    <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-
-                        <div class="portal-search-wrap">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                            <input type="text" id="mat-search" placeholder="Buscar por INC, Tramo o Material...">
+                    <div class="demo-accounts-box" style="padding:12px; background:var(--bg-light); border:1px solid var(--border); border-radius:10px;">
+                        <p style="font-size:12px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary);">Cuentas Rapidas de Prueba (Click para ingresar):</p>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="admingeneral" data-pass="AdminGeneral123!" style="font-size:11px; padding:4px 8px;">Admin General</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="tecnico1" data-pass="Tecnico123!" style="font-size:11px; padding:4px 8px;">Tecnico</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="supervisor1" data-pass="Supervisor123!" style="font-size:11px; padding:4px 8px;">Supervisor Op.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="seguridad1" data-pass="Seguridad123!" style="font-size:11px; padding:4px 8px;">Supervisor Seg.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="hse1" data-pass="Hse123!" style="font-size:11px; padding:4px 8px;">Area HSE</button>
                         </div>
                     </div>
-
-                    <div class="portal-table-scroll">
-                        <table class="portal-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>INC / CRQ</th>
-                                    <th>Almacen / PM</th>
-                                    <th>Tramo</th>
-                                    <th>Descripcion</th>
-                                    <th>Materiales</th>
-                                    <th>Usuario</th>
-                                </tr>
-                            </thead>
-                            <tbody id="mat-reports-tbody">
-                                <tr><td colspan="7" style="text-align:center; padding: 20px;">Cargando historial de materiales...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
+            </div>
 
+            <div class="ruteo-tab-protected-content">
+                <div class="materiales-container">
+                    <!-- TARJETA FORMULARIO MATERIALES -->
+                    <div class="material-card">
+                        <div class="card-header">
+                            <p style="color:var(--text-muted); margin: 0 0 20px 0;">Registre los materiales utilizados en incidencias o mantenimientos por Almacen / PM</p>
+                        </div>
+
+                        <form id="form-consumo-materiales" class="ruteo-materiales-form">
+                            <div class="form-grid-3">
+                                <div class="form-group">
+                                    <label>No. Incidencia / INC</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="mat-incidencia" placeholder="Ej: INC 78093" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>CRQ (Opcional)</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="mat-crq" placeholder="Ej: CRQ-90272">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Almacen / PM (Centro Mantenimiento)</label>
+                                    <div class="input-wrapper">
+                                        <select id="mat-almacen-pm" required>
+                                            <option value="">-- Seleccionar Almacen / PM --</option>
+                                            <?php foreach ($pm_list as $pm_item) : ?>
+                                                <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Tramo</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="mat-tramo" placeholder="Ej: Urubamba - Quillabamba" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Fecha de Intervencion</label>
+                                    <div class="input-wrapper">
+                                        <input type="date" id="mat-fecha" value="<?php echo date('Y-m-d'); ?>" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label>Descripcion de Incidencia / Trabajo</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="mat-descripcion" placeholder="Ej: Perdida de enlace Cusco - Quillabamba / Preventivo PEXT" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- TABLA DINAMICA DE MATERIALES -->
+                            <div class="materials-items-section">
+                                <div class="items-section-header">
+                                    <h4>Materiales Utilizados</h4>
+                                    <button type="button" class="btn-add-item" id="btn-add-material-row">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                        </svg>
+                                        <span>Agregar Material</span>
+                                    </button>
+                                </div>
+
+                                <div class="portal-table-scroll">
+                                    <table class="items-table" id="table-material-items">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 50px;">Item</th>
+                                                <th>Descripcion del Material</th>
+                                                <th style="width: 120px;">Unidad</th>
+                                                <th style="width: 100px;">Cantidad</th>
+                                                <th style="width: 160px;">Codigo SAP</th>
+                                                <th style="width: 140px;">No. Drum</th>
+                                                <th style="width: 60px;">Accion</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tbody-material-items">
+                                            <!-- Filas dinamicas JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="form-footer-actions">
+                                <button type="submit" class="ruteo-submit-btn" style="min-width: 220px;">
+                                    <span class="btn-text">Guardar Reporte Materiales</span>
+                                    <div class="spinner"></div>
+                                </button>
+                                <div id="mat-form-msg" class="ruteo-message"></div>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- HISTORIAL DE MATERIALES -->
+                    <div class="material-card" style="margin-top: 24px;">
+                        <div class="card-header">
+                            <h3>Historial de Reportes de Materiales</h3>
+                        </div>
+
+                        <div class="portal-filters-row">
+                            <div class="filter-group">
+                                <label for="filter-mat-pm">Filtrar por PM</label>
+                                <select id="filter-mat-pm">
+                                    <option value="">Todos los PMs</option>
+                                    <?php foreach ($pm_list as $pm_item) : ?>
+                                        <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="portal-search-wrap">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input type="text" id="mat-search" placeholder="Buscar por INC, Tramo o Material...">
+                            </div>
+                        </div>
+
+                        <div class="portal-table-scroll">
+                            <table class="portal-table">
+                                <thead>
+                                    <tr>
+                                        <th>Fecha</th>
+                                        <th>INC / CRQ</th>
+                                        <th>Almacen / PM</th>
+                                        <th>Tramo</th>
+                                        <th>Descripcion</th>
+                                        <th>Materiales</th>
+                                        <th>Usuario</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="mat-reports-tbody">
+                                    <tr><td colspan="7" style="text-align:center; padding: 20px;">Cargando historial de materiales...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </section>
 
         <!-- SECCION 5: SLA E INFORMES DE MANTENIMIENTO -->
         <section class="ruteo-tab-content" id="tab-sla-informes">
-            <div class="sla-container">
-                <div class="sla-header">
-                    <p style="color:var(--text-muted); margin: 0 0 24px 0;">Acceda a los formatos estandarizados de soporte y reportes tecnicos</p>
+            <div class="ruteo-tab-protected-notice" style="display:none;">
+                <div class="login-card-container" style="max-width:520px; margin: 30px auto; text-align:center; padding:32px 24px; background:var(--bg-glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(10px);">
+                    <div style="width:64px; height:64px; margin:0 auto 16px auto; background:rgba(0, 151, 216, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="32" height="32" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                    </div>
+                    <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
+                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 24px 0;">Debes iniciar sesion con tu cuenta para acceder a SLA e Informes de Mantenimiento.</p>
+
+                    <form class="ruteo-auth-login-form" style="text-align:left; margin-bottom:20px;">
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label style="font-size:13px; font-weight:600;">Nombre de Usuario o Correo Electronico</label>
+                            <div class="input-wrapper">
+                                <input type="text" name="username" placeholder="Usuario o correo@dominio.com" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <label style="font-size:13px; font-weight:600;">Clave de Acceso</label>
+                            <div class="input-wrapper">
+                                <input type="password" name="password" placeholder="--------" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="ruteo-submit-btn" style="width:100%;">
+                            <span class="btn-text">Iniciar Sesion e Ingresar</span>
+                            <div class="spinner"></div>
+                        </button>
+                        <div class="ruteo-message"></div>
+                    </form>
+
+                    <div class="demo-accounts-box" style="padding:12px; background:var(--bg-light); border:1px solid var(--border); border-radius:10px;">
+                        <p style="font-size:12px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary);">Cuentas Rapidas de Prueba (Click para ingresar):</p>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="admingeneral" data-pass="AdminGeneral123!" style="font-size:11px; padding:4px 8px;">Admin General</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="tecnico1" data-pass="Tecnico123!" style="font-size:11px; padding:4px 8px;">Tecnico</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="supervisor1" data-pass="Supervisor123!" style="font-size:11px; padding:4px 8px;">Supervisor Op.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="seguridad1" data-pass="Seguridad123!" style="font-size:11px; padding:4px 8px;">Supervisor Seg.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="hse1" data-pass="Hse123!" style="font-size:11px; padding:4px 8px;">Area HSE</button>
+                        </div>
+                    </div>
                 </div>
+            </div>
 
-                <div class="sla-cards-grid">
-                    <div class="sla-card">
-                        <div class="sla-icon icon-blue-bg">
-                            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                        </div>
-                        <h4>Formato SLA Cumplimiento</h4>
-                        <p>Generacion de reporte de cumplimiento de tiempos de respuesta y solucion segun acuerdo de nivel de servicio.</p>
-                        <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Formato SLA">Abrir Formato SLA</button>
+            <div class="ruteo-tab-protected-content">
+                <div class="sla-container">
+                    <div class="sla-header">
+                        <p style="color:var(--text-muted); margin: 0 0 24px 0;">Acceda a los formatos estandarizados de soporte y reportes tecnicos</p>
                     </div>
 
-                    <div class="sla-card">
-                        <div class="sla-icon icon-green-bg">
-                            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
+                    <div class="sla-cards-grid">
+                        <div class="sla-card">
+                            <div class="sla-icon icon-blue-bg">
+                                <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                            </div>
+                            <h4>Formato SLA Cumplimiento</h4>
+                            <p>Generacion de reporte de cumplimiento de tiempos de respuesta y solucion segun acuerdo de nivel de servicio.</p>
+                            <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Formato SLA">Abrir Formato SLA</button>
                         </div>
-                        <h4>Informe Tecnico Preventivo</h4>
-                        <p>Formato normalizado para mantenimientos preventivos PEXT en tramos de fibra optica.</p>
-                        <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Informe Preventivo">Generar Informe</button>
-                    </div>
 
-                    <div class="sla-card">
-                        <div class="sla-icon icon-purple-bg">
-                            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                            </svg>
+                        <div class="sla-card">
+                            <div class="sla-icon icon-green-bg">
+                                <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <h4>Informe Tecnico Preventivo</h4>
+                            <p>Formato normalizado para mantenimientos preventivos PEXT en tramos de fibra optica.</p>
+                            <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Informe Preventivo">Generar Informe</button>
                         </div>
-                        <h4>Informe Tecnico Correctivo</h4>
-                        <p>Reporte detallado de atencion de incidencias, reparacion de hilos, empalmes y consumo de fibra.</p>
-                        <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Informe Correctivo">Generar Informe</button>
+
+                        <div class="sla-card">
+                            <div class="sla-icon icon-purple-bg">
+                                <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                </svg>
+                            </div>
+                            <h4>Informe Tecnico Correctivo</h4>
+                            <p>Reporte detallado de atencion de incidencias, reparacion de hilos, empalmes y consumo de fibra.</p>
+                            <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Informe Correctivo">Generar Informe</button>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
 
         <!-- SECCION: NEGATIVA AL TRABAJO POR RIESGO INMINENTE -->
-<section class="ruteo-tab-content" id="tab-negativa">
-    <div class="ruteo-form-card animate-fade-in">
-        <p class="form-header-sub">Complete el formato de Negativa al Trabajo por Riesgo Inminente (HSE-RE-NEG-01) segun la etapa que le corresponda.</p>
-
-        <div class="ruteo-form-section" style="margin-bottom:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
-            <label style="font-weight:600;">Registro:</label>
-            <select id="negativa-select-registro" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main); min-width:260px;">
-                <option value="0">+ Nueva Negativa</option>
-            </select>
-            <span id="negativa-estado-badge" class="badge-pill"></span>
-        </div>
-
-        <!-- Resumen de lo ya llenado en etapas anteriores (solo lectura) -->
-        <div id="negativa-resumen" style="display:none; margin-bottom:20px; padding:16px; border-radius:10px; background:var(--bg-subtle); border:1px solid var(--border);"></div>
-
-        <!-- ETAPA 1: TECNICO (puntos 1 a 4) -->
-        <form id="form-negativa-tecnico" class="ruteo-form">
-            <div class="ruteo-form-section">
-                <h3 class="form-section-title"><span class="step-badge">1</span> Datos Generales y Empresa Cliente</h3>
-                <div class="ruteo-fields-grid">
-                    <div class="form-group"><label>Cliente / Empresa Principal</label><div class="input-wrapper">
-                        <select name="cliente_nombre" class="neg-select-cliente" required>
-                            <option value="CYMTEL">CYMTEL</option>
-                        </select>
-                    </div></div>
-                    <div class="form-group"><label>Proceso</label><div class="input-wrapper"><input type="text" name="proceso" placeholder="Ej: Perdida de enlace..." required></div></div>
-                    <div class="form-group"><label>CM / Localidad</label><div class="input-wrapper"><input type="text" name="cm_localidad" required></div></div>
-                    <div class="form-group"><label>Contratista</label><div class="input-wrapper"><input type="text" name="contratista" required></div></div>
-                    <div class="form-group"><label>Sub Contratista</label><div class="input-wrapper"><input type="text" name="sub_contratista"></div></div>
-                    <div class="form-group"><label>Relacionado a</label><div class="input-wrapper">
-                        <select name="relacionado_a" required><option value="PEXT">PEXT</option><option value="PINT">PINT</option></select>
-                    </div></div>
-                    <div class="form-group"><label>Lugar de Trabajo</label><div class="input-wrapper"><input type="text" name="lugar_trabajo" required></div></div>
-                    <div class="form-group"><label>Fecha</label><div class="input-wrapper"><input type="date" name="fecha" required></div></div>
-                    <div class="form-group"><label>Hora Inicio</label><div class="input-wrapper"><input type="time" name="hora_inicio" required></div></div>
-                    <div class="form-group"><label>Hora Fin</label><div class="input-wrapper"><input type="time" name="hora_fin"></div></div>
-                    <div class="form-group"><label>Total de Horas</label><div class="input-wrapper"><input type="text" name="total_horas" placeholder="Ej: 08 horas, 43 minutos"></div></div>
-                </div>
-            </div>
-
-            <div class="ruteo-form-section">
-                <h3 class="form-section-title"><span class="step-badge">2</span> Investigacion del Supervisor Operativo</h3>
-                <div class="ruteo-fields-grid">
-                    <div class="form-group"><label>Nombre del Supervisor Operativo</label><div class="input-wrapper"><input type="text" name="supervisor_operativo_nombre" required></div></div>
-                    <div class="form-group"><label>Trabajador Reportante</label><div class="input-wrapper"><input type="text" name="trabajador_reportante" required></div></div>
-                </div>
-            </div>
-
-            <div class="ruteo-form-section">
-                <h3 class="form-section-title"><span class="step-badge">3</span> Razones para la Negativa</h3>
-                <div class="form-group"><textarea name="razones_negativa" rows="5" placeholder="Describa las condiciones adversas y la base legal..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div>
-            </div>
-
-            <div class="ruteo-form-section">
-                <h3 class="form-section-title"><span class="step-badge">4</span> Evidencias Fotograficas</h3>
-                <div class="ruteo-photos-grid">
-                    <div class="ruteo-photo-upload" id="neg-upload-box-1">
-                        <label for="neg-foto1" class="upload-label">
-                            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                            <span class="upload-text">Evidencia 1</span>
-                        </label>
-                        <input type="file" id="neg-foto1" name="foto1" accept="image/*">
-                        <div class="preview" id="neg-preview1"><button type="button" class="btn-remove-photo" data-input="neg-foto1" data-preview="neg-preview1">&times;</button></div>
+        <section class="ruteo-tab-content" id="tab-negativa">
+            <div class="ruteo-tab-protected-notice" style="display:none;">
+                <div class="login-card-container" style="max-width:520px; margin: 30px auto; text-align:center; padding:32px 24px; background:var(--bg-glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(10px);">
+                    <div style="width:64px; height:64px; margin:0 auto 16px auto; background:rgba(0, 151, 216, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="32" height="32" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
                     </div>
-                    <div class="ruteo-photo-upload" id="neg-upload-box-2">
-                        <label for="neg-foto2" class="upload-label">
-                            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-                            <span class="upload-text">Evidencia 2</span>
-                        </label>
-                        <input type="file" id="neg-foto2" name="foto2" accept="image/*">
-                        <div class="preview" id="neg-preview2"><button type="button" class="btn-remove-photo" data-input="neg-foto2" data-preview="neg-preview2">&times;</button></div>
+                    <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
+                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 24px 0;">Debes iniciar sesion con tu cuenta para acceder al modulo de Negativa al Trabajo.</p>
+
+                    <form class="ruteo-auth-login-form" style="text-align:left; margin-bottom:20px;">
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label style="font-size:13px; font-weight:600;">Nombre de Usuario o Correo Electronico</label>
+                            <div class="input-wrapper">
+                                <input type="text" name="username" placeholder="Usuario o correo@dominio.com" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <label style="font-size:13px; font-weight:600;">Clave de Acceso</label>
+                            <div class="input-wrapper">
+                                <input type="password" name="password" placeholder="--------" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="ruteo-submit-btn" style="width:100%;">
+                            <span class="btn-text">Iniciar Sesion e Ingresar</span>
+                            <div class="spinner"></div>
+                        </button>
+                        <div class="ruteo-message"></div>
+                    </form>
+
+                    <div class="demo-accounts-box" style="padding:12px; background:var(--bg-light); border:1px solid var(--border); border-radius:10px;">
+                        <p style="font-size:12px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary);">Cuentas Rapidas de Prueba (Click para ingresar):</p>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="admingeneral" data-pass="AdminGeneral123!" style="font-size:11px; padding:4px 8px;">Admin General</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="tecnico1" data-pass="Tecnico123!" style="font-size:11px; padding:4px 8px;">Tecnico</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="supervisor1" data-pass="Supervisor123!" style="font-size:11px; padding:4px 8px;">Supervisor Op.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="seguridad1" data-pass="Seguridad123!" style="font-size:11px; padding:4px 8px;">Supervisor Seg.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="hse1" data-pass="Hse123!" style="font-size:11px; padding:4px 8px;">Area HSE</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Tecnico</button>
-        </form>
+            <div class="ruteo-tab-protected-content">
+                <div class="ruteo-form-card animate-fade-in">
+                    <p class="form-header-sub">Complete el formato de Negativa al Trabajo por Riesgo Inminente (HSE-RE-NEG-01) segun la etapa que le corresponda.</p>
 
-        <!-- ETAPA 2: SUPERVISOR OPERATIVO (Edicion completa Puntos 1, 2, 3 + Puntos 5 y 6) -->
-        <form id="form-negativa-supervisor" class="ruteo-form" style="display:none;">
-            <div class="ruteo-form-section">
-                <h3 class="form-section-title"><span class="step-badge">1</span> Revision y Edicion de Datos Generales</h3>
-                <div class="ruteo-fields-grid">
-                    <div class="form-group"><label>Cliente / Empresa Principal</label><div class="input-wrapper">
-                        <select name="cliente_nombre" class="neg-select-cliente" required>
-                            <option value="CYMTEL">CYMTEL</option>
+                    <div class="ruteo-form-section" style="margin-bottom:16px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+                        <label style="font-weight:600;">Registro:</label>
+                        <select id="negativa-select-registro" style="padding:8px 12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main); min-width:260px;">
+                            <option value="0">+ Nueva Negativa</option>
                         </select>
-                    </div></div>
-                    <div class="form-group"><label>Proceso</label><div class="input-wrapper"><input type="text" name="proceso" required></div></div>
-                    <div class="form-group"><label>CM / Localidad</label><div class="input-wrapper"><input type="text" name="cm_localidad" required></div></div>
-                    <div class="form-group"><label>Contratista</label><div class="input-wrapper"><input type="text" name="contratista" required></div></div>
-                    <div class="form-group"><label>Sub Contratista</label><div class="input-wrapper"><input type="text" name="sub_contratista"></div></div>
-                    <div class="form-group"><label>Relacionado a</label><div class="input-wrapper">
-                        <select name="relacionado_a" required><option value="PEXT">PEXT</option><option value="PINT">PINT</option></select>
-                    </div></div>
-                    <div class="form-group"><label>Lugar de Trabajo</label><div class="input-wrapper"><input type="text" name="lugar_trabajo" required></div></div>
-                    <div class="form-group"><label>Fecha</label><div class="input-wrapper"><input type="date" name="fecha" required></div></div>
-                    <div class="form-group"><label>Hora Inicio</label><div class="input-wrapper"><input type="time" name="hora_inicio" required></div></div>
-                    <div class="form-group"><label>Hora Fin</label><div class="input-wrapper"><input type="time" name="hora_fin"></div></div>
-                    <div class="form-group"><label>Total de Horas</label><div class="input-wrapper"><input type="text" name="total_horas"></div></div>
+                        <span id="negativa-estado-badge" class="badge-pill"></span>
+                    </div>
+
+                    <!-- Resumen de lo ya llenado en etapas anteriores (solo lectura) -->
+                    <div id="negativa-resumen" style="display:none; margin-bottom:20px; padding:16px; border-radius:10px; background:var(--bg-subtle); border:1px solid var(--border);"></div>
+
+                    <!-- ETAPA 1: TECNICO (puntos 1 a 4) -->
+                    <form id="form-negativa-tecnico" class="ruteo-form">
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">1</span> Datos Generales y Empresa Cliente</h3>
+                            <div class="ruteo-fields-grid">
+                                <div class="form-group"><label>Cliente / Empresa Principal</label><div class="input-wrapper">
+                                    <select name="cliente_nombre" class="neg-select-cliente" required>
+                                        <option value="CYMTEL">CYMTEL</option>
+                                    </select>
+                                </div></div>
+                                <div class="form-group"><label>Proceso</label><div class="input-wrapper"><input type="text" name="proceso" placeholder="Ej: Perdida de enlace..." required></div></div>
+                                <div class="form-group"><label>CM / Localidad</label><div class="input-wrapper"><input type="text" name="cm_localidad" required></div></div>
+                                <div class="form-group"><label>Contratista</label><div class="input-wrapper"><input type="text" name="contratista" required></div></div>
+                                <div class="form-group"><label>Sub Contratista</label><div class="input-wrapper"><input type="text" name="sub_contratista"></div></div>
+                                <div class="form-group"><label>Relacionado a</label><div class="input-wrapper">
+                                    <select name="relacionado_a" required><option value="PEXT">PEXT</option><option value="PINT">PINT</option></select>
+                                </div></div>
+                                <div class="form-group"><label>Lugar de Trabajo</label><div class="input-wrapper"><input type="text" name="lugar_trabajo" required></div></div>
+                                <div class="form-group"><label>Fecha</label><div class="input-wrapper"><input type="date" name="fecha" required></div></div>
+                                <div class="form-group"><label>Hora Inicio</label><div class="input-wrapper"><input type="time" name="hora_inicio" required></div></div>
+                                <div class="form-group"><label>Hora Fin</label><div class="input-wrapper"><input type="time" name="hora_fin"></div></div>
+                                <div class="form-group"><label>Total de Horas</label><div class="input-wrapper"><input type="text" name="total_horas" placeholder="Ej: 08 horas, 43 minutos"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">2</span> Investigacion del Supervisor Operativo</h3>
+                            <div class="ruteo-fields-grid">
+                                <div class="form-group"><label>Nombre del Supervisor Operativo</label><div class="input-wrapper"><input type="text" name="supervisor_operativo_nombre" required></div></div>
+                                <div class="form-group"><label>Trabajador Reportante</label><div class="input-wrapper"><input type="text" name="trabajador_reportante" required></div></div>
+                            </div>
+                        </div>
+
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">3</span> Razones para la Negativa</h3>
+                            <div class="form-group"><textarea name="razones_negativa" rows="5" placeholder="Describa las condiciones adversas y la base legal..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div>
+                        </div>
+
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">4</span> Evidencias Fotograficas</h3>
+                            <div class="ruteo-photos-grid">
+                                <div class="ruteo-photo-upload" id="neg-upload-box-1">
+                                    <label for="neg-foto1" class="upload-label">
+                                        <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                        <span class="upload-text">Evidencia 1</span>
+                                    </label>
+                                    <input type="file" id="neg-foto1" name="foto1" accept="image/*">
+                                    <div class="preview" id="neg-preview1"><button type="button" class="btn-remove-photo" data-input="neg-foto1" data-preview="neg-preview1">&times;</button></div>
+                                </div>
+                                <div class="ruteo-photo-upload" id="neg-upload-box-2">
+                                    <label for="neg-foto2" class="upload-label">
+                                        <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                                        <span class="upload-text">Evidencia 2</span>
+                                    </label>
+                                    <input type="file" id="neg-foto2" name="foto2" accept="image/*">
+                                    <div class="preview" id="neg-preview2"><button type="button" class="btn-remove-photo" data-input="neg-foto2" data-preview="neg-preview2">&times;</button></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Tecnico</button>
+                    </form>
+
+                    <!-- ETAPA 2: SUPERVISOR OPERATIVO (Edicion completa Puntos 1, 2, 3 + Puntos 5 y 6) -->
+                    <form id="form-negativa-supervisor" class="ruteo-form" style="display:none;">
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">1</span> Revision y Edicion de Datos Generales</h3>
+                            <div class="ruteo-fields-grid">
+                                <div class="form-group"><label>Cliente / Empresa Principal</label><div class="input-wrapper">
+                                    <select name="cliente_nombre" class="neg-select-cliente" required>
+                                        <option value="CYMTEL">CYMTEL</option>
+                                    </select>
+                                </div></div>
+                                <div class="form-group"><label>Proceso</label><div class="input-wrapper"><input type="text" name="proceso" required></div></div>
+                                <div class="form-group"><label>CM / Localidad</label><div class="input-wrapper"><input type="text" name="cm_localidad" required></div></div>
+                                <div class="form-group"><label>Contratista</label><div class="input-wrapper"><input type="text" name="contratista" required></div></div>
+                                <div class="form-group"><label>Sub Contratista</label><div class="input-wrapper"><input type="text" name="sub_contratista"></div></div>
+                                <div class="form-group"><label>Relacionado a</label><div class="input-wrapper">
+                                    <select name="relacionado_a" required><option value="PEXT">PEXT</option><option value="PINT">PINT</option></select>
+                                </div></div>
+                                <div class="form-group"><label>Lugar de Trabajo</label><div class="input-wrapper"><input type="text" name="lugar_trabajo" required></div></div>
+                                <div class="form-group"><label>Fecha</label><div class="input-wrapper"><input type="date" name="fecha" required></div></div>
+                                <div class="form-group"><label>Hora Inicio</label><div class="input-wrapper"><input type="time" name="hora_inicio" required></div></div>
+                                <div class="form-group"><label>Hora Fin</label><div class="input-wrapper"><input type="time" name="hora_fin"></div></div>
+                                <div class="form-group"><label>Total de Horas</label><div class="input-wrapper"><input type="text" name="total_horas"></div></div>
+                            </div>
+                        </div>
+
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">2</span> Investigacion y Datos de Reporte</h3>
+                            <div class="ruteo-fields-grid">
+                                <div class="form-group"><label>Nombre del Supervisor Operativo</label><div class="input-wrapper"><input type="text" name="supervisor_operativo_nombre" required></div></div>
+                                <div class="form-group"><label>Trabajador Reportante</label><div class="input-wrapper"><input type="text" name="trabajador_reportante" required></div></div>
+                            </div>
+                        </div>
+
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">3</span> Edicion de Razones para la Negativa (Punto 3)</h3>
+                            <div class="form-group"><textarea name="razones_negativa" rows="5" placeholder="Corriga o complemente las razones indicadas por el tecnico..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div>
+                        </div>
+
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">5</span> Solucion y Medidas Correctivas (Supervisor Op.)</h3>
+                            <div class="ruteo-fields-grid">
+                                <div class="form-group full-width"><label>Medidas Correctivas Aplicadas</label><div class="input-wrapper"><textarea name="medidas_correctivas" rows="3" required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div></div>
+                                <div class="form-group"><label>Satisface Negativa al Trabajo?</label><div class="input-wrapper">
+                                    <select name="satisface_negativa" required><option value="SI">SI</option><option value="NO">NO</option></select>
+                                </div></div>
+                            </div>
+                        </div>
+
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">6</span> Reinicio de Labores</h3>
+                            <div class="ruteo-fields-grid">
+                                <div class="form-group"><label>Se reinician las labores?</label><div class="input-wrapper">
+                                    <select name="reinicia_labores" required><option value="SI">SI</option><option value="NO">NO</option></select>
+                                </div></div>
+                                <div class="form-group"><label>Fecha Reinicio</label><div class="input-wrapper"><input type="date" name="fecha_reinicio"></div></div>
+                                <div class="form-group"><label>Hora Reinicio</label><div class="input-wrapper"><input type="time" name="hora_reinicio"></div></div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Supervisor Operativo</button>
+                    </form>
+
+                    <!-- ETAPA 3: SUPERVISOR SEGURIDAD (Punto 7) -->
+                    <form id="form-negativa-seguridad" class="ruteo-form" style="display:none;">
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">7</span> Verificacion del Supervisor de Seguridad / SST</h3>
+                            <div class="ruteo-fields-grid">
+                                <div class="form-group"><label>Nombre Supervisor Seguridad</label><div class="input-wrapper"><input type="text" name="supervisor_seguridad_nombre" required></div></div>
+                                <div class="form-group full-width"><label>Observaciones de Seguridad SST</label><div class="input-wrapper"><textarea name="observaciones_seguridad" rows="3" required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Supervisor de Seguridad</button>
+                    </form>
+
+                    <!-- ETAPA 4: HSE (Punto 8) -->
+                    <form id="form-negativa-hse" class="ruteo-form" style="display:none;">
+                        <div class="ruteo-form-section">
+                            <h3 class="form-section-title"><span class="step-badge">8</span> Cierre Final por Area HSE</h3>
+                            <div class="ruteo-fields-grid">
+                                <div class="form-group"><label>Nombre del Responsable HSE</label><div class="input-wrapper"><input type="text" name="hse_nombre" required></div></div>
+                                <div class="form-group full-width"><label>Dictamen Final HSE</label><div class="input-wrapper"><textarea name="dictamen_hse" rows="3" required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div></div>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Area HSE</button>
+                    </form>
+
+                    <div style="margin-top:20px; display:flex; gap:16px; align-items:center; flex-wrap:wrap;">
+                        <div id="negativa-msg" class="ruteo-message"></div>
+                    </div>
+
+                    <button type="button" id="btn-negativa-exportar-pdf" class="btn-secondary" style="display:none; margin-top:16px; gap:8px;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                        <span>Exportar Negativa a PDF (Formato HSE-RE-NEG-01)</span>
+                    </button>
                 </div>
             </div>
-
-            <div class="ruteo-form-section">
-                <h3 class="form-section-title"><span class="step-badge">2</span> Investigacion y Datos de Reporte</h3>
-                <div class="ruteo-fields-grid">
-                    <div class="form-group"><label>Nombre del Supervisor Operativo</label><div class="input-wrapper"><input type="text" name="supervisor_operativo_nombre" required></div></div>
-                    <div class="form-group"><label>Trabajador Reportante</label><div class="input-wrapper"><input type="text" name="trabajador_reportante" required></div></div>
-                </div>
-            </div>
-
-            <div class="ruteo-form-section">
-                <h3 class="form-section-title"><span class="step-badge">3</span> Edicion de Razones para la Negativa (Punto 3)</h3>
-                <div class="form-group"><textarea name="razones_negativa" rows="5" placeholder="Corriga o complemente las razones indicadas por el tecnico..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div>
-            </div>
-
-            <div class="ruteo-form-section">
-                <h3 class="form-section-title"><span class="step-badge">5</span> Acciones Correctivas</h3>
-                <div class="form-group"><textarea name="acciones_correctivas" rows="4" placeholder="Detalle las acciones correctivas realizadas..." required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div>
-            </div>
-            <div class="ruteo-form-section">
-                <h3 class="form-section-title"><span class="step-badge">6</span> Acuerdo de Condiciones Inseguras</h3>
-                <div class="form-group">
-                    <label style="margin-right:20px;"><input type="radio" name="acuerdo_inseguro" value="SI" required> Si</label>
-                    <label><input type="radio" name="acuerdo_inseguro" value="NO"> No</label>
-                </div>
-            </div>
-            <button type="submit" class="btn-primary ruteo-submit-btn">Guardar Cambios y Firmar como Supervisor Operativo</button>
-        </form>
-
-        <!-- ETAPA 3 y 4: SOLO FIRMA (Seguridad / HSE) -->
-        <div id="negativa-firma-simple" style="display:none;">
-            <p id="negativa-firma-simple-texto" style="margin-bottom:14px; font-weight:500;"></p>
-            <button type="button" id="btn-negativa-firmar-simple" class="btn-primary ruteo-submit-btn">Firmar</button>
-        </div>
-
-        <button type="button" id="btn-negativa-exportar-pdf" class="btn-secondary" style="display:none; margin-top:16px; gap:8px;">
-            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            <span>Exportar Negativa a PDF (Formato HSE-RE-NEG-01)</span>
-        </button>
-    </div>
-</section>
+        </section>
 
         <!-- SECCION 6: GESTION DE USUARIOS Y CONFIGURACION (SOLO ADMIN) -->
         <section class="ruteo-tab-content" id="tab-usuarios">
-            <div class="users-container">
-
-                <!-- GESTION DE CLIENTES Y LOGOS -->
-                <div class="user-create-card" id="clientes-card" style="margin-bottom:20px;">
-                    <h4>Empresas Clientes y Logos para Reportes (Ej: CYMTEL)</h4>
-                    <p class="users-sub" style="margin-bottom:14px;">Registra los clientes del software, sus logos y datos de contacto para los formatos oficiales.</p>
-                    <form id="form-cliente" enctype="multipart/form-data" style="margin-bottom:20px;">
-                        <div class="user-form-grid">
-                            <div class="form-group">
-                                <label>Nombre del Cliente</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="cli-nombre-input" placeholder="Ej: CYMTEL" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>RUC / Identificacion</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="cli-ruc-input" placeholder="Ej: 20512345678">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Direccion / Sede</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="cli-direccion-input" placeholder="Ej: Av. Central 123 - Lima">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Contacto / Telefono</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="cli-contacto-input" placeholder="Ej: Ing. Juan Lopez - 987654321">
-                                </div>
-                            </div>
-                            <div class="form-group full-width">
-                                <label>Logo del Cliente (PNG, JPG, WEBP - max 2MB)</label>
-                                <input type="file" id="cli-logo-file" accept="image/*">
-                            </div>
-                        </div>
-                        <div style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
-                            <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
-                                <span>Guardar Cliente</span>
-                            </button>
-                        </div>
-                        <div id="cli-msg" class="ruteo-message"></div>
-                    </form>
-
-                    <h5 style="margin-bottom:10px;">Clientes Registrados</h5>
-                    <div style="overflow-x:auto;">
-                        <table class="portal-table" style="width:100%;">
-                            <thead>
-                                <tr>
-                                    <th>Logo</th>
-                                    <th>Nombre Cliente</th>
-                                    <th>RUC</th>
-                                    <th>Direccion / Sede</th>
-                                    <th>Contacto</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="clientes-tbody"></tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- LOGO DEL SISTEMA -->
-                <div class="user-create-card" id="site-logo-card" style="margin-bottom:20px;">
-                    <h4>Logo del Sistema (Software O&M)</h4>
-                    <p class="users-sub" style="margin-bottom:14px;">Esta imagen se muestra en la barra lateral para todos los usuarios.</p>
-                    <form id="form-site-logo" enctype="multipart/form-data" style="display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
-                        <div class="brand-logo-icon" id="site-logo-preview" style="width:56px; height:56px;">
-                            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
-                            </svg>
-                        </div>
-                        <div class="form-group" style="flex:1; min-width:220px; margin-bottom:0;">
-                            <label>Subir nueva imagen (PNG, JPG, WEBP o SVG - max 2MB)</label>
-                            <div class="input-wrapper">
-                                <input type="file" id="site-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" required>
-                            </div>
-                        </div>
-                        <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
-                            <span>Guardar Logo</span>
-                        </button>
-                        <div id="site-logo-msg" class="ruteo-message"></div>
-                    </form>
-                </div>
-
-                <div class="users-header-row">
-                    <div>
-                        <p class="users-sub">Administra accesos para Administradores y Operarios Workers con foto y sede asignada.</p>
-                    </div>
-                    <button class="btn-secondary" id="btn-toggle-create-user">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            <div class="ruteo-tab-protected-notice" style="display:none;">
+                <div class="login-card-container" style="max-width:520px; margin: 30px auto; text-align:center; padding:32px 24px; background:var(--bg-glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(10px);">
+                    <div style="width:64px; height:64px; margin:0 auto 16px auto; background:rgba(0, 151, 216, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="32" height="32" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                         </svg>
-                        <span>Nuevo Usuario</span>
-                    </button>
-                </div>
-
-                <!-- FORMULARIO CREAR USUARIO AMPLIADO -->
-                <div class="user-create-card" id="user-create-card" style="display:none;">
-                    <h4>Crear Nueva Cuenta de Usuario</h4>
-                    <form id="form-create-user" enctype="multipart/form-data">
-                        <div class="user-form-grid">
-                            <div class="form-group">
-                                <label>Nombre Completo</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="user-display-name-input" placeholder="Ej: Juan Perez" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Nombre de Usuario</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="user-username-input" placeholder="Ej: jperez" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Correo Electronico</label>
-                                <div class="input-wrapper">
-                                    <input type="email" id="user-email-input" placeholder="juan@ejemplo.com" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Numero Telefonico</label>
-                                <div class="input-wrapper">
-                                    <input type="tel" id="user-phone-input" placeholder="+51 987 654 321">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Clave de Acceso</label>
-                                <div class="input-wrapper">
-                                    <input type="password" id="user-password-input" placeholder="--------" required>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Rol de Usuario</label>
-                                <div class="input-wrapper">
-                                    <select id="user-role-select">
-                                        <option value="worker">Operario (Worker)</option>
-                                        <option value="admin">Administrador (Admin)</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label>Rol Negativa al Trabajo</label>
-                                <div class="input-wrapper">
-                                    <select id="user-negativa-rol-select">
-                                        <option value="">-- Sin Rol Especifico --</option>
-                                        <option value="tecnico">Tecnico Reportante</option>
-                                        <option value="supervisor_operativo">Supervisor Operativo</option>
-                                        <option value="supervisor_seguridad">Supervisor de Seguridad</option>
-                                        <option value="hse">Area HSE</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group full-width">
-                                <label>Centro de Mantenimiento / PM Asignado</label>
-                                <div class="input-wrapper">
-                                    <select id="user-pm-select">
-                                        <option value="">-- Sin PM Especifico --</option>
-                                        <?php foreach ($pm_list as $pm_item) : ?>
-                                            <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="form-group full-width">
-                                <label>Foto de Perfil / Imagen Avatar</label>
-                                <input type="file" id="user-avatar-input" accept="image/*">
-                                <div class="avatar-preview-box" id="user-avatar-preview"></div>
-                            </div>
-                        </div>
-                        <div style="margin-top:16px; display:flex; gap:10px; justify-content:flex-end;">
-                            <button type="button" class="portal-btn portal-btn--refresh" id="btn-cancel-create-user">Cancelar</button>
-                            <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
-                                <span>Guardar Usuario</span>
-                            </button>
-                        </div>
-                        <div id="create-user-msg" class="ruteo-message"></div>
-                    </form>
-                </div>
-
-                <!-- TABLA DE USUARIOS -->
-                <div class="portal-table-wrapper">
-                    <div class="portal-table-header">
-                        <h3>Cuentas Registradas</h3>
-                        <span class="portal-note" id="users-count-note">Cargando usuarios...</span>
                     </div>
-                    <div class="portal-table-scroll">
-                        <table class="portal-table">
-                            <thead>
-                                <tr>
-                                    <th>Avatar</th>
-                                    <th>Usuario</th>
-                                    <th>Nombre Completo</th>
-                                    <th>Correo</th>
-                                    <th>Telefono</th>
-                                    <th>PM Asignado</th>
-                                    <th>Rol</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="users-tbody"></tbody>
-                        </table>
+                    <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
+                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 24px 0;">Debes iniciar sesion como Administrador General para gestionar cuentas de usuario y clientes.</p>
+
+                    <form class="ruteo-auth-login-form" style="text-align:left; margin-bottom:20px;">
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label style="font-size:13px; font-weight:600;">Nombre de Usuario o Correo Electronico</label>
+                            <div class="input-wrapper">
+                                <input type="text" name="username" placeholder="Usuario o correo@dominio.com" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <label style="font-size:13px; font-weight:600;">Clave de Acceso</label>
+                            <div class="input-wrapper">
+                                <input type="password" name="password" placeholder="--------" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="ruteo-submit-btn" style="width:100%;">
+                            <span class="btn-text">Iniciar Sesion e Ingresar</span>
+                            <div class="spinner"></div>
+                        </button>
+                        <div class="ruteo-message"></div>
+                    </form>
+
+                    <div class="demo-accounts-box" style="padding:12px; background:var(--bg-light); border:1px solid var(--border); border-radius:10px;">
+                        <p style="font-size:12px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary);">Cuentas Rapidas de Prueba (Click para ingresar):</p>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="admingeneral" data-pass="AdminGeneral123!" style="font-size:11px; padding:4px 8px;">Admin General</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="tecnico1" data-pass="Tecnico123!" style="font-size:11px; padding:4px 8px;">Tecnico</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="supervisor1" data-pass="Supervisor123!" style="font-size:11px; padding:4px 8px;">Supervisor Op.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="seguridad1" data-pass="Seguridad123!" style="font-size:11px; padding:4px 8px;">Supervisor Seg.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="hse1" data-pass="Hse123!" style="font-size:11px; padding:4px 8px;">Area HSE</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ruteo-tab-protected-content">
+                <div class="users-container">
+
+                    <!-- GESTION DE CLIENTES Y LOGOS -->
+                    <div class="user-create-card" id="clientes-card" style="margin-bottom:20px;">
+                        <h4>Empresas Clientes y Logos para Reportes (Ej: CYMTEL)</h4>
+                        <p class="users-sub" style="margin-bottom:14px;">Registra los clientes del software, sus logos y datos de contacto para los formatos oficiales.</p>
+                        <form id="form-cliente" enctype="multipart/form-data" style="margin-bottom:20px;">
+                            <div class="user-form-grid">
+                                <div class="form-group">
+                                    <label>Nombre del Cliente</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="cli-nombre-input" placeholder="Ej: CYMTEL" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>RUC / Identificacion</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="cli-ruc-input" placeholder="Ej: 20512345678">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Direccion / Sede</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="cli-direccion-input" placeholder="Ej: Av. Central 123 - Lima">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Contacto / Telefono</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="cli-contacto-input" placeholder="Ej: Ing. Juan Lopez - 987654321">
+                                    </div>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label>Logo del Cliente (PNG, JPG, WEBP - max 2MB)</label>
+                                    <input type="file" id="cli-logo-file" accept="image/*">
+                                </div>
+                            </div>
+                            <div style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
+                                <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
+                                    <span>Guardar Cliente</span>
+                                </button>
+                            </div>
+                            <div id="cli-msg" class="ruteo-message"></div>
+                        </form>
+
+                        <h5 style="margin-bottom:10px;">Clientes Registrados</h5>
+                        <div style="overflow-x:auto;">
+                            <table class="portal-table" style="width:100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Logo</th>
+                                        <th>Nombre Cliente</th>
+                                        <th>RUC</th>
+                                        <th>Direccion / Sede</th>
+                                        <th>Contacto</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="clientes-tbody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- LOGO DEL SISTEMA -->
+                    <div class="user-create-card" id="site-logo-card" style="margin-bottom:20px;">
+                        <h4>Logo del Sistema (Software O&M)</h4>
+                        <p class="users-sub" style="margin-bottom:14px;">Esta imagen se muestra en la barra lateral para todos los usuarios.</p>
+                        <form id="form-site-logo" enctype="multipart/form-data" style="display:flex; align-items:center; gap:18px; flex-wrap:wrap;">
+                            <div class="brand-logo-icon" id="site-logo-preview" style="width:56px; height:56px;">
+                                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                                </svg>
+                            </div>
+                            <div class="form-group" style="flex:1; min-width:220px; margin-bottom:0;">
+                                <label>Subir nueva imagen (PNG, JPG, WEBP o SVG - max 2MB)</label>
+                                <div class="input-wrapper">
+                                    <input type="file" id="site-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
+                                <span>Guardar Logo</span>
+                            </button>
+                            <div id="site-logo-msg" class="ruteo-message"></div>
+                        </form>
+                    </div>
+
+                    <div class="users-header-row">
+                        <div>
+                            <p class="users-sub">Administra accesos para Administradores y Operarios Workers con foto y sede asignada.</p>
+                        </div>
+                        <button class="btn-secondary" id="btn-toggle-create-user">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                            </svg>
+                            <span>Nuevo Usuario</span>
+                        </button>
+                    </div>
+
+                    <!-- FORMULARIO CREAR USUARIO AMPLIADO -->
+                    <div class="user-create-card" id="user-create-card" style="display:none;">
+                        <h4>Crear Nueva Cuenta de Usuario</h4>
+                        <form id="form-create-user" enctype="multipart/form-data">
+                            <div class="user-form-grid">
+                                <div class="form-group">
+                                    <label>Nombre Completo</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="user-display-name-input" placeholder="Ej: Juan Perez" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Nombre de Usuario</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="user-username-input" placeholder="Ej: jperez" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Correo Electronico</label>
+                                    <div class="input-wrapper">
+                                        <input type="email" id="user-email-input" placeholder="juan@ejemplo.com" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Numero Telefonico</label>
+                                    <div class="input-wrapper">
+                                        <input type="tel" id="user-phone-input" placeholder="+51 987 654 321">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Clave de Acceso</label>
+                                    <div class="input-wrapper">
+                                        <input type="password" id="user-password-input" placeholder="--------" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Rol de Usuario</label>
+                                    <div class="input-wrapper">
+                                        <select id="user-role-select">
+                                            <option value="worker">Operario (Worker)</option>
+                                            <option value="admin">Administrador (Admin)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Rol Negativa al Trabajo</label>
+                                    <div class="input-wrapper">
+                                        <select id="user-negativa-rol-select">
+                                            <option value="">-- Sin Rol Especifico --</option>
+                                            <option value="tecnico">Tecnico Reportante</option>
+                                            <option value="supervisor_operativo">Supervisor Operativo</option>
+                                            <option value="supervisor_seguridad">Supervisor de Seguridad</option>
+                                            <option value="hse">Area HSE</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label>Centro de Mantenimiento / PM Asignado</label>
+                                    <div class="input-wrapper">
+                                        <select id="user-pm-select">
+                                            <option value="">-- Sin PM Especifico --</option>
+                                            <?php foreach ($pm_list as $pm_item) : ?>
+                                                <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label>Foto de Perfil / Imagen Avatar</label>
+                                    <input type="file" id="user-avatar-input" accept="image/*">
+                                    <div class="avatar-preview-box" id="user-avatar-preview"></div>
+                                </div>
+                            </div>
+                            <div style="margin-top:16px; display:flex; gap:10px; justify-content:flex-end;">
+                                <button type="button" class="portal-btn portal-btn--refresh" id="btn-cancel-create-user">Cancelar</button>
+                                <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
+                                    <span>Guardar Usuario</span>
+                                </button>
+                            </div>
+                            <div id="create-user-msg" class="ruteo-message"></div>
+                        </form>
+                    </div>
+
+                    <!-- TABLA DE USUARIOS -->
+                    <div class="portal-table-wrapper">
+                        <div class="portal-table-header">
+                            <h3>Cuentas Registradas</h3>
+                            <span class="portal-note" id="users-count-note">Cargando usuarios...</span>
+                        </div>
+                        <div class="portal-table-scroll">
+                            <table class="portal-table">
+                                <thead>
+                                    <tr>
+                                        <th>Avatar</th>
+                                        <th>Usuario</th>
+                                        <th>Nombre Completo</th>
+                                        <th>Correo</th>
+                                        <th>Telefono</th>
+                                        <th>PM Asignado</th>
+                                        <th>Rol</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="users-tbody"></tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1038,58 +1249,6 @@ body.admin-bar .ruteo-app-layout {
 
         <!-- SECCION 7: PERFIL DE USUARIO -->
         <section class="ruteo-tab-content" id="tab-perfil">
-            <div class="profile-container">
-                <div class="profile-card">
-                    <div class="profile-header-banner">
-                        <div class="profile-avatar-large" id="profile-avatar-img-box">
-                            <span id="profile-avatar-large-text">?</span>
-                        </div>
-                        <div class="profile-header-info">
-                            <h2 id="profile-name-heading">Nombre de Usuario</h2>
-                            <p id="profile-role-heading">Cargando perfil...</p>
-                        </div>
-                    </div>
-
-                    <form id="form-update-profile" class="profile-form">
-                        <div class="form-grid-2">
-                            <div class="form-group">
-                                <label>Nombre Completo</label>
-                                <div class="input-wrapper">
-                                    <input type="text" id="prof-display-name" required>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Correo Electronico (Solo Lectura)</label>
-                                <div class="input-wrapper">
-                                    <input type="email" id="prof-email" disabled readonly>
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Numero Telefonico</label>
-                                <div class="input-wrapper">
-                                    <input type="tel" id="prof-phone" placeholder="+51 987 654 321">
-                                </div>
-                            </div>
-
-                            <div class="form-group">
-                                <label>Centro de Mantenimiento / PM Asignado</label>
-                                <div class="input-wrapper">
-                                    <select id="prof-pm">
-                                        <option value="">-- Seleccionar PM --</option>
-                                        <?php foreach ($pm_list as $pm_item) : ?>
-                                            <option value="<?php echo esc_attr($pm_item); ?>"><?php echo esc_html($pm_item); ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div class="form-group full-width">
-                                <label>Actualizar Foto de Perfil</label>
-                                <input type="file" id="prof-avatar-file" accept="image/*">
-                            </div>
-                        </div>
 
                         <div class="form-footer-actions">
                             <button type="submit" class="ruteo-submit-btn">
