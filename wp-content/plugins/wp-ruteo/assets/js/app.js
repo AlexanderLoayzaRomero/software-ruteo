@@ -194,6 +194,8 @@ jQuery(document).ready(function($) {
 
             $('#ruteo-form-restricted-notice').hide();
             $('#ruteo-form').show();
+            $('.ruteo-tab-protected-notice').hide();
+            $('.ruteo-tab-protected-content').show();
 
             $('#tab-btn-login').hide();
             $('#tab-btn-perfil').show();
@@ -230,13 +232,12 @@ jQuery(document).ready(function($) {
 
             $('#ruteo-form-restricted-notice').show();
             $('#ruteo-form').hide();
+            $('.ruteo-tab-protected-notice').show();
+            $('.ruteo-tab-protected-content').hide();
 
             $('#tab-btn-usuarios').hide();
             $('#tab-btn-perfil').hide();
             $('#tab-btn-login').show();
-
-            $('.ruteo-tab-content').removeClass('active').hide();
-            $('#tab-login').addClass('active').show();
         }
     }
 

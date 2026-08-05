@@ -341,91 +341,137 @@ body.admin-bar .ruteo-app-layout {
 
         <!-- SECCION 2: REGISTROS DE CAMPO -->
         <section class="ruteo-tab-content" id="tab-registros">
-            <div class="registros-container">
-                <div class="portal-toolbar-row">
-                    <div class="portal-actions">
-                        <button class="portal-btn portal-btn--refresh" id="btn-refresh-portal">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                            </svg>
-                            <span>Actualizar</span>
-                        </button>
-
-                        <button class="portal-btn portal-btn--download" id="btn-download-pdf">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
-                            </svg>
-                            <span class="btn-dl-text">Descargar PDF</span>
-                        </button>
-
-                        <button class="portal-btn portal-btn--excel" id="btn-download-excel">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                            </svg>
-                            <span class="btn-xl-text">Descargar Excel</span>
-                        </button>
+            <div class="ruteo-tab-protected-notice" style="display:none;">
+                <div class="login-card-container" style="max-width:520px; margin: 30px auto; text-align:center; padding:32px 24px; background:var(--bg-glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(10px);">
+                    <div style="width:64px; height:64px; margin:0 auto 16px auto; background:rgba(0, 151, 216, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="32" height="32" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
                     </div>
+                    <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
+                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 24px 0;">Debes iniciar sesion con tu cuenta para consultar los Registros de Campo y descargar reportes.</p>
 
-                    <div class="portal-filters-row">
-                        <div class="filter-group">
-                            <label for="filter-tramo">Filtrar Tramo</label>
-                            <select id="filter-tramo">
-                                <option value="">Todos los tramos</option>
-                            </select>
+                    <form class="ruteo-auth-login-form" style="text-align:left; margin-bottom:20px;">
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label style="font-size:13px; font-weight:600;">Nombre de Usuario o Correo Electronico</label>
+                            <div class="input-wrapper">
+                                <input type="text" name="username" placeholder="Usuario o correo@dominio.com" required>
+                            </div>
                         </div>
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <label style="font-size:13px; font-weight:600;">Clave de Acceso</label>
+                            <div class="input-wrapper">
+                                <input type="password" name="password" placeholder="--------" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="ruteo-submit-btn" style="width:100%;">
+                            <span class="btn-text">Iniciar Sesion e Ingresar</span>
+                            <div class="spinner"></div>
+                        </button>
+                        <div class="ruteo-message"></div>
+                    </form>
 
-                        <div class="portal-search-wrap">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                            </svg>
-                            <input type="text" id="portal-search" placeholder="Buscar por tramo, codigo, ID...">
+                    <div class="demo-accounts-box" style="padding:12px; background:var(--bg-light); border:1px solid var(--border); border-radius:10px;">
+                        <p style="font-size:12px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary);">Cuentas Rapidas de Prueba (Click para ingresar):</p>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="admingeneral" data-pass="AdminGeneral123!" style="font-size:11px; padding:4px 8px;">Admin General</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="tecnico1" data-pass="Tecnico123!" style="font-size:11px; padding:4px 8px;">Tecnico</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="supervisor1" data-pass="Supervisor123!" style="font-size:11px; padding:4px 8px;">Supervisor Op.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="seguridad1" data-pass="Seguridad123!" style="font-size:11px; padding:4px 8px;">Supervisor Seg.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="hse1" data-pass="Hse123!" style="font-size:11px; padding:4px 8px;">Area HSE</button>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <div class="portal-table-wrapper" id="portal-table-wrapper">
-                    <div class="portal-loading" id="portal-loading">
-                        <div class="portal-spinner"></div>
-                        <span>Cargando registros de campo...</span>
-                    </div>
+            <div class="ruteo-tab-protected-content">
+                <div class="registros-container">
+                    <div class="portal-toolbar-row">
+                        <div class="portal-actions">
+                            <button class="portal-btn portal-btn--refresh" id="btn-refresh-portal">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                <span>Actualizar</span>
+                            </button>
 
-                    <div class="portal-error" id="portal-error" style="display:none;">
-                        <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                        </svg>
-                        <p id="portal-error-msg">No se pudo conectar con Google Sheets.</p>
-                    </div>
+                            <button class="portal-btn portal-btn--download" id="btn-download-pdf">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+                                </svg>
+                                <span class="btn-dl-text">Descargar PDF</span>
+                            </button>
 
-                    <div id="portal-data-section" style="display:none;">
-                        <div class="portal-table-header">
-                            <span class="portal-note" id="portal-last-update"></span>
+                            <button class="portal-btn portal-btn--excel" id="btn-download-excel">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                <span class="btn-xl-text">Descargar Excel</span>
+                            </button>
                         </div>
-                    <div class="portal-table-scroll">
-                        <table class="portal-table" id="portal-table">
-                            <thead>
-                                <tr>
-                                    <th>Fecha</th>
-                                    <th>Tramo</th>
-                                    <th>ID Consol</th>
-                                    <th>Estructura</th>
-                                    <th>Tipo</th>
-                                    <th>Altura</th>
-                                    <th>Codigo</th>
-                                    <th>Ubicacion</th>
-                                    <th>Mufa</th>
-                                    <th>Retencion</th>
-                                    <th>Suspension</th>
-                                    <th>Cruceta</th>
-                                    <th>Foto 1</th>
-                                    <th>Foto 2</th>
-                                    <th>KMZ</th>
-                                </tr>
-                            </thead>
-                            <tbody id="portal-tbody"></tbody>
-                        </table>
+
+                        <div class="portal-filters-row">
+                            <div class="filter-group">
+                                <label for="filter-tramo">Filtrar Tramo</label>
+                                <select id="filter-tramo">
+                                    <option value="">Todos los tramos</option>
+                                </select>
+                            </div>
+
+                            <div class="portal-search-wrap">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input type="text" id="portal-search" placeholder="Buscar por tramo, codigo, ID...">
+                            </div>
+                        </div>
                     </div>
-                    <div class="portal-empty" id="portal-empty" style="display:none;">
-                        <p>No hay registros aun.</p>
+
+                    <div class="portal-table-wrapper" id="portal-table-wrapper">
+                        <div class="portal-loading" id="portal-loading">
+                            <div class="portal-spinner"></div>
+                            <span>Cargando registros de campo...</span>
+                        </div>
+
+                        <div class="portal-error" id="portal-error" style="display:none;">
+                            <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                            </svg>
+                            <p id="portal-error-msg">No se pudo conectar con Google Sheets.</p>
+                        </div>
+
+                        <div id="portal-data-section" style="display:none;">
+                            <div class="portal-table-header">
+                                <span class="portal-note" id="portal-last-update"></span>
+                            </div>
+                            <div class="portal-table-scroll">
+                                <table class="portal-table" id="portal-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Tramo</th>
+                                            <th>ID Consol</th>
+                                            <th>Estructura</th>
+                                            <th>Tipo</th>
+                                            <th>Altura</th>
+                                            <th>Codigo</th>
+                                            <th>Ubicacion</th>
+                                            <th>Mufa</th>
+                                            <th>Retencion</th>
+                                            <th>Suspension</th>
+                                            <th>Cruceta</th>
+                                            <th>Foto 1</th>
+                                            <th>Foto 2</th>
+                                            <th>KMZ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="portal-tbody"></tbody>
+                                </table>
+                            </div>
+                            <div class="portal-empty" id="portal-empty" style="display:none;">
+                                <p>No hay registros aun.</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
