@@ -210,129 +210,174 @@ body.admin-bar .ruteo-app-layout {
 
         <!-- SECCION 1: INICIO (DASHBOARD) -->
         <section class="ruteo-tab-content active" id="tab-inicio">
-            <div class="dashboard-stats-grid">
-                <div class="dash-stat-card">
-                    <div class="stat-icon icon-blue">
-                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <div class="ruteo-tab-protected-notice" style="display:none;">
+                <div class="login-card-container" style="max-width:520px; margin: 30px auto; text-align:center; padding:32px 24px; background:var(--bg-glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(10px);">
+                    <div style="width:64px; height:64px; margin:0 auto 16px auto; background:rgba(0, 151, 216, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="32" height="32" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                         </svg>
                     </div>
-                    <div class="stat-info">
-                        <span class="stat-title">Registros Activos</span>
-                        <span class="stat-number" id="dash-stat-total">-</span>
-                    </div>
-                </div>
+                    <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
+                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 24px 0;">Debes iniciar sesion con tu cuenta para acceder al Panel de Inicio y metricas del sistema.</p>
 
-                <div class="dash-stat-card">
-                    <div class="stat-icon icon-green">
-                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                        </svg>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-title">Reportes Materiales</span>
-                        <span class="stat-number" id="dash-stat-materiales">-</span>
-                    </div>
-                </div>
+                    <form class="ruteo-auth-login-form" style="text-align:left; margin-bottom:20px;">
+                        <div class="form-group" style="margin-bottom:14px;">
+                            <label style="font-size:13px; font-weight:600;">Nombre de Usuario o Correo Electronico</label>
+                            <div class="input-wrapper">
+                                <input type="text" name="username" placeholder="Usuario o correo@dominio.com" required>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:18px;">
+                            <label style="font-size:13px; font-weight:600;">Clave de Acceso</label>
+                            <div class="input-wrapper">
+                                <input type="password" name="password" placeholder="--------" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="ruteo-submit-btn" style="width:100%;">
+                            <span class="btn-text">Iniciar Sesion e Ingresar</span>
+                            <div class="spinner"></div>
+                        </button>
+                        <div class="ruteo-message"></div>
+                    </form>
 
-                <div class="dash-stat-card">
-                    <div class="stat-icon icon-purple">
-                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
-                        </svg>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-title">Tramos Activos</span>
-                        <span class="stat-number" id="dash-stat-tramos">-</span>
-                    </div>
-                </div>
-
-                <div class="dash-stat-card">
-                    <div class="stat-icon icon-red">
-                        <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
-                        </svg>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-title">Cuentas Registradas</span>
-                        <span class="stat-number" id="dash-stat-users">-</span>
+                    <div class="demo-accounts-box" style="padding:12px; background:var(--bg-light); border:1px solid var(--border); border-radius:10px;">
+                        <p style="font-size:12px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary);">Cuentas Rapidas de Prueba (Click para ingresar):</p>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="admingeneral" data-pass="AdminGeneral123!" style="font-size:11px; padding:4px 8px;">Admin General</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="tecnico1" data-pass="Tecnico123!" style="font-size:11px; padding:4px 8px;">Tecnico</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="supervisor1" data-pass="Supervisor123!" style="font-size:11px; padding:4px 8px;">Supervisor Op.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="seguridad1" data-pass="Seguridad123!" style="font-size:11px; padding:4px 8px;">Supervisor Seg.</button>
+                            <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="hse1" data-pass="Hse123!" style="font-size:11px; padding:4px 8px;">Area HSE</button>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="dashboard-panels-grid">
-                <div class="dash-panel quick-actions-panel">
-                    <h3 class="panel-title">Acciones Rapidas</h3>
-                    <div class="quick-actions-list">
-                        <button class="action-btn-card" data-goto="formulario">
-                            <div class="btn-card-icon icon-blue-bg">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                                </svg>
-                            </div>
-                            <div class="btn-card-text">
-                                <span class="card-text-title">Nuevo Registro de Campo</span>
-                                <span class="card-text-sub">Capturar estructura, herrajes y fotos</span>
-                            </div>
-                        </button>
-
-                        <button class="action-btn-card" data-goto="materiales">
-                            <div class="btn-card-icon icon-green-bg">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                </svg>
-                            </div>
-                            <div class="btn-card-text">
-                                <span class="card-text-title">Consumo de Materiales</span>
-                                <span class="card-text-sub">Reportar materiales usados por PM/Incidencia</span>
-                            </div>
-                        </button>
-
-                        <button class="action-btn-card" data-goto="sla-informes">
-                            <div class="btn-card-icon icon-purple-bg">
-                                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                                </svg>
-                            </div>
-                            <div class="btn-card-text">
-                                <span class="card-text-title">SLA e Informes</span>
-                                <span class="card-text-sub">Generar formatos de mantenimiento</span>
-                            </div>
-                        </button>
+            <div class="ruteo-tab-protected-content">
+                <div class="dashboard-stats-grid">
+                    <div class="dash-stat-card">
+                        <div class="stat-icon icon-blue">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-title">Registros Activos</span>
+                            <span class="stat-number" id="dash-stat-total">-</span>
+                        </div>
                     </div>
 
-                    <!-- ACCESOS DIRECTOS A GOOGLE SHEETS PARA ADMIN -->
-                    <div class="admin-sheets-panel" id="admin-sheets-box" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); display: none;">
-                        <h4 style="font-size: 14px; font-weight: 700; margin: 0 0 12px 0; color: var(--menu-title);">Accesos Directos a Google Sheets (Solo Admin)</h4>
-                        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                            <a href="https://docs.google.com/spreadsheets/d/1m19aeKOuPJYw01yvFPP9_SGmpdJgUg_q/edit" target="_blank" class="portal-btn portal-btn--excel" id="btn-link-gsheet-ruteo" style="font-size: 12px; padding: 8px 14px; text-decoration: none;">
-                                📊 Abrir Google Sheet Ruteo
-                            </a>
-                            <a href="https://docs.google.com/spreadsheets" target="_blank" class="portal-btn portal-btn--download" id="btn-link-gsheet-materiales" style="font-size: 12px; padding: 8px 14px; text-decoration: none;">
-                                📦 Abrir Google Sheet Materiales
-                            </a>
+                    <div class="dash-stat-card">
+                        <div class="stat-icon icon-green">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-title">Reportes Materiales</span>
+                            <span class="stat-number" id="dash-stat-materiales">-</span>
+                        </div>
+                    </div>
+
+                    <div class="dash-stat-card">
+                        <div class="stat-icon icon-purple">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-title">Tramos Activos</span>
+                            <span class="stat-number" id="dash-stat-tramos">-</span>
+                        </div>
+                    </div>
+
+                    <div class="dash-stat-card">
+                        <div class="stat-icon icon-red">
+                            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/>
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-title">Cuentas Registradas</span>
+                            <span class="stat-number" id="dash-stat-users">-</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="dash-panel system-status-panel">
-                    <h3 class="panel-title">Estado del Sistema</h3>
-                    <div class="status-items-list">
-                        <div class="status-item-row">
-                            <span>Sincronizacion Google Sheets</span>
-                            <span class="status-badge-active">En linea</span>
+                <div class="dashboard-panels-grid">
+                    <div class="dash-panel quick-actions-panel">
+                        <h3 class="panel-title">Acciones Rapidas</h3>
+                        <div class="quick-actions-list">
+                            <button class="action-btn-card" data-goto="formulario">
+                                <div class="btn-card-icon icon-blue-bg">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                </div>
+                                <div class="btn-card-text">
+                                    <span class="card-text-title">Nuevo Registro de Campo</span>
+                                    <span class="card-text-sub">Capturar estructura, herrajes y fotos</span>
+                                </div>
+                            </button>
+
+                            <button class="action-btn-card" data-goto="materiales">
+                                <div class="btn-card-icon icon-green-bg">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+                                    </svg>
+                                </div>
+                                <div class="btn-card-text">
+                                    <span class="card-text-title">Consumo de Materiales</span>
+                                    <span class="card-text-sub">Reportar materiales usados por PM/Incidencia</span>
+                                </div>
+                            </button>
+
+                            <button class="action-btn-card" data-goto="sla-informes">
+                                <div class="btn-card-icon icon-purple-bg">
+                                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                    </svg>
+                                </div>
+                                <div class="btn-card-text">
+                                    <span class="card-text-title">SLA e Informes</span>
+                                    <span class="card-text-sub">Generar formatos de mantenimiento</span>
+                                </div>
+                            </button>
                         </div>
-                        <div class="status-item-row">
-                            <span>Almacenamiento de Fotos Drive</span>
-                            <span class="status-badge-active">Disponible</span>
+
+                        <!-- ACCESOS DIRECTOS A GOOGLE SHEETS PARA ADMIN -->
+                        <div class="admin-sheets-panel" id="admin-sheets-box" style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); display: none;">
+                            <h4 style="font-size: 14px; font-weight: 700; margin: 0 0 12px 0; color: var(--menu-title);">Accesos Directos a Google Sheets (Solo Admin)</h4>
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                <a href="https://docs.google.com/spreadsheets/d/1m19aeKOuPJYw01yvFPP9_SGmpdJgUg_q/edit" target="_blank" class="portal-btn portal-btn--excel" id="btn-link-gsheet-ruteo" style="font-size: 12px; padding: 8px 14px; text-decoration: none;">
+                                    📊 Abrir Google Sheet Ruteo
+                                </a>
+                                <a href="https://docs.google.com/spreadsheets" target="_blank" class="portal-btn portal-btn--download" id="btn-link-gsheet-materiales" style="font-size: 12px; padding: 8px 14px; text-decoration: none;">
+                                    📦 Abrir Google Sheet Materiales
+                                </a>
+                            </div>
                         </div>
-                        <div class="status-item-row">
-                            <span>Generacion de PDF / KMZ</span>
-                            <span class="status-badge-active">Operativo</span>
-                        </div>
-                        <div class="status-item-row">
-                            <span>Centros de Mantenimiento (PMs)</span>
-                            <span class="status-badge-info">24 Sedes Activas</span>
+                    </div>
+
+                    <div class="dash-panel system-status-panel">
+                        <h3 class="panel-title">Estado del Sistema</h3>
+                        <div class="status-items-list">
+                            <div class="status-item-row">
+                                <span>Sincronizacion Google Sheets</span>
+                                <span class="status-badge-active">En linea</span>
+                            </div>
+                            <div class="status-item-row">
+                                <span>Almacenamiento de Fotos Drive</span>
+                                <span class="status-badge-active">Disponible</span>
+                            </div>
+                            <div class="status-item-row">
+                                <span>Generacion de PDF / KMZ</span>
+                                <span class="status-badge-active">Operativo</span>
+                            </div>
+                            <div class="status-item-row">
+                                <span>Centros de Mantenimiento (PMs)</span>
+                                <span class="status-badge-info">24 Sedes Activas</span>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -7,45 +7,45 @@ $is_logged_in = is_user_logged_in();
 ?>
 
 <div class="ruteo-form-card animate-fade-in">
-    <div class="login-card-container ruteo-login-required-notice" id="ruteo-form-restricted-notice" style="<?php echo $is_logged_in ? 'display:none;' : ''; ?>">
-        <div class="login-card-title">
-            <div style="margin-bottom:10px;">
-                <svg width="36" height="36" fill="none" stroke="var(--error)" viewBox="0 0 24 24">
+    <div class="ruteo-tab-protected-notice ruteo-login-required-notice" id="ruteo-form-restricted-notice" style="<?php echo $is_logged_in ? 'display:none;' : ''; ?>">
+        <div class="login-card-container" style="max-width:520px; margin: 30px auto; text-align:center; padding:32px 24px; background:var(--bg-glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(10px);">
+            <div style="width:64px; height:64px; margin:0 auto 16px auto; background:rgba(0, 151, 216, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                <svg width="32" height="32" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
                 </svg>
             </div>
-            <h3>Acceso Restringido</h3>
-            <p>Debes iniciar sesion como Administrador o Worker para acceder al Formulario de Campo.</p>
-        </div>
+            <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
+            <p style="font-size:14px; color:var(--text-muted); margin:0 0 24px 0;">Debes iniciar sesion como Administrador o Worker para acceder al Formulario de Campo.</p>
 
-        <form class="ruteo-auth-login-form" style="margin-top:20px;">
-            <div class="form-group" style="margin-bottom:14px;">
-                <label>Nombre de Usuario o Correo Electronico</label>
-                <div class="input-wrapper">
-                    <input type="text" name="username" placeholder="Usuario o correo@dominio.com" required>
+            <form class="ruteo-auth-login-form" style="text-align:left; margin-bottom:20px;">
+                <div class="form-group" style="margin-bottom:14px;">
+                    <label style="font-size:13px; font-weight:600;">Nombre de Usuario o Correo Electronico</label>
+                    <div class="input-wrapper">
+                        <input type="text" name="username" placeholder="Usuario o correo@dominio.com" required>
+                    </div>
                 </div>
-            </div>
-            <div class="form-group" style="margin-bottom:18px;">
-                <label>Clave de Acceso</label>
-                <div class="input-wrapper">
-                    <input type="password" name="password" placeholder="--------" required>
+                <div class="form-group" style="margin-bottom:18px;">
+                    <label style="font-size:13px; font-weight:600;">Clave de Acceso</label>
+                    <div class="input-wrapper">
+                        <input type="password" name="password" placeholder="--------" required>
+                    </div>
                 </div>
-            </div>
-            <button type="submit" class="ruteo-submit-btn" style="width:100%;">
-                <span class="btn-text">Iniciar Sesion e Ingresar</span>
-                <div class="spinner"></div>
-            </button>
-            <div class="ruteo-message"></div>
-        </form>
+                <button type="submit" class="ruteo-submit-btn" style="width:100%;">
+                    <span class="btn-text">Iniciar Sesion e Ingresar</span>
+                    <div class="spinner"></div>
+                </button>
+                <div class="ruteo-message"></div>
+            </form>
 
-        <div class="demo-accounts-box" style="margin-top:16px; padding:12px; background:var(--bg-light); border:1px solid var(--border); border-radius:10px;">
-            <p style="font-size:12px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary);">Cuentas Rapidas de Prueba (Click para ingresar):</p>
-            <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
-                <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="admingeneral" data-pass="AdminGeneral123!" style="font-size:11px; padding:4px 8px;">Admin General</button>
-                <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="tecnico1" data-pass="Tecnico123!" style="font-size:11px; padding:4px 8px;">Tecnico</button>
-                <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="supervisor1" data-pass="Supervisor123!" style="font-size:11px; padding:4px 8px;">Supervisor Op.</button>
-                <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="seguridad1" data-pass="Seguridad123!" style="font-size:11px; padding:4px 8px;">Supervisor Seg.</button>
-                <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="hse1" data-pass="Hse123!" style="font-size:11px; padding:4px 8px;">Area HSE</button>
+            <div class="demo-accounts-box" style="padding:12px; background:var(--bg-light); border:1px solid var(--border); border-radius:10px;">
+                <p style="font-size:12px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary);">Cuentas Rapidas de Prueba (Click para ingresar):</p>
+                <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                    <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="admingeneral" data-pass="AdminGeneral123!" style="font-size:11px; padding:4px 8px;">Admin General</button>
+                    <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="tecnico1" data-pass="Tecnico123!" style="font-size:11px; padding:4px 8px;">Tecnico</button>
+                    <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="supervisor1" data-pass="Supervisor123!" style="font-size:11px; padding:4px 8px;">Supervisor Op.</button>
+                    <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="seguridad1" data-pass="Seguridad123!" style="font-size:11px; padding:4px 8px;">Supervisor Seg.</button>
+                    <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="hse1" data-pass="Hse123!" style="font-size:11px; padding:4px 8px;">Area HSE</button>
+                </div>
             </div>
         </div>
     </div>
