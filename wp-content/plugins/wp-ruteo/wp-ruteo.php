@@ -406,13 +406,23 @@ class WPRuteoApp {
     public function handle_ajax_login() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
 
-        $username = isset( $_POST['username'] ) ? sanitize_user( wp_unslash( $_POST['username'] ) ) : '';
-        $password = isset( $_POST['password'] ) ? $_POST['password'] : '';
-        $remember = ! empty( $_POST['remember'] );
+        $raw_input = isset( $_POST['username'] ) ? trim( wp_unslash( $_POST['username'] ) ) : '';
+        $password  = isset( $_POST['password'] ) ? $_POST['password'] : '';
+        $remember  = ! empty( $_POST['remember'] );
 
-        if ( empty( $username ) || empty( $password ) ) {
+        if ( empty( $raw_input ) || empty( $password ) ) {
             wp_send_json_error( array( 'message' => 'Usuario y clave son requeridos.' ) );
             return;
+        }
+
+        $username = $raw_input;
+        if ( is_email( $raw_input ) ) {
+            $user_by_email = get_user_by( 'email', $raw_input );
+            if ( $user_by_email ) {
+                $username = $user_by_email->user_login;
+            }
+        } else {
+            $username = sanitize_user( $raw_input );
         }
 
         $creds = array(
@@ -424,7 +434,7 @@ class WPRuteoApp {
         $user = wp_signon( $creds, is_ssl() );
 
         if ( is_wp_error( $user ) ) {
-            wp_send_json_error( array( 'message' => 'Credenciales invalidas. Revisa usuario y clave.' ) );
+            wp_send_json_error( array( 'message' => 'Credenciales invalidas. Revisa usuario o correo y clave.' ) );
             return;
         }
 

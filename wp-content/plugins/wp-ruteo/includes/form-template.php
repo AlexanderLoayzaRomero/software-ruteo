@@ -20,9 +20,9 @@ $is_logged_in = is_user_logged_in();
 
         <form class="ruteo-auth-login-form" style="margin-top:20px;">
             <div class="form-group" style="margin-bottom:14px;">
-                <label>Nombre de Usuario</label>
+                <label>Nombre de Usuario o Correo Electronico</label>
                 <div class="input-wrapper">
-                    <input type="text" name="username" placeholder="Ej: admin_ruteo o worker_ruteo" required>
+                    <input type="text" name="username" placeholder="Usuario o correo@dominio.com" required>
                 </div>
             </div>
             <div class="form-group" style="margin-bottom:18px;">
@@ -38,10 +38,15 @@ $is_logged_in = is_user_logged_in();
             <div class="ruteo-message"></div>
         </form>
 
-        <div style="text-align:center; margin-top:16px;">
-            <button type="button" class="btn-secondary btn-goto-login" data-goto="login" style="text-decoration:none; border:none; cursor:pointer;">
-                Ir a la pestana Iniciar Sesion
-            </button>
+        <div class="demo-accounts-box" style="margin-top:16px; padding:12px; background:var(--bg-light); border:1px solid var(--border); border-radius:10px;">
+            <p style="font-size:12px; font-weight:600; margin:0 0 8px 0; color:var(--text-secondary);">Cuentas Rapidas de Prueba (Click para ingresar):</p>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:center;">
+                <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="admingeneral" data-pass="AdminGeneral123!" style="font-size:11px; padding:4px 8px;">Admin General</button>
+                <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="tecnico1" data-pass="Tecnico123!" style="font-size:11px; padding:4px 8px;">Tecnico</button>
+                <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="supervisor1" data-pass="Supervisor123!" style="font-size:11px; padding:4px 8px;">Supervisor Op.</button>
+                <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="seguridad1" data-pass="Seguridad123!" style="font-size:11px; padding:4px 8px;">Supervisor Seg.</button>
+                <button type="button" class="btn-demo-login portal-btn portal-btn--refresh" data-user="hse1" data-pass="Hse123!" style="font-size:11px; padding:4px 8px;">Area HSE</button>
+            </div>
         </div>
     </div>
 
