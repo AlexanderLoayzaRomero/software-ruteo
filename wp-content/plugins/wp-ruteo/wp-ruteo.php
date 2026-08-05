@@ -56,6 +56,8 @@ class WPRuteoApp {
         add_action( 'wp_ajax_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
         add_action( 'wp_ajax_nopriv_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
 
+        ruteo_crear_tabla_negativas();
+
         // Clientes AJAX Endpoints
         add_action( 'wp_ajax_ruteo_get_clientes', array( $this, 'handle_ajax_get_clientes' ) );
         add_action( 'wp_ajax_nopriv_ruteo_get_clientes', array( $this, 'handle_ajax_get_clientes' ) );
@@ -983,7 +985,11 @@ class WPRuteoApp {
                 }
             }
 
-            $wpdb->insert( $table, $campos );
+            $inserted = $wpdb->insert( $table, $campos );
+            if ( false === $inserted ) {
+                wp_send_json_error( array( 'message' => 'Error al guardar en base de datos: ' . $wpdb->last_error ) );
+                return;
+            }
             $id = $wpdb->insert_id;
 
         } elseif ( $etapa === 'supervisor' ) {
