@@ -446,7 +446,10 @@ function generarDocumentosTodosLosRegistros() {
   var FOLDER_ID = '1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = sheet.getDataRange().getValues();
-  if (data.length <= 1) return;
+  if (data.length <= 1) {
+    Logger.log("No hay registros para procesar.");
+    return;
+  }
 
   var headers = data[0];
   var docxColIndex = -1;
@@ -461,6 +464,9 @@ function generarDocumentosTodosLosRegistros() {
     sheet.getRange(1, headers.length + 1).setValue("Link Docx");
     docxColIndex = headers.length;
   }
+
+  var total = data.length - 1;
+  Logger.log("Iniciando generacion de " + total + " documentos en Google Drive...");
 
   for (var i = 1; i < data.length; i++) {
     var record = {
@@ -486,11 +492,24 @@ function generarDocumentosTodosLosRegistros() {
       foto2_url: data[i][19]
     };
 
-    var docUrl = generarGoogleDoc(record, FOLDER_ID);
-    if (docUrl) {
-      sheet.getRange(i + 1, docxColIndex + 1).setValue(docUrl);
+    Logger.log("[" + i + "/" + total + "] Procesando: " + (record.id_consol || record.codigo || ("Ficha_" + i)));
+
+    try {
+      var docUrl = generarGoogleDoc(record, FOLDER_ID);
+      if (docUrl) {
+        sheet.getRange(i + 1, docxColIndex + 1).setValue(docUrl);
+        Logger.log("[" + i + "/" + total + "] OK -> Documento creado.");
+      }
+    } catch(errRow) {
+      Logger.log("[" + i + "/" + total + "] Error: " + errRow.toString());
+    }
+
+    if (i % 2 === 0) {
+      SpreadsheetApp.flush();
     }
   }
+  SpreadsheetApp.flush();
+  Logger.log("¡Proceso completado con exito! Todos los documentos fueron generados.");
 }
 
 function obtenerBlobImagen(inputStr, defaultName) {
@@ -514,13 +533,14 @@ function obtenerBlobImagen(inputStr, defaultName) {
     }
   }
 
-  // 2. Extraer ID de archivo de Google Drive (coincide con cualquier patron de URL o ID puro)
+  // 2. Extraer ID de archivo de Google Drive
+  var isDriveUrl = str.indexOf('google.com') !== -1 || str.indexOf('drive.google') !== -1;
   var idMatch = str.match(/\/d\/([a-zA-Z0-9_-]{20,})/) || 
                 str.match(/[?&]id=([a-zA-Z0-9_-]{20,})/) || 
                 str.match(/^([a-zA-Z0-9_-]{25,50})$/);
   
   var fileId = idMatch ? idMatch[1] : null;
-  if (!fileId && str.indexOf('google.com') !== -1) {
+  if (!fileId && isDriveUrl) {
     var rawMatch = str.match(/([a-zA-Z0-9_-]{28,45})/);
     if (rawMatch) fileId = rawMatch[1];
   }
@@ -535,14 +555,16 @@ function obtenerBlobImagen(inputStr, defaultName) {
         }
       }
     } catch(eDrive) {
-      Logger.log("Error obteniendo archivo Drive por ID " + fileId + ": " + eDrive.toString());
+      Logger.log("Error Drive ID " + fileId + ": " + eDrive.toString());
     }
+    // Evitar realizar fetch HTTP de la pagina web de Drive si DriveApp no pudo obtener la foto
+    return null;
   }
 
-  // 3. Descarga de URL HTTP/HTTPS externa
-  if (str.indexOf('http://') === 0 || str.indexOf('https://') === 0) {
+  // 3. Descarga de URL HTTP/HTTPS externa (solo si no es de Google Drive)
+  if (!isDriveUrl && (str.indexOf('http://') === 0 || str.indexOf('https://') === 0)) {
     try {
-      var resp = UrlFetchApp.fetch(str, { muteHttpExceptions: true });
+      var resp = UrlFetchApp.fetch(str, { muteHttpExceptions: true, followRedirects: true });
       if (resp.getResponseCode() === 200) {
         var b = resp.getBlob();
         if (b && b.getContentType() && b.getContentType().indexOf('image') !== -1) {
@@ -550,7 +572,7 @@ function obtenerBlobImagen(inputStr, defaultName) {
         }
       }
     } catch(eFetch) {
-      Logger.log("Error UrlFetch imagen: " + eFetch.toString());
+      Logger.log("Error UrlFetch: " + eFetch.toString());
     }
   }
 
