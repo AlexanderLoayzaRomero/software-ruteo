@@ -1803,6 +1803,14 @@ jQuery(document).ready(function($) {
 
             var startY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 130;
 
+            if (startY + 80 > 275) {
+                doc.addPage();
+                doc.setFillColor(0, 151, 216); doc.rect(0,0,w,12,'F');
+                doc.setTextColor(255,255,255); doc.setFontSize(9); doc.setFont('helvetica', 'bold');
+                doc.text('SOFTWARE O&M - FICHA TECNICA (ANEXO FOTOGRAFICO)', 14, 8);
+                startY = 20;
+            }
+
             // Seccion Evidencias Fotograficas
             doc.setFontSize(11);
             doc.setFont('helvetica', 'bold');
@@ -1879,7 +1887,13 @@ jQuery(document).ready(function($) {
                 pdfDoc.text(shortUrl, x, yPos + 8);
             }
 
-            doc.save('Ficha_Ruteo_' + (r.codigo || r.id_consol || 'Registro') + '.pdf');
+            var filename = 'Ficha_Ruteo_' + (r.codigo || r.id_consol || 'Registro') + '.pdf';
+            var blob = doc.output('blob');
+            if (typeof window.downloadBlobRuteo === 'function') {
+                window.downloadBlobRuteo(blob, filename);
+            } else {
+                doc.save(filename);
+            }
         });
     };
 
