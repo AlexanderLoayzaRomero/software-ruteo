@@ -306,44 +306,54 @@ function generarGoogleDoc(data, folderId) {
     cell1.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(4).setPaddingRight(4);
     cell2.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(4).setPaddingRight(4);
 
+    var pHeader1 = cell1.getChild(0).asParagraph();
+    pHeader1.setBold(true).setFontSize(8);
+
+    var pHeader2 = cell2.getChild(0).asParagraph();
+    pHeader2.setBold(true).setFontSize(8);
+
+    // Foto 1
     var img1Url = data.foto1_url || data.foto_1 || data.foto1;
-    var pCell1 = cell1.getChild(0).asParagraph();
-    pCell1.appendParagraph("Fotografia 1 - Estructura").setBold(true).setFontSize(8);
     if (img1Url) {
       var blob1 = obtenerBlobImagen(img1Url, "foto1.jpg");
       if (blob1) {
         try {
-          var imgObj1 = pCell1.appendImage(blob1);
+          var imgObj1 = cell1.appendImage(blob1);
           imgObj1.setWidth(235);
           imgObj1.setHeight(165);
         } catch(e1) {
-          pCell1.appendParagraph("Enlace: " + img1Url).setFontSize(7);
+          var pErr1 = cell1.appendParagraph("Enlace: " + img1Url);
+          pErr1.setFontSize(7);
         }
       } else {
-        pCell1.appendParagraph("Enlace: " + img1Url).setFontSize(7);
+        var pLink1 = cell1.appendParagraph("Enlace: " + img1Url);
+        pLink1.setFontSize(7);
       }
     } else {
-      pCell1.appendParagraph("Sin foto registrada").setFontSize(8).setItalic(true);
+      var pNone1 = cell1.appendParagraph("Sin foto registrada");
+      pNone1.setFontSize(8).setItalic(true);
     }
 
+    // Foto 2
     var img2Url = data.foto2_url || data.foto_2 || data.foto2;
-    var pCell2 = cell2.getChild(0).asParagraph();
-    pCell2.appendParagraph("Fotografia 2 - Mufa / Detalle").setBold(true).setFontSize(8);
     if (img2Url) {
       var blob2 = obtenerBlobImagen(img2Url, "foto2.jpg");
       if (blob2) {
         try {
-          var imgObj2 = pCell2.appendImage(blob2);
+          var imgObj2 = cell2.appendImage(blob2);
           imgObj2.setWidth(235);
           imgObj2.setHeight(165);
         } catch(e2) {
-          pCell2.appendParagraph("Enlace: " + img2Url).setFontSize(7);
+          var pErr2 = cell2.appendParagraph("Enlace: " + img2Url);
+          pErr2.setFontSize(7);
         }
       } else {
-        pCell2.appendParagraph("Enlace: " + img2Url).setFontSize(7);
+        var pLink2 = cell2.appendParagraph("Enlace: " + img2Url);
+        pLink2.setFontSize(7);
       }
     } else {
-      pCell2.appendParagraph("Sin foto registrada").setFontSize(8).setItalic(true);
+      var pNone2 = cell2.appendParagraph("Sin foto registrada");
+      pNone2.setFontSize(8).setItalic(true);
     }
 
     doc.saveAndClose();
