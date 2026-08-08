@@ -1717,6 +1717,49 @@ jQuery(document).ready(function($) {
         window.generarReportePDFGeneral(registros);
     });
 
+    function preloadImageBase64(url) {
+        return new Promise(function(resolve) {
+            if (!url || typeof url !== 'string') { resolve(null); return; }
+            var cleanUrl = url.trim();
+            if (!cleanUrl) { resolve(null); return; }
+
+            if (cleanUrl.indexOf('data:image/') === 0) {
+                var format = 'JPEG';
+                if (cleanUrl.indexOf('image/png') !== -1) format = 'PNG';
+                else if (cleanUrl.indexOf('image/webp') !== -1) format = 'WEBP';
+                resolve({ dataUrl: cleanUrl, format: format });
+                return;
+            }
+
+            var driveMatch = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+            var fetchUrl = cleanUrl;
+            if (driveMatch && driveMatch[1]) {
+                fetchUrl = 'https://drive.google.com/uc?export=view&id=' + driveMatch[1];
+            }
+
+            var img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = function() {
+                try {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || img.width || 400;
+                    canvas.height = img.naturalHeight || img.height || 300;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                    resolve({ dataUrl: dataUrl, format: 'JPEG' });
+                } catch(e) {
+                    resolve(null);
+                }
+            };
+            img.onerror = function() {
+                resolve(null);
+            };
+            img.src = fetchUrl;
+            setTimeout(function() { resolve(null); }, 3500);
+        });
+    }
+
     window.generarDocumentoPDF = function(idx) {
         var raw = window._ruteoRegistros ? window._ruteoRegistros[idx] : null; if (!raw) return;
         var r = normalizarRegistro(raw);
@@ -1725,30 +1768,119 @@ jQuery(document).ready(function($) {
             alert('Libreria PDF no disponible. Por favor recargue la pagina.');
             return;
         }
-        var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-        var w = doc.internal.pageSize.getWidth();
-        doc.setFillColor(0, 151, 216); doc.rect(0,0,w,28,'F'); doc.setTextColor(255,255,255);
-        doc.setFontSize(15); doc.setFont('helvetica', 'bold');
-        doc.text('SOFTWARE O&M - FICHA TECNICA DE CAMPO', 14, 12);
-        doc.setFontSize(9); doc.setFont('helvetica', 'normal');
-        doc.text('Fecha: ' + (r.fecha || '-') + '  |  Tramo: ' + (r.tramo || '-') + '  |  ID Consol: ' + (r.id_consol || '-'), 14, 21);
-        
-        var data = [
-            ['ID Consol', r.id_consol || '-'],
-            ['Codigo Estructura', r.codigo || '-'],
-            ['Estructura', r.estructura || '-'],
-            ['Tipo Estructura', r.tipo_estructura || '-'],
-            ['Altura', (r.altura || '-') + ' m'],
-            ['Ubicacion', r.ubicacion || '-'],
-            ['Mufa / Herrajes', 'Mufa: ' + r.mufa + ' | Ret: ' + r.retencion + ' | Susp: ' + r.suspension],
-            ['Cruceta / Accesorios', 'Cruceta: ' + r.cruceta + ' | Hebillas: ' + r.hebillas + ' | Fleje: ' + r.fleje],
-            ['Observacion', r.observacion || '-']
-        ];
-        var autoTableFn = (typeof doc.autoTable === 'function') ? doc.autoTable : (window.jspdf && window.jspdf.autoTable);
-        if (typeof autoTableFn === 'function') {
-            autoTableFn.call(doc, { startY: 34, body: data, theme: 'grid', headStyles: { fillColor: [0, 151, 216] }, bodyStyles: { fontSize: 8.5, cellPadding: 2.5 }, margin: { left: 12, right: 12 } });
-        }
-        doc.save('Ficha_Ruteo_' + (r.codigo || r.id_consol || 'Registro') + '.pdf');
+
+        Promise.all([
+            preloadImageBase64(r.foto_1),
+            preloadImageBase64(r.foto_2)
+        ]).then(function(images) {
+            var img1 = images[0];
+            var img2 = images[1];
+
+            var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            var w = doc.internal.pageSize.getWidth();
+
+            doc.setFillColor(0, 151, 216); doc.rect(0,0,w,28,'F'); doc.setTextColor(255,255,255);
+            doc.setFontSize(15); doc.setFont('helvetica', 'bold');
+            doc.text('SOFTWARE O&M - FICHA TECNICA DE CAMPO', 14, 12);
+            doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+            doc.text('Fecha: ' + (r.fecha || '-') + '  |  Tramo: ' + (r.tramo || '-') + '  |  ID Consol: ' + (r.id_consol || '-'), 14, 21);
+            
+            var data = [
+                ['ID Consol', r.id_consol || '-'],
+                ['Codigo Estructura', r.codigo || '-'],
+                ['Estructura', r.estructura || '-'],
+                ['Tipo Estructura', r.tipo_estructura || '-'],
+                ['Altura', (r.altura || '-') + ' m'],
+                ['Ubicacion', r.ubicacion || '-'],
+                ['Mufa / Herrajes', 'Mufa: ' + r.mufa + ' | Ret: ' + r.retencion + ' | Susp: ' + r.suspension],
+                ['Cruceta / Accesorios', 'Cruceta: ' + r.cruceta + ' | Hebillas: ' + r.hebillas + ' | Fleje: ' + r.fleje],
+                ['Observacion', r.observacion || '-']
+            ];
+            var autoTableFn = (typeof doc.autoTable === 'function') ? doc.autoTable : (window.jspdf && window.jspdf.autoTable);
+            if (typeof autoTableFn === 'function') {
+                autoTableFn.call(doc, { startY: 34, body: data, theme: 'grid', headStyles: { fillColor: [0, 151, 216] }, bodyStyles: { fontSize: 8.5, cellPadding: 2.5 }, margin: { left: 12, right: 12 } });
+            }
+
+            var startY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 130;
+
+            // Seccion Evidencias Fotograficas
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(0, 151, 216);
+            doc.text('EVIDENCIAS FOTOGRAFICAS DE CAMPO', 12, startY);
+
+            doc.setDrawColor(200, 215, 230);
+            doc.setLineWidth(0.4);
+            doc.line(12, startY + 2, w - 12, startY + 2);
+
+            var boxY = startY + 6;
+            var boxW = 88;
+            var boxH = 68;
+
+            // Foto 1 Box
+            doc.setDrawColor(220, 226, 235);
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(12, boxY, boxW, boxH, 2, 2, 'FD');
+
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(71, 85, 105);
+            doc.text('Fotografia 1 - Estructura', 16, boxY + 6);
+
+            if (img1 && img1.dataUrl) {
+                try {
+                    doc.addImage(img1.dataUrl, img1.format, 16, boxY + 9, boxW - 8, boxH - 12);
+                } catch(e) {
+                    renderImageFallback(doc, 16, boxY + 14, r.foto_1);
+                }
+            } else if (r.foto_1) {
+                renderImageFallback(doc, 16, boxY + 14, r.foto_1);
+            } else {
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(148, 163, 184);
+                doc.text('Sin fotografia 1 registrada', 16, boxY + 30);
+            }
+
+            // Foto 2 Box
+            doc.setDrawColor(220, 226, 235);
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(108, boxY, boxW, boxH, 2, 2, 'FD');
+
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(71, 85, 105);
+            doc.text('Fotografia 2 - Mufa / Detalle', 112, boxY + 6);
+
+            if (img2 && img2.dataUrl) {
+                try {
+                    doc.addImage(img2.dataUrl, img2.format, 112, boxY + 9, boxW - 8, boxH - 12);
+                } catch(e) {
+                    renderImageFallback(doc, 112, boxY + 14, r.foto_2);
+                }
+            } else if (r.foto_2) {
+                renderImageFallback(doc, 112, boxY + 14, r.foto_2);
+            } else {
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'italic');
+                doc.setTextColor(148, 163, 184);
+                doc.text('Sin fotografia 2 registrada', 112, boxY + 30);
+            }
+
+            function renderImageFallback(pdfDoc, x, yPos, imgUrl) {
+                pdfDoc.setFontSize(7.5);
+                pdfDoc.setFont('helvetica', 'bold');
+                pdfDoc.setTextColor(0, 151, 216);
+                pdfDoc.text('Enlace de Foto en Google Drive:', x, yPos);
+                pdfDoc.setFontSize(6.5);
+                pdfDoc.setFont('helvetica', 'normal');
+                pdfDoc.setTextColor(100, 116, 139);
+                var shortUrl = imgUrl.length > 42 ? imgUrl.substring(0, 42) + '...' : imgUrl;
+                pdfDoc.text(shortUrl, x, yPos + 8);
+            }
+
+            doc.save('Ficha_Ruteo_' + (r.codigo || r.id_consol || 'Registro') + '.pdf');
+        });
     };
 
     // --- MODULO AUDITORIA Y LOGS ---
