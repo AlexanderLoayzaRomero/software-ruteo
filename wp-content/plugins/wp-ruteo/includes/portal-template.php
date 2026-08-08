@@ -123,10 +123,17 @@ body.admin-bar .ruteo-app-layout {
             </button>
 
             <button class="sidebar-item" data-tab="negativa">
-    <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-    </svg>
-    <span>Negativa al Trabajo</span>
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                </svg>
+                <span>Negativa al Trabajo</span>
+            </button>
+
+            <button class="sidebar-item" data-tab="auditoria" id="tab-btn-auditoria">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
+                </svg>
+                <span>Auditoria y Logs</span>
             </button>
 
             <button class="sidebar-item" data-tab="usuarios" id="tab-btn-usuarios" style="display:none;">
@@ -460,6 +467,17 @@ body.admin-bar .ruteo-app-layout {
                                 <label for="filter-tramo">Filtrar Tramo</label>
                                 <select id="filter-tramo">
                                     <option value="">Todos los tramos</option>
+                                </select>
+                            </div>
+
+                            <div class="filter-group">
+                                <label for="filter-tipo-est">Tipo Estructura</label>
+                                <select id="filter-tipo-est">
+                                    <option value="">Todos los tipos</option>
+                                    <option value="Poste">Poste</option>
+                                    <option value="Torre">Torre</option>
+                                    <option value="Mufa">Mufa</option>
+                                    <option value="Camara">Camara</option>
                                 </select>
                             </div>
 
@@ -1410,6 +1428,53 @@ body.admin-bar .ruteo-app-layout {
                                 <div id="profile-form-msg" class="ruteo-message"></div>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCION AUDITORIA Y LOGS -->
+        <section class="ruteo-tab-content" id="tab-auditoria">
+            <div class="ruteo-tab-protected-notice" style="display:none;">
+                <div class="login-card-container" style="max-width:520px; margin: 30px auto; text-align:center; padding:32px 24px; background:var(--bg-glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(10px);">
+                    <div style="width:64px; height:64px; margin:0 auto 16px auto; background:rgba(0, 151, 216, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="32" height="32" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                    </div>
+                    <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
+                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 24px 0;">Debes iniciar sesion para ver la auditoria de actividades del sistema.</p>
+                </div>
+            </div>
+
+            <div class="ruteo-tab-protected-content">
+                <div class="portal-card">
+                    <div class="portal-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h3 style="margin:0; font-size:18px; font-weight:700;">Historial de Auditoria y Registro de Actividades</h3>
+                            <p style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);">Trazabilidad en tiempo real de inicios de sesion, firmas y cambios en el sistema</p>
+                        </div>
+                        <button type="button" class="portal-btn portal-btn--refresh" id="btn-refresh-audit-logs">
+                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Actualizar Logs
+                        </button>
+                    </div>
+                    <div class="portal-table-wrapper" style="margin-top:16px;">
+                        <table class="portal-table" id="table-audit-logs">
+                            <thead>
+                                <tr>
+                                    <th>Fecha y Hora</th>
+                                    <th>Usuario</th>
+                                    <th>Accion Realizada</th>
+                                    <th>Detalles del Evento</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-audit-logs">
+                                <tr><td colspan="4" style="text-align:center; padding:20px;">Cargando historial de auditoria...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

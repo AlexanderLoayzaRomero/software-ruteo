@@ -259,6 +259,7 @@ jQuery(document).ready(function($) {
             'formulario': 'Nuevo Registro de Campo',
             'materiales': 'Consumo de Materiales',
             'sla-informes': 'SLA e Informes de Mantenimiento',
+            'auditoria': 'Historial de Auditoria y Logs',
             'usuarios': 'Gestion de Cuentas de Usuario',
             'perfil': 'Perfil de Usuario',
             'login': 'Iniciar Sesion',
@@ -276,6 +277,8 @@ jQuery(document).ready(function($) {
             cargarUsuarios();
         } else if (targetTab === 'materiales') {
             cargarMateriales();
+        } else if (targetTab === 'auditoria') {
+            cargarAuditLogs();
         } else if (targetTab === 'registros' && currentUser.isLoggedIn) {
             if (typeof window.cargarDatosPortal === 'function') {
                 var hayRegistros = window._ruteoRegistros && window._ruteoRegistros.length > 0;
@@ -1476,12 +1479,14 @@ jQuery(document).ready(function($) {
 
     function filtrarRegistros() {
         var tramoFiltro = document.getElementById('filter-tramo') ? document.getElementById('filter-tramo').value : '';
+        var tipoFiltro = document.getElementById('filter-tipo-est') ? document.getElementById('filter-tipo-est').value : '';
         var textoBusqueda = document.getElementById('portal-search') ? document.getElementById('portal-search').value.toLowerCase().trim() : '';
 
         var allRegistros = window._ruteoRegistros || [];
         var filtrados = allRegistros.filter(function(raw) {
             var r = normalizarRegistro(raw);
             if (tramoFiltro && r.tramo !== tramoFiltro) return false;
+            if (tipoFiltro && (r.tipo_estructura || '').toLowerCase().indexOf(tipoFiltro.toLowerCase()) === -1) return false;
             if (textoBusqueda) {
                 var haystack = (r.tramo + ' ' + r.id_consol + ' ' + r.codigo + ' ' + r.ubicacion + ' ' + r.estructura + ' ' + r.tipo_estructura + ' ' + r.observacion).toLowerCase();
                 if (haystack.indexOf(textoBusqueda) === -1) return false;
@@ -1648,8 +1653,11 @@ jQuery(document).ready(function($) {
         var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         var w = doc.internal.pageSize.getWidth();
         doc.setFillColor(0, 151, 216); doc.rect(0,0,w,28,'F'); doc.setTextColor(255,255,255);
-        doc.setFontSize(16); doc.text('FICHA TECNICA DE REGISTRO - O&M', w/2, 13, { align: 'center' });
-        doc.setFontSize(9); doc.text('Fecha: ' + r.fecha + ' | Tramo: ' + r.tramo, w/2, 21, { align: 'center' });
+        doc.setFontSize(15); doc.setFont('helvetica', 'bold');
+        doc.text('SOFTWARE O&M - FICHA TECNICA DE CAMPO', 14, 12);
+        doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+        doc.text('Fecha: ' + (r.fecha || '-') + '  |  Tramo: ' + (r.tramo || '-') + '  |  ID Consol: ' + (r.id_consol || '-'), 14, 21);
+        
         var data = [
             ['ID Consol', r.id_consol || '-'],
             ['Codigo Estructura', r.codigo || '-'],
@@ -1667,6 +1675,80 @@ jQuery(document).ready(function($) {
         }
         doc.save('Ficha_Ruteo_' + (r.codigo || r.id_consol || 'Registro') + '.pdf');
     };
+
+    // --- MODULO AUDITORIA Y LOGS ---
+    function cargarAuditLogs() {
+        var $tbody = $('#tbody-audit-logs');
+        $tbody.html('<tr><td colspan="4" style="text-align:center; padding:20px;">Cargando registros de auditoria...</td></tr>');
+        $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_get_logs', nonce: wpRuteoAjax.nonce }, function(res) {
+            if (res.success && res.data && res.data.logs) {
+                renderTablaAuditLogs(res.data.logs);
+            } else {
+                $tbody.html('<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No se pudieron obtener los logs de auditoria.</td></tr>');
+            }
+        });
+    }
+
+    function renderTablaAuditLogs(logs) {
+        var $tbody = $('#tbody-audit-logs');
+        $tbody.empty();
+        if (!logs || !logs.length) {
+            $tbody.append('<tr><td colspan="4" style="text-align:center; padding:20px;">No hay actividades registradas en el sistema.</td></tr>');
+            return;
+        }
+        logs.forEach(function(l) {
+            var tr = '<tr>' +
+                '<td><span style="font-size:12px; font-weight:600; color:var(--text-muted);">' + l.fecha + '</span></td>' +
+                '<td><strong>' + l.usuario + '</strong></td>' +
+                '<td><span class="status-badge-info" style="font-size:11px;">' + l.accion + '</span></td>' +
+                '<td>' + (l.detalle || '-') + '</td>' +
+            '</tr>';
+            $tbody.append(tr);
+        });
+    }
+
+    $('#btn-refresh-audit-logs').on('click', cargarAuditLogs);
+
+    // EXPORTAR A EXCEL / CSV CON BOM UTF-8
+    function exportarCSVRegistros() {
+        var registros = window._ruteoRegistros || [];
+        if (!registros.length) {
+            alert('No hay registros de campo para exportar a Excel.');
+            return;
+        }
+
+        var headers = ['Fecha', 'Tramo', 'ID Consol', 'Estructura', 'Tipo Estructura', 'Altura (m)', 'Codigo', 'Ubicacion', 'Mufa', 'Retencion', 'Suspension', 'Cruceta', 'Observaciones'];
+        var rows = [headers];
+
+        registros.forEach(function(raw) {
+            var r = normalizarRegistro(raw);
+            rows.push([
+                '"' + (r.fecha || '') + '"',
+                '"' + (r.tramo || '').replace(/"/g, '""') + '"',
+                '"' + (r.id_consol || '').replace(/"/g, '""') + '"',
+                '"' + (r.estructura || '').replace(/"/g, '""') + '"',
+                '"' + (r.tipo_estructura || '').replace(/"/g, '""') + '"',
+                '"' + (r.altura || '') + '"',
+                '"' + (r.codigo || '').replace(/"/g, '""') + '"',
+                '"' + (r.ubicacion || '').replace(/"/g, '""') + '"',
+                '"' + (r.mufa || '0') + '"',
+                '"' + (r.retencion || '0') + '"',
+                '"' + (r.suspension || '0') + '"',
+                '"' + (r.cruceta || '0') + '"',
+                '"' + (r.observacion || '').replace(/"/g, '""') + '"'
+            ]);
+        });
+
+        var csvContent = '\uFEFF' + rows.map(function(e) { return e.join(','); }).join('\n');
+        var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        var filename = 'Registros_Campo_OM_' + new Date().toISOString().slice(0,10) + '.csv';
+
+        if (typeof window.downloadBlobRuteo === 'function') {
+            window.downloadBlobRuteo(blob, filename);
+        }
+    }
+
+    $('#btn-download-excel').on('click', exportarCSVRegistros);
 
 });
 

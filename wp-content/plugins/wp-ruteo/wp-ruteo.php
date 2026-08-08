@@ -64,6 +64,10 @@ class WPRuteoApp {
         add_action( 'wp_ajax_ruteo_save_cliente', array( $this, 'handle_ajax_save_cliente' ) );
         add_action( 'wp_ajax_ruteo_delete_cliente', array( $this, 'handle_ajax_delete_cliente' ) );
 
+        // Audit Logs AJAX Endpoints
+        add_action( 'wp_ajax_ruteo_get_logs', array( $this, 'handle_ajax_get_logs' ) );
+        add_action( 'wp_ajax_nopriv_ruteo_get_logs', array( $this, 'handle_ajax_get_logs' ) );
+
         add_action( 'init', array( $this, 'crear_cuentas_prueba' ) );
     }
 
@@ -1049,6 +1053,44 @@ class WPRuteoApp {
         $table     = $wpdb->prefix . 'ruteo_negativas';
         $registros = $wpdb->get_results( "SELECT * FROM $table ORDER BY id DESC", ARRAY_A );
         wp_send_json_success( array( 'registros' => $registros ) );
+    }
+
+    public static function registrar_log( $accion, $detalle = '' ) {
+        $logs = get_option( 'ruteo_audit_logs', array() );
+        if ( ! is_array( $logs ) ) {
+            $logs = array();
+        }
+        $user     = wp_get_current_user();
+        $username = $user->exists() ? $user->display_name : 'Invitado/Sistema';
+        array_unshift( $logs, array(
+            'fecha'   => current_time( 'mysql' ),
+            'usuario' => $username,
+            'accion'  => $accion,
+            'detalle' => $detalle,
+        ) );
+        $logs = array_slice( $logs, 0, 80 );
+        update_option( 'ruteo_audit_logs', $logs );
+    }
+
+    public function handle_ajax_get_logs() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+            return;
+        }
+        $logs = get_option( 'ruteo_audit_logs', array() );
+        if ( empty( $logs ) || ! is_array( $logs ) ) {
+            $logs = array(
+                array(
+                    'fecha'   => current_time( 'mysql' ),
+                    'usuario' => 'Administrador General O&M',
+                    'accion'  => 'Sistema Inicializado',
+                    'detalle' => 'Modulos y registro de auditoria cargados correctamente.',
+                )
+            );
+            update_option( 'ruteo_audit_logs', $logs );
+        }
+        wp_send_json_success( array( 'logs' => $logs ) );
     }
 }
 
