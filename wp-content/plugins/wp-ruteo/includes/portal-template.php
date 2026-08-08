@@ -1202,10 +1202,11 @@ body.admin-bar .ruteo-app-layout {
                         </button>
                     </div>
 
-                    <!-- FORMULARIO CREAR USUARIO AMPLIADO -->
+                    <!-- FORMULARIO CREAR / EDITAR USUARIO AMPLIADO -->
                     <div class="user-create-card" id="user-create-card" style="display:none;">
-                        <h4>Crear Nueva Cuenta de Usuario</h4>
+                        <h4 id="user-form-title">Gestion de Cuenta y Permisos de Firmante</h4>
                         <form id="form-create-user" enctype="multipart/form-data">
+                            <input type="hidden" id="user-edit-id-input" value="0">
                             <div class="user-form-grid">
                                 <div class="form-group">
                                     <label>Nombre Completo</label>
@@ -1232,17 +1233,19 @@ body.admin-bar .ruteo-app-layout {
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Clave de Acceso</label>
+                                    <label>Clave de Acceso (Opcional en edicion)</label>
                                     <div class="input-wrapper">
-                                        <input type="password" id="user-password-input" placeholder="--------" required>
+                                        <input type="password" id="user-password-input" placeholder="--------">
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Rol de Usuario</label>
+                                    <label>Rol del Sistema</label>
                                     <div class="input-wrapper">
                                         <select id="user-role-select">
-                                            <option value="worker">Operario (Worker)</option>
-                                            <option value="admin">Administrador (Admin)</option>
+                                            <option value="ruteo_worker">Operario de Campo (Worker)</option>
+                                            <option value="ruteo_sup_operativo">Supervisor Operativo</option>
+                                            <option value="ruteo_sup_hse">Supervisor HSE / Seguridad</option>
+                                            <option value="ruteo_admin">Administrador General (Admin)</option>
                                         </select>
                                     </div>
                                 </div>
@@ -1259,11 +1262,30 @@ body.admin-bar .ruteo-app-layout {
                                     </div>
                                 </div>
                                 <div class="form-group full-width">
-                                    <label>Puesto de Trabajo</label>
+                                    <label>Cargo / Puesto de Trabajo Formal</label>
                                     <div class="input-wrapper">
                                         <input type="text" id="user-position-input" placeholder="Ej: Especialista Fibra Optica / Supervisor SST / Tecnico PEXT">
                                     </div>
                                 </div>
+
+                                <div class="form-group full-width" style="background: rgba(0, 151, 216, 0.05); padding: 14px 16px; border-radius: 10px; border: 1px solid var(--border);">
+                                    <label style="font-weight: 700; color: var(--accent); margin-bottom: 8px; display: block;">Atribuciones y Permisos de Firmante Digital</label>
+                                    <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 6px;">
+                                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                                            <input type="checkbox" class="chk-signer-cap" value="firmante_ejecutor">
+                                            <span>Firma Ejecutor (AST / Campo)</span>
+                                        </label>
+                                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                                            <input type="checkbox" class="chk-signer-cap" value="firmante_operativo">
+                                            <span>Firma Supervisor Operativo (Liberacion)</span>
+                                        </label>
+                                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                                            <input type="checkbox" class="chk-signer-cap" value="firmante_hse">
+                                            <span>Firma Supervisor HSE (Seguridad SST)</span>
+                                        </label>
+                                    </div>
+                                </div>
+
                                 <div class="form-group full-width">
                                     <label>Centro de Mantenimiento / PM Asignado</label>
                                     <div class="input-wrapper">
@@ -1304,10 +1326,10 @@ body.admin-bar .ruteo-app-layout {
                                         <th>Avatar</th>
                                         <th>Usuario</th>
                                         <th>Nombre Completo</th>
-                                        <th>Correo</th>
-                                        <th>Telefono</th>
+                                        <th>Correo / Cargo</th>
                                         <th>PM Asignado</th>
-                                        <th>Rol</th>
+                                        <th>Rol Sistema</th>
+                                        <th>Permisos de Firmante</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>

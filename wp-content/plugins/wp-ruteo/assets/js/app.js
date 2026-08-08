@@ -665,6 +665,7 @@ jQuery(document).ready(function($) {
             success: function(res) {
                 if (res.success && res.data && res.data.users) {
                     var users = res.data.users;
+                    window.ruteoUsersCache = users;
                     $('#users-count-note').text('Total cuentas: ' + users.length);
                     $('#dash-stat-users').text(users.length);
                     renderTablaUsuarios(users);
@@ -685,9 +686,29 @@ jQuery(document).ready(function($) {
         }
 
         users.forEach(function(u) {
-            var roleBadge = u.role === 'Admin' ? 
-                '<span class="status-badge-active">Admin</span>' : 
-                '<span class="status-badge-info">Worker</span>';
+            var roleBadge = '<span class="status-badge-info">Operario</span>';
+            if (u.roleKey === 'ruteo_admin' || u.role === 'Admin General' || u.role === 'Admin') {
+                roleBadge = '<span class="status-badge-active" style="background:rgba(34,197,94,0.15); color:#22C55E; border:1px solid #22C55E; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">Admin General</span>';
+            } else if (u.roleKey === 'ruteo_sup_operativo' || u.role === 'Supervisor Operativo') {
+                roleBadge = '<span style="background:rgba(0,151,216,0.15); color:#0097D8; border:1px solid #0097D8; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">Supervisor Op.</span>';
+            } else if (u.roleKey === 'ruteo_sup_hse' || u.role === 'Supervisor HSE') {
+                roleBadge = '<span style="background:rgba(168,85,247,0.15); color:#A855F7; border:1px solid #A855F7; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">Supervisor HSE</span>';
+            }
+
+            var signerBadges = '';
+            var caps = u.signerCaps || [];
+            if (caps.indexOf('firmante_ejecutor') !== -1) {
+                signerBadges += '<span style="display:inline-block; margin:2px; font-size:10px; background:rgba(34,197,94,0.12); color:#22C55E; padding:2px 6px; border-radius:4px; border:1px solid rgba(34,197,94,0.3);">✍️ Ejecutor</span> ';
+            }
+            if (caps.indexOf('firmante_operativo') !== -1) {
+                signerBadges += '<span style="display:inline-block; margin:2px; font-size:10px; background:rgba(0,151,216,0.12); color:#0097D8; padding:2px 6px; border-radius:4px; border:1px solid rgba(0,151,216,0.3);">✍️ Sup. Op.</span> ';
+            }
+            if (caps.indexOf('firmante_hse') !== -1) {
+                signerBadges += '<span style="display:inline-block; margin:2px; font-size:10px; background:rgba(168,85,247,0.12); color:#A855F7; padding:2px 6px; border-radius:4px; border:1px solid rgba(168,85,247,0.3);">✍️ HSE</span> ';
+            }
+            if (!signerBadges) {
+                signerBadges = '<span style="font-size:11px; color:var(--text-muted);">Sin firma autorizada</span>';
+            }
 
             var avatarHtml = u.avatar ? '<img src="' + u.avatar + '" alt="Avatar">' : (u.displayName || u.username || '?').charAt(0).toUpperCase();
 
@@ -695,13 +716,43 @@ jQuery(document).ready(function($) {
                 '<td><div class="user-avatar-table">' + avatarHtml + '</div></td>' +
                 '<td><strong>' + u.username + '</strong></td>' +
                 '<td>' + (u.displayName || u.username) + '</td>' +
-                '<td>' + u.email + '</td>' +
-                '<td>' + (u.position || '-') + '</td>' +
+                '<td>' + u.email + '<br><small style="color:var(--text-muted); font-size:11px;">' + (u.position || 'Sin cargo') + '</small></td>' +
                 '<td>' + (u.pmAssigned || 'Sin asignar') + '</td>' +
                 '<td>' + roleBadge + '</td>' +
-                '<td><button class="btn-del-row btn-del-user" data-id="' + u.id + '" data-name="' + u.username + '">Eliminar</button></td>' +
+                '<td>' + signerBadges + '</td>' +
+                '<td>' +
+                    '<div style="display:flex; gap:6px;">' +
+                        '<button class="portal-btn portal-btn--refresh btn-edit-user" data-id="' + u.id + '" style="padding:4px 8px; font-size:11px;">Editar</button>' +
+                        '<button class="btn-del-row btn-del-user" data-id="' + u.id + '" data-name="' + u.username + '" style="padding:4px 8px; font-size:11px;">Eliminar</button>' +
+                    '</div>' +
+                '</td>' +
             '</tr>';
             $tbody.append(tr);
+        });
+
+        $('.btn-edit-user').off('click').on('click', function() {
+            var uid = $(this).data('id');
+            var u = (window.ruteoUsersCache || []).find(function(item) { return item.id == uid; });
+            if (u) {
+                $('#user-edit-id-input').val(u.id);
+                $('#user-username-input').val(u.username).prop('readonly', true);
+                $('#user-display-name-input').val(u.displayName || '');
+                $('#user-email-input').val(u.email || '');
+                $('#user-password-input').val('');
+                $('#user-phone-input').val(u.phone || '');
+                $('#user-role-select').val(u.roleKey || 'ruteo_worker');
+                $('#user-negativa-rol-select').val(u.negativaRol || '');
+                $('#user-position-input').val(u.position || '');
+                $('#user-pm-select').val(u.pmAssigned || '');
+                
+                $('.chk-signer-cap').prop('checked', false);
+                (u.signerCaps || []).forEach(function(cap) {
+                    $('.chk-signer-cap[value="' + cap + '"]').prop('checked', true);
+                });
+
+                $('#user-form-title').text('Editar Cuenta: ' + u.username);
+                $('#user-create-card').slideDown(300);
+            }
         });
 
         $('.btn-del-user').off('click').on('click', function() {
@@ -713,15 +764,35 @@ jQuery(document).ready(function($) {
         });
     }
 
-    // CREAR USUARIO AMPLIADO
+    // BOTON NUEVO USUARIO (LIMPIAR FORMULARIO)
+    $('#btn-show-create-user').off('click').on('click', function() {
+        $('#user-edit-id-input').val('0');
+        $('#user-username-input').prop('readonly', false);
+        $('#form-create-user')[0].reset();
+        $('.chk-signer-cap').prop('checked', false);
+        $('#user-form-title').text('Crear Nueva Cuenta de Usuario');
+        $('#user-create-card').slideToggle(300);
+    });
+
+    $('#btn-cancel-create-user').off('click').on('click', function() {
+        $('#user-create-card').slideUp(300);
+    });
+
+    // CREAR / EDITAR USUARIO AMPLIADO
     $('#form-create-user').on('submit', function(e) {
         e.preventDefault();
         var $msg = $('#create-user-msg');
         $msg.removeClass('success error').hide();
 
+        var selectedCaps = [];
+        $('.chk-signer-cap:checked').each(function() {
+            selectedCaps.push($(this).val());
+        });
+
         var formData = new FormData();
         formData.append('action', 'ruteo_create_user');
         formData.append('nonce', wpRuteoAjax.nonce);
+        formData.append('user_id', $('#user-edit-id-input').val() || '0');
         formData.append('display_name', $('#user-display-name-input').val());
         formData.append('username', $('#user-username-input').val());
         formData.append('email', $('#user-email-input').val());
@@ -731,6 +802,7 @@ jQuery(document).ready(function($) {
         formData.append('position', $('#user-position-input').val() || '');
         formData.append('phone', $('#user-phone-input').val());
         formData.append('pm_assigned', $('#user-pm-select').val());
+        formData.append('signer_caps', selectedCaps.join(','));
 
         var fileInput = $('#user-avatar-input')[0];
         if (fileInput && fileInput.files && fileInput.files[0]) {
@@ -747,10 +819,13 @@ jQuery(document).ready(function($) {
                 if (res.success) {
                     $msg.addClass('success').text(res.data.message).fadeIn(200);
                     $('#form-create-user')[0].reset();
+                    $('#user-edit-id-input').val('0');
+                    $('#user-username-input').prop('readonly', false);
+                    $('.chk-signer-cap').prop('checked', false);
                     $('#user-create-card').slideUp(300);
                     cargarUsuarios();
                 } else {
-                    $msg.addClass('error').text(res.data.message || 'Error al crear usuario.').fadeIn(200);
+                    $msg.addClass('error').text(res.data.message || 'Error al guardar usuario.').fadeIn(200);
                 }
             },
             error: function() {

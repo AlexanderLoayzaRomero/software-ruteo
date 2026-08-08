@@ -77,6 +77,16 @@ class WPRuteoApp {
             'ruteo_admin_access'    => true,
             'ruteo_worker_access'   => true,
         ) );
+        add_role( 'ruteo_sup_operativo', 'Supervisor Operativo Ruteo', array(
+            'read'                       => true,
+            'ruteo_worker_access'        => true,
+            'ruteo_sup_operativo_access' => true,
+        ) );
+        add_role( 'ruteo_sup_hse', 'Supervisor HSE Ruteo', array(
+            'read'                  => true,
+            'ruteo_worker_access'   => true,
+            'ruteo_sup_hse_access'  => true,
+        ) );
         add_role( 'ruteo_worker', 'Operario Ruteo', array(
             'read'                  => true,
             'ruteo_worker_access'   => true,
@@ -92,6 +102,8 @@ class WPRuteoApp {
                 'email'        => 'admin@software-om.org.pe',
                 'role'         => 'ruteo_admin',
                 'negativa_rol' => 'admin_general',
+                'position'     => 'Administrador General O&M',
+                'signer_caps'  => array( 'firmante_ejecutor', 'firmante_operativo', 'firmante_hse' ),
             ),
             array(
                 'user'         => 'tecnico1',
@@ -100,30 +112,38 @@ class WPRuteoApp {
                 'email'        => 'tecnico1@ruteo.org.pe',
                 'role'         => 'ruteo_worker',
                 'negativa_rol' => 'tecnico',
+                'position'     => 'Tecnico de Campo O&M',
+                'signer_caps'  => array( 'firmante_ejecutor' ),
             ),
             array(
                 'user'         => 'supervisor1',
                 'pass'         => 'Supervisor123!',
                 'name'         => 'Carlos Mendoza (Supervisor Op.)',
                 'email'        => 'supervisor1@ruteo.org.pe',
-                'role'         => 'ruteo_worker',
+                'role'         => 'ruteo_sup_operativo',
                 'negativa_rol' => 'supervisor_operativo',
+                'position'     => 'Supervisor Operativo de Campo',
+                'signer_caps'  => array( 'firmante_operativo' ),
             ),
             array(
                 'user'         => 'seguridad1',
                 'pass'         => 'Seguridad123!',
                 'name'         => 'Roberto Silva (Supervisor Seg.)',
                 'email'        => 'seguridad1@ruteo.org.pe',
-                'role'         => 'ruteo_worker',
+                'role'         => 'ruteo_sup_hse',
                 'negativa_rol' => 'supervisor_seguridad',
+                'position'     => 'Supervisor de Seguridad SST',
+                'signer_caps'  => array( 'firmante_hse' ),
             ),
             array(
                 'user'         => 'hse1',
                 'pass'         => 'Hse123!',
                 'name'         => 'Maria Fernandez (Area HSE)',
                 'email'        => 'hse1@ruteo.org.pe',
-                'role'         => 'ruteo_worker',
+                'role'         => 'ruteo_sup_hse',
                 'negativa_rol' => 'hse',
+                'position'     => 'Lider de Area HSE',
+                'signer_caps'  => array( 'firmante_hse' ),
             ),
         );
 
@@ -136,9 +156,20 @@ class WPRuteoApp {
                     $u->set_role( isset( $c['role'] ) ? $c['role'] : 'ruteo_worker' );
                     wp_update_user( array( 'ID' => $user_id, 'display_name' => $c['name'] ) );
                 }
+            } else {
+                $u = new WP_User( $user_id );
+                if ( isset( $c['role'] ) ) {
+                    $u->set_role( $c['role'] );
+                }
             }
             if ( $user_id && ! is_wp_error( $user_id ) ) {
                 update_user_meta( $user_id, 'ruteo_negativa_rol', $c['negativa_rol'] );
+                if ( isset( $c['position'] ) ) {
+                    update_user_meta( $user_id, 'ruteo_position', $c['position'] );
+                }
+                if ( isset( $c['signer_caps'] ) ) {
+                    update_user_meta( $user_id, 'ruteo_signer_caps', $c['signer_caps'] );
+                }
             }
         }
     }
@@ -156,20 +187,31 @@ class WPRuteoApp {
         $user_role    = 'guest';
         $is_admin     = false;
 
-        $phone       = '';
-        $pm_assigned = '';
-        $avatar      = '';
-        $avatar      = get_user_meta( $current_user->ID, 'ruteo_avatar', true );
-        $negativa_rol = get_user_meta( $current_user->ID, 'ruteo_negativa_rol', true );
+        $phone        = '';
+        $pm_assigned   = '';
+        $avatar       = '';
+        $position     = '';
+        $signer_caps  = array();
+        $negativa_rol = '';
 
         if ( $is_logged_in ) {
-            $phone       = get_user_meta( $current_user->ID, 'ruteo_phone', true );
-            $pm_assigned = get_user_meta( $current_user->ID, 'ruteo_pm_assigned', true );
-            $avatar      = get_user_meta( $current_user->ID, 'ruteo_avatar', true );
+            $phone        = get_user_meta( $current_user->ID, 'ruteo_phone', true );
+            $pm_assigned  = get_user_meta( $current_user->ID, 'ruteo_pm_assigned', true );
+            $avatar       = get_user_meta( $current_user->ID, 'ruteo_avatar', true );
+            $position     = get_user_meta( $current_user->ID, 'ruteo_position', true );
+            $negativa_rol = get_user_meta( $current_user->ID, 'ruteo_negativa_rol', true );
+            $signer_caps  = get_user_meta( $current_user->ID, 'ruteo_signer_caps', true );
+            if ( ! is_array( $signer_caps ) ) {
+                $signer_caps = array();
+            }
 
             if ( in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true ) ) {
                 $user_role = 'admin';
                 $is_admin  = true;
+            } elseif ( in_array( 'ruteo_sup_operativo', (array) $current_user->roles, true ) ) {
+                $user_role = 'sup_operativo';
+            } elseif ( in_array( 'ruteo_sup_hse', (array) $current_user->roles, true ) ) {
+                $user_role = 'sup_hse';
             } elseif ( in_array( 'ruteo_worker', (array) $current_user->roles, true ) ) {
                 $user_role = 'worker';
             } else {
@@ -208,6 +250,8 @@ class WPRuteoApp {
                 'pmAssigned'  => $pm_assigned,
                 'avatar'      => $avatar,
                 'role'        => $user_role,
+                'position'    => $position ?: '',
+                'signerCaps'  => $signer_caps,
             ),
         ) );
     }
@@ -465,6 +509,10 @@ class WPRuteoApp {
         $avatar       = get_user_meta( $user->ID, 'ruteo_avatar', true );
         $negativa_rol = get_user_meta( $user->ID, 'ruteo_negativa_rol', true );
         $position     = get_user_meta( $user->ID, 'ruteo_position', true );
+        $signer_caps  = get_user_meta( $user->ID, 'ruteo_signer_caps', true );
+        if ( ! is_array( $signer_caps ) ) {
+            $signer_caps = array();
+        }
 
         wp_send_json_success( array(
             'message' => 'Inicio de sesion exitoso.',
@@ -480,6 +528,7 @@ class WPRuteoApp {
                 'isAdmin'     => $is_admin,
                 'negativaRol' => $negativa_rol ?: '',
                 'position'    => $position ?: '',
+                'signerCaps'  => $signer_caps,
             ),
         ) );
     }
@@ -502,7 +551,7 @@ class WPRuteoApp {
         }
 
         $wp_users = get_users( array(
-            'role__in' => array( 'ruteo_admin', 'ruteo_worker', 'administrator' ),
+            'role__in' => array( 'ruteo_admin', 'ruteo_sup_operativo', 'ruteo_sup_hse', 'ruteo_worker', 'administrator' ),
             'orderby'  => 'registered',
             'order'    => 'DESC',
         ) );
@@ -510,10 +559,25 @@ class WPRuteoApp {
         $user_list = array();
         foreach ( $wp_users as $u ) {
             $roles      = (array) $u->roles;
-            $role_label = 'Worker';
+            $role_label = 'Operario';
+            $role_key   = 'ruteo_worker';
+
             if ( in_array( 'administrator', $roles, true ) || in_array( 'ruteo_admin', $roles, true ) ) {
-                $role_label = 'Admin';
+                $role_label = 'Admin General';
+                $role_key   = 'ruteo_admin';
+            } elseif ( in_array( 'ruteo_sup_operativo', $roles, true ) ) {
+                $role_label = 'Supervisor Operativo';
+                $role_key   = 'ruteo_sup_operativo';
+            } elseif ( in_array( 'ruteo_sup_hse', $roles, true ) ) {
+                $role_label = 'Supervisor HSE';
+                $role_key   = 'ruteo_sup_hse';
             }
+
+            $signer_caps = get_user_meta( $u->ID, 'ruteo_signer_caps', true );
+            if ( ! is_array( $signer_caps ) ) {
+                $signer_caps = array();
+            }
+
             $user_list[] = array(
                 'id'          => $u->ID,
                 'username'    => $u->user_login,
@@ -523,6 +587,8 @@ class WPRuteoApp {
                 'pmAssigned'  => get_user_meta( $u->ID, 'ruteo_pm_assigned', true ),
                 'avatar'      => get_user_meta( $u->ID, 'ruteo_avatar', true ),
                 'role'        => $role_label,
+                'roleKey'     => $role_key,
+                'signerCaps'  => $signer_caps,
                 'negativaRol' => get_user_meta( $u->ID, 'ruteo_negativa_rol', true ) ?: '',
                 'position'    => get_user_meta( $u->ID, 'ruteo_position', true ) ?: '',
                 'registered'  => $u->user_registered,
@@ -543,15 +609,74 @@ class WPRuteoApp {
             return;
         }
 
+        $edit_id      = isset( $_POST['user_id'] ) ? intval( $_POST['user_id'] ) : 0;
         $username     = isset( $_POST['username'] ) ? sanitize_user( wp_unslash( $_POST['username'] ) ) : '';
         $email        = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
         $password     = isset( $_POST['password'] ) ? $_POST['password'] : '';
         $display_name = isset( $_POST['display_name'] ) ? sanitize_text_field( wp_unslash( $_POST['display_name'] ) ) : '';
-        $role         = isset( $_POST['role'] ) ? sanitize_text_field( wp_unslash( $_POST['role'] ) ) : 'worker';
+        $role         = isset( $_POST['role'] ) ? sanitize_text_field( wp_unslash( $_POST['role'] ) ) : 'ruteo_worker';
         $phone        = isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '';
         $pm_assigned  = isset( $_POST['pm_assigned'] ) ? sanitize_text_field( wp_unslash( $_POST['pm_assigned'] ) ) : '';
         $negativa_rol = isset( $_POST['negativa_rol'] ) ? sanitize_text_field( wp_unslash( $_POST['negativa_rol'] ) ) : '';
         $position     = isset( $_POST['position'] ) ? sanitize_text_field( wp_unslash( $_POST['position'] ) ) : '';
+
+        $raw_caps = isset( $_POST['signer_caps'] ) ? $_POST['signer_caps'] : array();
+        if ( is_string( $raw_caps ) ) {
+            $signer_caps = array_filter( array_map( 'trim', explode( ',', $raw_caps ) ) );
+        } elseif ( is_array( $raw_caps ) ) {
+            $signer_caps = array_map( 'sanitize_text_field', $raw_caps );
+        } else {
+            $signer_caps = array();
+        }
+
+        $wp_role = 'ruteo_worker';
+        if ( $role === 'admin' || $role === 'ruteo_admin' ) {
+            $wp_role = 'ruteo_admin';
+        } elseif ( $role === 'sup_operativo' || $role === 'ruteo_sup_operativo' ) {
+            $wp_role = 'ruteo_sup_operativo';
+        } elseif ( $role === 'sup_hse' || $role === 'ruteo_sup_hse' ) {
+            $wp_role = 'ruteo_sup_hse';
+        }
+
+        if ( $edit_id > 0 ) {
+            $user_data = array(
+                'ID'           => $edit_id,
+                'display_name' => ! empty( $display_name ) ? $display_name : $username,
+            );
+            if ( ! empty( $email ) ) {
+                $user_data['user_email'] = $email;
+            }
+            if ( ! empty( $password ) ) {
+                $user_data['user_pass'] = $password;
+            }
+            wp_update_user( $user_data );
+
+            $u = new WP_User( $edit_id );
+            $u->set_role( $wp_role );
+
+            update_user_meta( $edit_id, 'ruteo_phone', $phone );
+            update_user_meta( $edit_id, 'ruteo_pm_assigned', $pm_assigned );
+            update_user_meta( $edit_id, 'ruteo_negativa_rol', $negativa_rol );
+            update_user_meta( $edit_id, 'ruteo_position', $position );
+            update_user_meta( $edit_id, 'ruteo_signer_caps', $signer_caps );
+
+            if ( ! empty( $_FILES['avatar']['tmp_name'] ) ) {
+                $tmp_file = $_FILES['avatar']['tmp_name'];
+                $type     = mime_content_type( $tmp_file );
+                $content  = file_get_contents( $tmp_file );
+                $base64   = 'data:' . $type . ';base64,' . base64_encode( $content );
+                update_user_meta( $edit_id, 'ruteo_avatar', $base64 );
+                @unlink( $tmp_file );
+            }
+
+            self::registrar_log( 'Usuario Actualizado', 'Se actualizaron rol (' . $wp_role . '), cargo y permisos de firma del usuario ID #' . $edit_id );
+
+            wp_send_json_success( array(
+                'message' => 'Usuario actualizado correctamente.',
+                'user_id' => $edit_id,
+            ) );
+            return;
+        }
 
         if ( empty( $username ) || empty( $password ) || empty( $email ) ) {
             wp_send_json_error( array( 'message' => 'Usuario, correo y clave son obligatorios.' ) );
@@ -568,8 +693,6 @@ class WPRuteoApp {
             return;
         }
 
-        $wp_role = ( $role === 'admin' || $role === 'ruteo_admin' ) ? 'ruteo_admin' : 'ruteo_worker';
-
         $user_id = wp_insert_user( array(
             'user_login'   => $username,
             'user_pass'    => $password,
@@ -583,27 +706,22 @@ class WPRuteoApp {
             return;
         }
 
-        if ( ! empty( $phone ) ) {
-            update_user_meta( $user_id, 'ruteo_phone', $phone );
-        }
-        if ( ! empty( $pm_assigned ) ) {
-            update_user_meta( $user_id, 'ruteo_pm_assigned', $pm_assigned );
-        }
-        if ( ! empty( $negativa_rol ) ) {
-            update_user_meta( $user_id, 'ruteo_negativa_rol', $negativa_rol );
-        }
-        if ( ! empty( $position ) ) {
-            update_user_meta( $user_id, 'ruteo_position', $position );
-        }
+        update_user_meta( $user_id, 'ruteo_phone', $phone );
+        update_user_meta( $user_id, 'ruteo_pm_assigned', $pm_assigned );
+        update_user_meta( $user_id, 'ruteo_negativa_rol', $negativa_rol );
+        update_user_meta( $user_id, 'ruteo_position', $position );
+        update_user_meta( $user_id, 'ruteo_signer_caps', $signer_caps );
 
         if ( ! empty( $_FILES['avatar']['tmp_name'] ) ) {
             $tmp_file = $_FILES['avatar']['tmp_name'];
-            $type     = mime_content_type($tmp_file);
-            $content  = file_get_contents($tmp_file);
-            $base64   = 'data:' . $type . ';base64,' . base64_encode($content);
+            $type     = mime_content_type( $tmp_file );
+            $content  = file_get_contents( $tmp_file );
+            $base64   = 'data:' . $type . ';base64,' . base64_encode( $content );
             update_user_meta( $user_id, 'ruteo_avatar', $base64 );
-            @unlink($tmp_file);
+            @unlink( $tmp_file );
         }
+
+        self::registrar_log( 'Usuario Creado', 'Se creo la cuenta de usuario ' . $username . ' con rol ' . $wp_role . ' y permisos de firmante' );
 
         wp_send_json_success( array(
             'message' => 'Usuario creado exitosamente con perfil ampliado.',
