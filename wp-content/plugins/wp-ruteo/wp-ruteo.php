@@ -68,6 +68,10 @@ class WPRuteoApp {
         add_action( 'wp_ajax_ruteo_get_logs', array( $this, 'handle_ajax_get_logs' ) );
         add_action( 'wp_ajax_nopriv_ruteo_get_logs', array( $this, 'handle_ajax_get_logs' ) );
 
+        // Image Base64 Proxy Endpoint
+        add_action( 'wp_ajax_ruteo_get_image_base64', array( $this, 'handle_ajax_get_image_base64' ) );
+        add_action( 'wp_ajax_nopriv_ruteo_get_image_base64', array( $this, 'handle_ajax_get_image_base64' ) );
+
         add_action( 'init', array( $this, 'crear_cuentas_prueba' ) );
     }
 
@@ -1209,6 +1213,46 @@ class WPRuteoApp {
             update_option( 'ruteo_audit_logs', $logs );
         }
         wp_send_json_success( array( 'logs' => $logs ) );
+    }
+
+    public function handle_ajax_get_image_base64() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+        $url = isset( $_POST['url'] ) ? esc_url_raw( wp_unslash( $_POST['url'] ) ) : '';
+        if ( empty( $url ) ) {
+            wp_send_json_error( array( 'message' => 'URL vacia.' ) );
+            return;
+        }
+
+        if ( preg_match( '/\/d\/([a-zA-Z0-9_-]+)/', $url, $matches ) || preg_match( '/[?&]id=([a-zA-Z0-9_-]+)/', $url, $matches ) ) {
+            $file_id = $matches[1];
+            $url     = 'https://drive.google.com/uc?export=view&id=' . $file_id;
+        }
+
+        $response = wp_remote_get( $url, array(
+            'timeout'     => 15,
+            'redirection' => 5,
+            'sslverify'   => false,
+        ) );
+
+        if ( is_wp_error( $response ) ) {
+            wp_send_json_error( array( 'message' => 'Error al obtener la imagen.' ) );
+            return;
+        }
+
+        $code = wp_remote_retrieve_response_code( $response );
+        if ( $code !== 200 ) {
+            wp_send_json_error( array( 'message' => 'Respuesta HTTP ' . $code ) );
+            return;
+        }
+
+        $body = wp_remote_retrieve_body( $response );
+        $type = wp_remote_retrieve_header( $response, 'content-type' );
+        if ( empty( $type ) || strpos( $type, 'image' ) === false ) {
+            $type = 'image/jpeg';
+        }
+
+        $base64 = 'data:' . $type . ';base64,' . base64_encode( $body );
+        wp_send_json_success( array( 'base64' => $base64 ) );
     }
 }
 

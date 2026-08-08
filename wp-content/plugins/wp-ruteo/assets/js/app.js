@@ -1731,33 +1731,52 @@ jQuery(document).ready(function($) {
                 return;
             }
 
-            var driveMatch = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-            var fetchUrl = cleanUrl;
-            if (driveMatch && driveMatch[1]) {
-                fetchUrl = 'https://drive.google.com/uc?export=view&id=' + driveMatch[1];
-            }
-
-            var img = new Image();
-            img.crossOrigin = 'Anonymous';
-            img.onload = function() {
-                try {
-                    var canvas = document.createElement('canvas');
-                    canvas.width = img.naturalWidth || img.width || 400;
-                    canvas.height = img.naturalHeight || img.height || 300;
-                    var ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0);
-                    var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                    resolve({ dataUrl: dataUrl, format: 'JPEG' });
-                } catch(e) {
-                    resolve(null);
+            // Intento 1: Proxy PHP (supera bloqueos CORS de Google Drive)
+            $.post(wpRuteoAjax.ajaxurl, {
+                action: 'ruteo_get_image_base64',
+                nonce: wpRuteoAjax.nonce,
+                url: cleanUrl
+            }).done(function(res) {
+                if (res && res.success && res.data && res.data.base64) {
+                    var fmt = 'JPEG';
+                    if (res.data.base64.indexOf('image/png') !== -1) fmt = 'PNG';
+                    resolve({ dataUrl: res.data.base64, format: fmt });
+                } else {
+                    fallbackClientImageLoad(cleanUrl, resolve);
                 }
-            };
-            img.onerror = function() {
-                resolve(null);
-            };
-            img.src = fetchUrl;
-            setTimeout(function() { resolve(null); }, 3500);
+            }).fail(function() {
+                fallbackClientImageLoad(cleanUrl, resolve);
+            });
         });
+    }
+
+    function fallbackClientImageLoad(cleanUrl, resolve) {
+        var driveMatch = cleanUrl.match(/\/d\/([a-zA-Z0-9_-]+)/) || cleanUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        var fetchUrl = cleanUrl;
+        if (driveMatch && driveMatch[1]) {
+            fetchUrl = 'https://drive.google.com/uc?export=view&id=' + driveMatch[1];
+        }
+
+        var img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = function() {
+            try {
+                var canvas = document.createElement('canvas');
+                canvas.width = img.naturalWidth || img.width || 400;
+                canvas.height = img.naturalHeight || img.height || 300;
+                var ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                var dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                resolve({ dataUrl: dataUrl, format: 'JPEG' });
+            } catch(e) {
+                resolve(null);
+            }
+        };
+        img.onerror = function() {
+            resolve(null);
+        };
+        img.src = fetchUrl;
+        setTimeout(function() { resolve(null); }, 3000);
     }
 
     window.generarDocumentoPDF = function(idx) {
