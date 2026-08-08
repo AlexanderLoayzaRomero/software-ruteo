@@ -235,73 +235,108 @@ function generarGoogleDoc(data, folderId) {
     var doc = DocumentApp.create(docName);
     var body = doc.getBody();
 
-    var titlePara = body.appendParagraph("FICHA TECNICA DE REGISTRO DE CAMPO");
-    titlePara.setBold(true);
-    titlePara.setFontSize(16);
+    // Margenes compactos para garantizar 1 sola hoja
+    body.setMarginTop(24);
+    body.setMarginBottom(24);
+    body.setMarginLeft(28);
+    body.setMarginRight(28);
+
+    // Titulo Encabezado
+    var titlePara = body.appendParagraph("SOFTWARE O&M - FICHA TECNICA DE CAMPO");
+    titlePara.setBold(true).setFontSize(13);
     try {
       if (DocumentApp.ParagraphHeading && DocumentApp.ParagraphHeading.HEADING1) {
         titlePara.setHeading(DocumentApp.ParagraphHeading.HEADING1);
       }
     } catch(hErr) {}
-    body.appendParagraph("Fecha: " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"));
-    body.appendParagraph("Tramo: " + (data.tramo || "-") + " | Codigo: " + (data.codigo || "-") + " | ID Consol: " + (data.id_consol || "-"));
-    body.appendParagraph("");
+    
+    var subPara = body.appendParagraph("Fecha: " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm") + "  |  Tramo: " + (data.tramo || "-") + "  |  ID Consol: " + (data.id_consol || "-"));
+    subPara.setFontSize(8.5).setItalic(true);
 
-    body.appendTable([
-      ["Parametro", "Valor Registrado"],
-      ["Estructura", data.estructura || "-"],
-      ["Tipo Estructura", data.tipo_estructura || "-"],
-      ["Altura", (data.altura_estructura || data.altura || "-") + " m"],
-      ["Ubicacion Coordenadas", data.ubicacion || "-"],
-      ["Codigo", data.codigo || "-"],
-      ["Mufa", data.mufa || "0"],
-      ["Retencion", data.retencion || "0"],
-      ["Suspension", data.suspension || "0"],
-      ["Cruceta", data.cruceta || "0"],
-      ["Hebillas", data.hebillas || "0"],
-      ["Fleje", data.fleje || "0"],
-      ["Amortiguador", data.amortiguador || "0"],
-      ["Brazo Extensor", data.brazo_extensor || "0"],
-      ["Kit Retenida", data.kit_retenida || "0"],
-      ["Observaciones", data.observacion || "-"]
-    ]);
+    // Tabla Compacta de Especificaciones (4 columnas para ahorrar espacio vertical)
+    var specsTableData = [
+      ["ID Consol", data.id_consol || "-", "Codigo Estructura", data.codigo || "-"],
+      ["Estructura", data.estructura || "-", "Tipo Estructura", data.tipo_estructura || "-"],
+      ["Altura", (data.altura_estructura || data.altura || "-") + " m", "Ubicacion Coordenadas", data.ubicacion || "-"],
+      ["Mufa / Herrajes", "Mufa: " + (data.mufa || "0") + " | Ret: " + (data.retencion || "0") + " | Susp: " + (data.suspension || "0"), "Cruceta / Accesorios", "Cruceta: " + (data.cruceta || "0") + " | Fleje: " + (data.fleje || "0") + "m"],
+      ["Amortiguador / Kit", "Amort: " + (data.amortiguador || "0") + " | Kit Ret: " + (data.kit_retenida || "0"), "Hebillas / Extensor", "Hebillas: " + (data.hebillas || "0") + " | Ext: " + (data.brazo_extensor || "0")],
+      ["Observaciones", data.observacion || "-", "Fecha Registro", data.fecha || "-"]
+    ];
 
-    body.appendParagraph("");
-    var headingFotos = body.appendParagraph("EVIDENCIAS FOTOGRAFICAS DE CAMPO");
-    headingFotos.setBold(true).setFontSize(12);
+    var table = body.appendTable(specsTableData);
+    table.setBorderWidth(0.5);
+    table.setBorderColor("#CBD5E1");
 
-    var img1Url = data.foto1_url || data.foto_1 || data.foto1;
-    if (img1Url) {
-      body.appendParagraph("Fotografia 1 - Estructura:").setBold(true);
-      var blob1 = obtenerBlobImagen(img1Url, "foto1.jpg");
-      if (blob1) {
-        try {
-          var imgObj1 = body.appendImage(blob1);
-          imgObj1.setWidth(400);
-          imgObj1.setHeight(300);
-        } catch(e1) {
-          body.appendParagraph("Enlace: " + img1Url);
+    for (var r = 0; r < table.getNumRows(); r++) {
+      var row = table.getRow(r);
+      for (var c = 0; c < row.getNumCells(); c++) {
+        var cell = row.getCell(c);
+        cell.setPaddingTop(2);
+        cell.setPaddingBottom(2);
+        cell.setPaddingLeft(4);
+        cell.setPaddingRight(4);
+        var p = cell.getChild(0).asParagraph();
+        p.setFontSize(8);
+        if (c % 2 === 0) {
+          p.setBold(true);
+          cell.setBackgroundColor("#F1F5F9");
         }
-      } else {
-        body.appendParagraph("Enlace: " + img1Url);
       }
     }
 
+    var headingFotos = body.appendParagraph("\nEVIDENCIAS FOTOGRAFICAS DE CAMPO");
+    headingFotos.setBold(true).setFontSize(10);
+
+    // Tabla de 2 Columnas para colocar Fotos en la Misma Fila lado a lado
+    var photoTableData = [["", ""]];
+    var photoTable = body.appendTable(photoTableData);
+    photoTable.setBorderWidth(0.5);
+    photoTable.setBorderColor("#CBD5E1");
+
+    var cell1 = photoTable.getRow(0).getCell(0);
+    var cell2 = photoTable.getRow(0).getCell(1);
+    
+    cell1.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(4).setPaddingRight(4);
+    cell2.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(4).setPaddingRight(4);
+
+    var img1Url = data.foto1_url || data.foto_1 || data.foto1;
+    var pCell1 = cell1.getChild(0).asParagraph();
+    pCell1.appendParagraph("Fotografia 1 - Estructura").setBold(true).setFontSize(8);
+    if (img1Url) {
+      var blob1 = obtenerBlobImagen(img1Url, "foto1.jpg");
+      if (blob1) {
+        try {
+          var imgObj1 = pCell1.appendImage(blob1);
+          imgObj1.setWidth(235);
+          imgObj1.setHeight(165);
+        } catch(e1) {
+          pCell1.appendParagraph("Enlace: " + img1Url).setFontSize(7);
+        }
+      } else {
+        pCell1.appendParagraph("Enlace: " + img1Url).setFontSize(7);
+      }
+    } else {
+      pCell1.appendParagraph("Sin foto registrada").setFontSize(8).setItalic(true);
+    }
+
     var img2Url = data.foto2_url || data.foto_2 || data.foto2;
+    var pCell2 = cell2.getChild(0).asParagraph();
+    pCell2.appendParagraph("Fotografia 2 - Mufa / Detalle").setBold(true).setFontSize(8);
     if (img2Url) {
-      body.appendParagraph("Fotografia 2 - Mufa / Detalle:").setBold(true);
       var blob2 = obtenerBlobImagen(img2Url, "foto2.jpg");
       if (blob2) {
         try {
-          var imgObj2 = body.appendImage(blob2);
-          imgObj2.setWidth(400);
-          imgObj2.setHeight(300);
+          var imgObj2 = pCell2.appendImage(blob2);
+          imgObj2.setWidth(235);
+          imgObj2.setHeight(165);
         } catch(e2) {
-          body.appendParagraph("Enlace: " + img2Url);
+          pCell2.appendParagraph("Enlace: " + img2Url).setFontSize(7);
         }
       } else {
-        body.appendParagraph("Enlace: " + img2Url);
+        pCell2.appendParagraph("Enlace: " + img2Url).setFontSize(7);
       }
+    } else {
+      pCell2.appendParagraph("Sin foto registrada").setFontSize(8).setItalic(true);
     }
 
     doc.saveAndClose();
