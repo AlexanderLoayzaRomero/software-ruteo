@@ -255,13 +255,20 @@ function generarGoogleDoc(data, folderId) {
 
     // Tabla Compacta de Especificaciones (4 columnas para ahorrar espacio vertical)
     var specsTableData = [
-      ["ID Consol", data.id_consol || "-", "Codigo Estructura", data.codigo || "-"],
-      ["Estructura", data.estructura || "-", "Tipo Estructura", data.tipo_estructura || "-"],
-      ["Altura", (data.altura_estructura || data.altura || "-") + " m", "Ubicacion Coordenadas", data.ubicacion || "-"],
-      ["Mufa / Herrajes", "Mufa: " + (data.mufa || "0") + " | Ret: " + (data.retencion || "0") + " | Susp: " + (data.suspension || "0"), "Cruceta / Accesorios", "Cruceta: " + (data.cruceta || "0") + " | Fleje: " + (data.fleje || "0") + "m"],
-      ["Amortiguador / Kit", "Amort: " + (data.amortiguador || "0") + " | Kit Ret: " + (data.kit_retenida || "0"), "Hebillas / Extensor", "Hebillas: " + (data.hebillas || "0") + " | Ext: " + (data.brazo_extensor || "0")],
-      ["Observaciones", data.observacion || "-", "Fecha Registro", data.fecha || "-"]
+      ["ID Consol", String(data.id_consol || "-"), "Codigo Estructura", String(data.codigo || "-")],
+      ["Estructura", String(data.estructura || "-"), "Tipo Estructura", String(data.tipo_estructura || "-")],
+      ["Altura", String(data.altura_estructura || data.altura || "-") + " m", "Ubicacion Coordenadas", String(data.ubicacion || "-")],
+      ["Mufa / Herrajes", "Mufa: " + String(data.mufa || "0") + " | Ret: " + String(data.retencion || "0") + " | Susp: " + String(data.suspension || "0"), "Cruceta / Accesorios", "Cruceta: " + String(data.cruceta || "0") + " | Fleje: " + String(data.fleje || "0") + "m"],
+      ["Amortiguador / Kit", "Amort: " + String(data.amortiguador || "0") + " | Kit Ret: " + String(data.kit_retenida || "0"), "Hebillas / Extensor", "Hebillas: " + String(data.hebillas || "0") + " | Ext: " + String(data.brazo_extensor || "0")],
+      ["Observaciones", String(data.observacion || "-"), "Fecha Registro", String(data.fecha || "-")]
     ];
+
+    // Sanitizacion de tipos para Google Apps Script DocumentApp.appendTable (evita error String vs Number)
+    for (var stR = 0; stR < specsTableData.length; stR++) {
+      for (var stC = 0; stC < specsTableData[stR].length; stC++) {
+        specsTableData[stR][stC] = String(specsTableData[stR][stC] !== undefined && specsTableData[stR][stC] !== null ? specsTableData[stR][stC] : "-");
+      }
+    }
 
     var table = body.appendTable(specsTableData);
     table.setBorderWidth(0.5);
@@ -288,7 +295,7 @@ function generarGoogleDoc(data, folderId) {
     headingFotos.setBold(true).setFontSize(10);
 
     // Tabla de 2 Columnas para colocar Fotos en la Misma Fila lado a lado
-    var photoTableData = [["", ""]];
+    var photoTableData = [["Fotografia 1 - Estructura", "Fotografia 2 - Mufa / Detalle"]];
     var photoTable = body.appendTable(photoTableData);
     photoTable.setBorderWidth(0.5);
     photoTable.setBorderColor("#CBD5E1");
