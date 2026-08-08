@@ -406,19 +406,22 @@ function generarKMZ(data, folderId) {
                     "Observacion: " + data.observacion + "<br>";
   if (data.foto1_url) descripcion += "<img src='" + data.foto1_url + "' width='300'>";
 
-  var kmlContent = "<?xml version='1.0' UTF-8'?>\n" +
-  "<kml xmlns='http://www.opengis.net/kml/2.2'>\n" +
-  "  <Document>\n" +
-  "    <name>Ruteo_" + nombrePunto + ".kml</name>\n" +
-  "    <Placemark>\n" +
-  "      <name>" + nombrePunto + "</name>\n" +
-  "      <description><![CDATA[" + descripcion + "]]></description>\n" +
-  "      <Point>\n" +
-  "        <coordinates>" + coords + "</coordinates>\n" +
-  "      </Point>\n" +
-  "    </Placemark>\n" +
-  "  </Document>\n" +
-  "</kml>";
+  var safeNombre = String(nombrePunto).replace(/[&<>'"]/g, '');
+  var safeDesc = String(descripcion).replace(/]]>/g, ']]&gt;');
+
+  var kmlContent = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+  '<kml xmlns="http://www.opengis.net/kml/2.2">\n' +
+  '  <Document>\n' +
+  '    <name>Ruteo_' + safeNombre + '.kml</name>\n' +
+  '    <Placemark>\n' +
+  '      <name>' + safeNombre + '</name>\n' +
+  '      <description><![CDATA[' + safeDesc + ']]></description>\n' +
+  '      <Point>\n' +
+  '        <coordinates>' + coords + '</coordinates>\n' +
+  '      </Point>\n' +
+  '    </Placemark>\n' +
+  '  </Document>\n' +
+  '</kml>';
 
   var kmlBlob = Utilities.newBlob(kmlContent, "application/vnd.google-earth.kml+xml", "doc.kml");
   var zipBlob = Utilities.zip([kmlBlob], "Ruteo_" + nombrePunto + ".zip");
