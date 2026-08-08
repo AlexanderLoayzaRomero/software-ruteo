@@ -267,11 +267,41 @@ function generarGoogleDoc(data, folderId) {
     ]);
 
     body.appendParagraph("");
-    if (data.foto1_url || data.foto_1) {
-      body.appendParagraph("Fotografia 1: " + (data.foto1_url || data.foto_1));
+    var headingFotos = body.appendParagraph("EVIDENCIAS FOTOGRAFICAS DE CAMPO");
+    headingFotos.setBold(true).setFontSize(12);
+
+    var img1Url = data.foto1_url || data.foto_1 || data.foto1;
+    if (img1Url) {
+      body.appendParagraph("Fotografia 1 - Estructura:").setBold(true);
+      var blob1 = obtenerBlobImagen(img1Url, "foto1.jpg");
+      if (blob1) {
+        try {
+          var imgObj1 = body.appendImage(blob1);
+          imgObj1.setWidth(400);
+          imgObj1.setHeight(300);
+        } catch(e1) {
+          body.appendParagraph("Enlace: " + img1Url);
+        }
+      } else {
+        body.appendParagraph("Enlace: " + img1Url);
+      }
     }
-    if (data.foto2_url || data.foto_2) {
-      body.appendParagraph("Fotografia 2: " + (data.foto2_url || data.foto_2));
+
+    var img2Url = data.foto2_url || data.foto_2 || data.foto2;
+    if (img2Url) {
+      body.appendParagraph("Fotografia 2 - Mufa / Detalle:").setBold(true);
+      var blob2 = obtenerBlobImagen(img2Url, "foto2.jpg");
+      if (blob2) {
+        try {
+          var imgObj2 = body.appendImage(blob2);
+          imgObj2.setWidth(400);
+          imgObj2.setHeight(300);
+        } catch(e2) {
+          body.appendParagraph("Enlace: " + img2Url);
+        }
+      } else {
+        body.appendParagraph("Enlace: " + img2Url);
+      }
     }
 
     doc.saveAndClose();
@@ -409,4 +439,48 @@ function generarDocumentosTodosLosRegistros() {
       sheet.getRange(i + 1, docxColIndex + 1).setValue(docUrl);
     }
   }
+}
+
+function obtenerBlobImagen(inputStr, defaultName) {
+  if (!inputStr || typeof inputStr !== 'string') return null;
+  var str = inputStr.trim();
+  if (!str) return null;
+
+  if (str.indexOf('data:image/') === 0) {
+    try {
+      var parts = str.split(',');
+      var header = parts[0];
+      var base64Data = parts[1];
+      var mime = 'image/jpeg';
+      if (header.indexOf('image/png') !== -1) mime = 'image/png';
+      else if (header.indexOf('image/webp') !== -1) mime = 'image/webp';
+      var decoded = Utilities.base64Decode(base64Data);
+      return Utilities.newBlob(decoded, mime, defaultName);
+    } catch(e) {
+      Logger.log("Error decodificando Base64: " + e.toString());
+    }
+  }
+
+  var driveMatch = str.match(/\/d\/([a-zA-Z0-9_-]+)/) || str.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (driveMatch && driveMatch[1]) {
+    try {
+      var file = DriveApp.getFileById(driveMatch[1]);
+      return file.getBlob();
+    } catch(eDrive) {
+      Logger.log("Error obteniendo archivo Drive: " + eDrive.toString());
+    }
+  }
+
+  if (str.indexOf('http://') === 0 || str.indexOf('https://') === 0) {
+    try {
+      var resp = UrlFetchApp.fetch(str, { muteHttpExceptions: true });
+      if (resp.getResponseCode() === 200) {
+        return resp.getBlob();
+      }
+    } catch(eFetch) {
+      Logger.log("Error obteniendo URL externa: " + eFetch.toString());
+    }
+  }
+
+  return null;
 }
