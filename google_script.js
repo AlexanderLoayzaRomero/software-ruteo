@@ -446,11 +446,12 @@ function obtenerBlobImagen(inputStr, defaultName) {
   var str = inputStr.trim();
   if (!str) return null;
 
+  // 1. Formato Base64
   if (str.indexOf('data:image/') === 0) {
     try {
       var parts = str.split(',');
       var header = parts[0];
-      var base64Data = parts[1];
+      var base64Data = parts[1] || parts[0];
       var mime = 'image/jpeg';
       if (header.indexOf('image/png') !== -1) mime = 'image/png';
       else if (header.indexOf('image/webp') !== -1) mime = 'image/webp';
@@ -461,24 +462,43 @@ function obtenerBlobImagen(inputStr, defaultName) {
     }
   }
 
-  var driveMatch = str.match(/\/d\/([a-zA-Z0-9_-]+)/) || str.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (driveMatch && driveMatch[1]) {
+  // 2. Extraer ID de archivo de Google Drive (coincide con cualquier patron de URL o ID puro)
+  var idMatch = str.match(/\/d\/([a-zA-Z0-9_-]{20,})/) || 
+                str.match(/[?&]id=([a-zA-Z0-9_-]{20,})/) || 
+                str.match(/^([a-zA-Z0-9_-]{25,50})$/);
+  
+  var fileId = idMatch ? idMatch[1] : null;
+  if (!fileId && str.indexOf('google.com') !== -1) {
+    var rawMatch = str.match(/([a-zA-Z0-9_-]{28,45})/);
+    if (rawMatch) fileId = rawMatch[1];
+  }
+
+  if (fileId) {
     try {
-      var file = DriveApp.getFileById(driveMatch[1]);
-      return file.getBlob();
+      var file = DriveApp.getFileById(fileId);
+      if (file) {
+        var blob = file.getBlob();
+        if (blob && blob.getContentType() && blob.getContentType().indexOf('image') !== -1) {
+          return blob;
+        }
+      }
     } catch(eDrive) {
-      Logger.log("Error obteniendo archivo Drive: " + eDrive.toString());
+      Logger.log("Error obteniendo archivo Drive por ID " + fileId + ": " + eDrive.toString());
     }
   }
 
+  // 3. Descarga de URL HTTP/HTTPS externa
   if (str.indexOf('http://') === 0 || str.indexOf('https://') === 0) {
     try {
       var resp = UrlFetchApp.fetch(str, { muteHttpExceptions: true });
       if (resp.getResponseCode() === 200) {
-        return resp.getBlob();
+        var b = resp.getBlob();
+        if (b && b.getContentType() && b.getContentType().indexOf('image') !== -1) {
+          return b;
+        }
       }
     } catch(eFetch) {
-      Logger.log("Error obteniendo URL externa: " + eFetch.toString());
+      Logger.log("Error UrlFetch imagen: " + eFetch.toString());
     }
   }
 

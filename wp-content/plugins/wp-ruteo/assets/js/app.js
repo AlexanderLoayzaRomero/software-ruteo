@@ -1649,26 +1649,30 @@ jQuery(document).ready(function($) {
     window.abrirODocumentoGoogleDocs = function(idx) {
         var raw = window._ruteoRegistros ? window._ruteoRegistros[idx] : null; if (!raw) return;
         var r = normalizarRegistro(raw);
-        if (r.link_docx && r.link_docx.length > 5) {
-            window.open(r.link_docx, '_blank');
-            return;
-        }
         var win = window.open('about:blank', '_blank');
         if (win) {
-            win.document.write('<div style="font-family:sans-serif; padding:40px; text-align:center; color:#0097D8;"><h2>Generando documento Google Docs en Drive...</h2><p>Por favor espere unos segundos mientras se abre en Google Drive.</p></div>');
+            win.document.write('<div style="font-family:sans-serif; padding:40px; text-align:center; color:#0097D8;"><h2>Generando Ficha Tecnica en Google Docs con imagenes...</h2><p>Por favor espere unos segundos mientras se incrustan las evidencias fotograficas y se abre en Google Drive.</p></div>');
         }
+        var recordPayload = $.extend({}, r, {
+            foto1_url: r.foto_1 || r.foto1_url || '',
+            foto2_url: r.foto_2 || r.foto2_url || ''
+        });
         var fd = new FormData();
         fd.append('action', 'ruteo_proxy_post');
         fd.append('nonce', wpRuteoAjax.nonce);
-        fd.append('payload', JSON.stringify({ action_type: 'create_doc', record: r }));
+        fd.append('payload', JSON.stringify({ action_type: 'create_doc', record: recordPayload }));
         fetch(wpRuteoAjax.ajaxurl, { method: 'POST', body: fd })
         .then(function(res) { return res.json(); })
         .then(function(json) {
-            var docUrl = (json.success && json.data) ? (typeof json.data === 'string' ? JSON.parse(json.data).doc_url : json.data.doc_url) : '';
-            if (win) win.location.href = docUrl || 'https://drive.google.com/drive/folders/1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
+            var docUrl = '';
+            if (json.success && json.data) {
+                var parsed = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
+                docUrl = parsed.doc_url || parsed.url || '';
+            }
+            if (win) win.location.href = docUrl || r.link_docx || 'https://drive.google.com/drive/folders/1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
         })
         .catch(function() {
-            if (win) win.location.href = 'https://drive.google.com/drive/folders/1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
+            if (win) win.location.href = r.link_docx || 'https://drive.google.com/drive/folders/1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
         });
     };
     window.generarDocumentoWord = window.abrirODocumentoGoogleDocs;
