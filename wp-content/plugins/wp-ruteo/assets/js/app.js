@@ -997,9 +997,11 @@ jQuery(document).ready(function($) {
         $('#form-negativa-tecnico, #form-negativa-supervisor, #negativa-firma-simple, #btn-negativa-exportar-pdf').hide();
 
         if (!registro) {
-            $('#negativa-estado-badge').text('');
+            $('#negativa-estado-badge').text('Sin firmar (Nueva Negativa)');
             $('#neg-preview1, #neg-preview2').removeClass('show').css('background-image', 'none');
             $('#neg-foto1, #neg-foto2').val('').closest('.ruteo-photo-upload').removeClass('has-file');
+            if ($('#form-negativa-tecnico')[0]) $('#form-negativa-tecnico')[0].reset();
+            $('#form-negativa-tecnico').find('.is-invalid').removeClass('is-invalid').css('border-color', '');
             $('#form-negativa-tecnico').show();
             return;
         }
