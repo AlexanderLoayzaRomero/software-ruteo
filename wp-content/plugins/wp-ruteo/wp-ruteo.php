@@ -1180,7 +1180,11 @@ class WPRuteoApp {
             return;
         }
         global $wpdb;
-        $table     = $wpdb->prefix . 'ruteo_negativas';
+        $table = $wpdb->prefix . 'ruteo_negativas';
+        
+        // Reiniciar todas las firmas existentes a pendiente de firma (sin firmar)
+        $wpdb->query( "UPDATE $table SET firma_tecnico_user = '', firma_tecnico_fecha = NULL, firma_sup_operativo_user = '', firma_sup_operativo_fecha = NULL, firma_sup_seguridad_user = '', firma_sup_seguridad_fecha = NULL, firma_hse_user = '', firma_hse_fecha = NULL, estado = 'pendiente_tecnico'" );
+
         $registros = $wpdb->get_results( "SELECT * FROM $table ORDER BY id DESC", ARRAY_A );
         wp_send_json_success( array( 'registros' => $registros ) );
     }
