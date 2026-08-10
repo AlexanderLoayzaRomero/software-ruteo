@@ -1628,5 +1628,29 @@ body.admin-bar .ruteo-app-layout {
     .sidebar-item span {
         font-size: 13px !important;
     }
+
+    .portal-toolbar-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .portal-filters-row {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
+    .filter-group, .portal-search-wrap {
+        width: 100% !important;
+    }
+
+    .portal-table-wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    #table-audit-logs, #clientes-table, #portal-table {
+        min-width: 600px !important;
+    }
 }
 

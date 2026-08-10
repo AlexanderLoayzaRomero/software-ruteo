@@ -461,6 +461,8 @@ class WPRuteoApp {
             ) );
         }
 
+        self::registrar_log( 'Registro de Campo', 'Nuevo registro de campo guardado para tramo: ' . $data['tramo'] . ' (Estructura ' . $data['codigo'] . ')' );
+
         wp_send_json_success( array(
             'message' => 'Datos de ruteo guardados correctamente.',
             'time'    => current_time( 'mysql' ),
@@ -517,6 +519,8 @@ class WPRuteoApp {
         if ( ! is_array( $signer_caps ) ) {
             $signer_caps = array();
         }
+
+        self::registrar_log( 'Inicio de Sesion', 'El usuario ' . $user->display_name . ' (' . $user->user_login . ') inicio sesion en el aplicativo.' );
 
         wp_send_json_success( array(
             'message' => 'Inicio de sesion exitoso.',
@@ -882,6 +886,8 @@ class WPRuteoApp {
         array_unshift( $materiales, $new_report );
         update_option( 'wp_ruteo_materiales_store', $materiales );
 
+        self::registrar_log( 'Consumo Materiales', 'Se registro reporte de materiales para incidencia ' . $incidencia . ' (' . $almacen_pm . ')' );
+
         // Enviar copia a Google Apps Script
         if ( $this->webhook_url ) {
             $payload = array(
@@ -1158,6 +1164,8 @@ class WPRuteoApp {
         }
 
         $registro = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ), ARRAY_A );
+
+        self::registrar_log( 'Negativa al Trabajo', 'Firma y actualizacion de etapa ' . strtoupper($etapa) . ' para registro ID #' . $id );
 
         wp_send_json_success( array(
             'message'  => 'Etapa guardada correctamente.',
