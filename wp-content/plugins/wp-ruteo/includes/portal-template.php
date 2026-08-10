@@ -1476,12 +1476,20 @@ body.admin-bar .ruteo-app-layout {
                             <h3 style="margin:0; font-size:18px; font-weight:700;">Historial de Auditoria y Registro de Actividades</h3>
                             <p style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);">Trazabilidad en tiempo real de inicios de sesion, firmas y cambios en el sistema</p>
                         </div>
-                        <button type="button" class="portal-btn portal-btn--refresh" id="btn-refresh-audit-logs">
-                            <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-                            </svg>
-                            Actualizar Logs
-                        </button>
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                            <div class="portal-search-wrap" style="max-width:240px;">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input type="text" id="audit-log-search" placeholder="Buscar en logs...">
+                            </div>
+                            <button type="button" class="portal-btn portal-btn--refresh" id="btn-refresh-audit-logs">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                Actualizar Logs
+                            </button>
+                        </div>
                     </div>
                     <div class="portal-table-wrapper" style="margin-top:16px;">
                         <table class="portal-table" id="table-audit-logs">

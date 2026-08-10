@@ -1926,6 +1926,7 @@ jQuery(document).ready(function($) {
         $tbody.html('<tr><td colspan="4" style="text-align:center; padding:20px;">Cargando registros de auditoria...</td></tr>');
         $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_get_logs', nonce: wpRuteoAjax.nonce }, function(res) {
             if (res.success && res.data && res.data.logs) {
+                window.ruteoAuditLogsCache = res.data.logs;
                 renderTablaAuditLogs(res.data.logs);
             } else {
                 $tbody.html('<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No se pudieron obtener los logs de auditoria.</td></tr>');
@@ -1950,6 +1951,20 @@ jQuery(document).ready(function($) {
             $tbody.append(tr);
         });
     }
+
+    $('#audit-log-search').on('input', function() {
+        var query = $(this).val().toLowerCase().trim();
+        var allLogs = window.ruteoAuditLogsCache || [];
+        if (!query) {
+            renderTablaAuditLogs(allLogs);
+            return;
+        }
+        var filtered = allLogs.filter(function(l) {
+            var haystack = (l.fecha + ' ' + l.usuario + ' ' + l.accion + ' ' + (l.detalle || '')).toLowerCase();
+            return haystack.indexOf(query) !== -1;
+        });
+        renderTablaAuditLogs(filtered);
+    });
 
     $('#btn-refresh-audit-logs').on('click', cargarAuditLogs);
 
