@@ -1117,12 +1117,16 @@ class WPRuteoApp {
                 }
             }
 
-            $inserted = $wpdb->insert( $table, $campos );
-            if ( false === $inserted ) {
-                wp_send_json_error( array( 'message' => 'Error al guardar en base de datos: ' . $wpdb->last_error ) );
-                return;
+            if ( $id > 0 ) {
+                $wpdb->update( $table, $campos, array( 'id' => $id ) );
+            } else {
+                $inserted = $wpdb->insert( $table, $campos );
+                if ( false === $inserted ) {
+                    wp_send_json_error( array( 'message' => 'Error al guardar en base de datos: ' . $wpdb->last_error ) );
+                    return;
+                }
+                $id = $wpdb->insert_id;
             }
-            $id = $wpdb->insert_id;
 
         } elseif ( $etapa === 'supervisor' ) {
             $wpdb->update( $table, array(

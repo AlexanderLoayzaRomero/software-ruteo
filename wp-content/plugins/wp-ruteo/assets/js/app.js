@@ -1031,7 +1031,29 @@ jQuery(document).ready(function($) {
 
         var puedeActuar = negativaPuedeActuar(registro.estado);
 
-        if (registro.estado === 'pendiente_supervisor') {
+        if (registro.estado === 'pendiente_tecnico') {
+            if (puedeActuar) {
+                var $ft = $('#form-negativa-tecnico');
+                $ft.find('select[name="cliente_nombre"]').val(registro.cliente_nombre || 'CYMTEL');
+                $ft.find('input[name="proceso"]').val(registro.proceso || '');
+                $ft.find('input[name="cm_localidad"]').val(registro.cm_localidad || '');
+                $ft.find('input[name="contratista"]').val(registro.contratista || '');
+                $ft.find('input[name="sub_contratista"]').val(registro.sub_contratista || '');
+                $ft.find('select[name="relacionado_a"]').val(registro.relacionado_a || 'PEXT');
+                $ft.find('input[name="lugar_trabajo"]').val(registro.lugar_trabajo || '');
+                $ft.find('input[name="fecha"]').val(registro.fecha || '');
+                $ft.find('input[name="hora_inicio"]').val(registro.hora_inicio || '');
+                $ft.find('input[name="hora_fin"]').val(registro.hora_fin || '');
+                $ft.find('input[name="total_horas"]').val(registro.total_horas || '');
+                $ft.find('input[name="supervisor_operativo_nombre"]').val(registro.supervisor_operativo_nombre || '');
+                $ft.find('input[name="trabajador_reportante"]').val(registro.trabajador_reportante || '');
+                $ft.find('textarea[name="razones_negativa"]').val(registro.razones_negativa || '');
+                $ft.show();
+            } else {
+                $('#negativa-firma-simple-texto').text('Esperando firma del Tecnico Reportante.');
+                $('#negativa-firma-simple').show().find('button').hide();
+            }
+        } else if (registro.estado === 'pendiente_supervisor') {
             if (puedeActuar) {
                 var $fs = $('#form-negativa-supervisor');
                 $fs.find('select[name="cliente_nombre"]').val(registro.cliente_nombre || 'CYMTEL');
@@ -1125,6 +1147,9 @@ jQuery(document).ready(function($) {
         fd.append('action', 'ruteo_negativa_guardar');
         fd.append('nonce', wpRuteoAjax.nonce);
         fd.append('etapa', 'tecnico');
+        if (negativaActual && negativaActual.id) {
+            fd.append('id', negativaActual.id);
+        }
         $.ajax({
             url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
             success: function(res) {
