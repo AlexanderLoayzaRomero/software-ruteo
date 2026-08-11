@@ -97,7 +97,7 @@ body.admin-bar .ruteo-app-layout {
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
                 </svg>
-                <span>Registros</span>
+                <span>Registros de Ruteo</span>
             </button>
 
             <button class="sidebar-item" data-tab="formulario">
@@ -118,7 +118,7 @@ body.admin-bar .ruteo-app-layout {
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                <span>SLA e Informes</span>
+                <span>Informes</span>
             </button>
 
             <button class="sidebar-item" data-tab="negativa">
@@ -345,7 +345,7 @@ body.admin-bar .ruteo-app-layout {
                                     </svg>
                                 </div>
                                 <div class="btn-card-text">
-                                    <span class="card-text-title">SLA e Informes</span>
+                                    <span class="card-text-title">Informes</span>
                                     <span class="card-text-sub">Generar formatos de mantenimiento</span>
                                 </div>
                             </button>

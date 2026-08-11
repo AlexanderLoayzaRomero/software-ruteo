@@ -283,10 +283,10 @@ jQuery(document).ready(function($) {
 
         var titleMap = {
             'inicio': 'Panel de Administracion',
-            'registros': 'Registros de Campo',
+            'registros': 'Registros de Ruteo',
             'formulario': 'Nuevo Registro de Campo',
             'materiales': 'Consumo de Materiales',
-            'sla-informes': 'SLA e Informes de Mantenimiento',
+            'sla-informes': 'Informes',
             'auditoria': 'Historial de Auditoria y Logs',
             'usuarios': 'Gestion de Cuentas de Usuario',
             'perfil': 'Perfil de Usuario',
@@ -2009,6 +2009,7 @@ jQuery(document).ready(function($) {
         cargarDatosPortal(false);
         cargarMateriales();
         cargarUsuarios();
+        cargarNegativas();
     }
 
     window.abrirODocumentoGoogleDocs = function(idx) {
@@ -2329,17 +2330,94 @@ jQuery(document).ready(function($) {
 
     $('#btn-refresh-audit-logs').on('click', cargarAuditLogs);
 
-    // EXPORTAR A EXCEL / CSV CON BOM UTF-8
+    // EXPORTAR A EXCEL MULTI-HOJA (.XLSX CON PESTAÑA PARA NEGATIVAS)
     function exportarCSVRegistros() {
         var registros = window._ruteoRegistros || [];
-        if (!registros.length) {
-            alert('No hay registros de campo para exportar a Excel.');
+        var materiales = window.allMaterialesList || [];
+        var negativas = window.ruteoNegativasCache || [];
+
+        if (!registros.length && !materiales.length && !negativas.length) {
+            alert('No hay registros para exportar a Excel.');
             return;
         }
 
+        if (typeof XLSX !== 'undefined') {
+            var wb = XLSX.utils.book_new();
+
+            // 1. HOJA 1: Registros de Ruteo
+            var headersRegistros = ['Fecha', 'Tramo', 'ID Consol', 'Estructura', 'Tipo Estructura', 'Altura (m)', 'Codigo', 'Ubicacion', 'Mufa', 'Retencion', 'Suspension', 'Cruceta', 'Observaciones'];
+            var rowsRegistros = [headersRegistros];
+            registros.forEach(function(raw) {
+                var r = normalizarRegistro(raw);
+                rowsRegistros.push([
+                    r.fecha || '',
+                    r.tramo || '',
+                    r.id_consol || '',
+                    r.estructura || '',
+                    r.tipo_estructura || '',
+                    r.altura || '',
+                    r.codigo || '',
+                    r.ubicacion || '',
+                    r.mufa || '0',
+                    r.retencion || '0',
+                    r.suspension || '0',
+                    r.cruceta || '0',
+                    r.observacion || ''
+                ]);
+            });
+            var wsRegistros = XLSX.utils.aoa_to_sheet(rowsRegistros);
+            XLSX.utils.book_append_sheet(wb, wsRegistros, "Registros de Ruteo");
+
+            // 2. HOJA 2: Consumo de Materiales
+            var headersMateriales = ['ID', 'Fecha', 'Codigo Material', 'Descripcion Material', 'Cantidad', 'Unidad', 'Tramo', 'Tecnico / Reportante', 'Fecha Registro'];
+            var rowsMateriales = [headersMateriales];
+            materiales.forEach(function(m) {
+                rowsMateriales.push([
+                    m.id || '',
+                    m.fecha || '',
+                    m.codigo_material || '',
+                    m.descripcion_material || '',
+                    m.cantidad || 0,
+                    m.unidad || '',
+                    m.tramo || '',
+                    m.usuario_nombre || '',
+                    m.created_at || ''
+                ]);
+            });
+            var wsMateriales = XLSX.utils.aoa_to_sheet(rowsMateriales);
+            XLSX.utils.book_append_sheet(wb, wsMateriales, "Consumo de Materiales");
+
+            // 3. HOJA 3: Negativas al Trabajo (¡NUEVA PÁGINA EN EXCEL!)
+            var headersNegativas = ['ID', 'Fecha Registro', 'Estado', 'Cliente', 'Proceso / Proyecto', 'Lugar de Trabajo', 'Trabajador Reportante', 'Razones de Negativa', 'Supervisor Operativo', 'Medidas Correctivas', 'Acuerdo Inseguro (SI/NO)', 'Supervisor Seguridad', 'Dictamen HSE'];
+            var rowsNegativas = [headersNegativas];
+            negativas.forEach(function(n) {
+                rowsNegativas.push([
+                    n.id || '',
+                    n.created_at || '',
+                    negativaEstadoLabel(n.estado) || n.estado || '',
+                    n.cliente_nombre || 'CYMTEL',
+                    n.proceso || '',
+                    n.lugar_trabajo || '',
+                    n.trabajador_reportante || n.firma_tecnico_user || '',
+                    n.razones_negativa || '',
+                    n.supervisor_operativo_nombre || n.firma_sup_operativo_user || '',
+                    n.medidas_correctivas || '',
+                    n.satisface_negativa || '',
+                    n.firma_sup_seguridad_user || '',
+                    n.dictamen_hse || ''
+                ]);
+            });
+            var wsNegativas = XLSX.utils.aoa_to_sheet(rowsNegativas);
+            XLSX.utils.book_append_sheet(wb, wsNegativas, "Negativas al Trabajo");
+
+            var filename = 'Consolidado_Ruteo_OM_' + new Date().toISOString().slice(0,10) + '.xlsx';
+            XLSX.writeFile(wb, filename);
+            return;
+        }
+
+        // Fallback CSV en caso de no tener libreria XLSX cargada
         var headers = ['Fecha', 'Tramo', 'ID Consol', 'Estructura', 'Tipo Estructura', 'Altura (m)', 'Codigo', 'Ubicacion', 'Mufa', 'Retencion', 'Suspension', 'Cruceta', 'Observaciones'];
         var rows = [headers];
-
         registros.forEach(function(raw) {
             var r = normalizarRegistro(raw);
             rows.push([
@@ -2358,13 +2436,12 @@ jQuery(document).ready(function($) {
                 '"' + (r.observacion || '').replace(/"/g, '""') + '"'
             ]);
         });
-
         var csvContent = '\uFEFF' + rows.map(function(e) { return e.join(','); }).join('\n');
         var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        var filename = 'Registros_Campo_OM_' + new Date().toISOString().slice(0,10) + '.csv';
+        var filenameCsv = 'Registros_Campo_OM_' + new Date().toISOString().slice(0,10) + '.csv';
 
         if (typeof window.downloadBlobRuteo === 'function') {
-            window.downloadBlobRuteo(blob, filename);
+            window.downloadBlobRuteo(blob, filenameCsv);
         }
     }
 
