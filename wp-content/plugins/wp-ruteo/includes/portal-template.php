@@ -731,10 +731,11 @@ body.admin-bar .ruteo-app-layout {
                                         <th>Descripcion</th>
                                         <th>Materiales</th>
                                         <th>Usuario</th>
+                                        <th>Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="mat-reports-tbody">
-                                    <tr><td colspan="7" style="text-align:center; padding: 20px;">Cargando historial de materiales...</td></tr>
+                                    <tr><td colspan="8" style="text-align:center; padding: 20px;">Cargando historial de materiales...</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1050,10 +1051,20 @@ body.admin-bar .ruteo-app-layout {
                         <div id="negativa-msg" class="ruteo-message"></div>
                     </div>
 
-                    <button type="button" id="btn-negativa-exportar-pdf" class="btn-secondary" style="display:none; margin-top:16px; gap:8px;">
-                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-                        <span>Exportar Negativa a PDF (Formato HSE-RE-NEG-01)</span>
-                    </button>
+                    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
+                        <button type="button" id="btn-negativas-exportar-excel" class="btn-secondary" style="gap:8px; display:inline-flex; align-items:center;">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>Exportar Todas las Negativas a Excel (.xlsx)</span>
+                        </button>
+                        <button type="button" id="btn-negativa-guardar-drive" class="btn-secondary" style="gap:8px; display:inline-flex; align-items:center;">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/></svg>
+                            <span>Guardar Negativa en Google Drive ☁️</span>
+                        </button>
+                        <button type="button" id="btn-negativa-exportar-pdf" class="btn-secondary" style="display:none; gap:8px;">
+                            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                            <span>Exportar Negativa Actual a PDF (Formato HSE-RE-NEG-01)</span>
+                        </button>
+                    </div>
                     <div id="negativa-pdf-notice" style="display:none; font-size:12.5px; color:var(--text-muted); background:var(--bg-subtle); padding:10px 14px; border-radius:8px; border:1px solid var(--border); margin-top:16px;">
                         La exportacion a PDF (Formato HSE-RE-NEG-01) estara disponible cuando se tengan todas las firmas completas (Visto Bueno final del Area HSE).
                     </div>
@@ -1463,7 +1474,11 @@ body.admin-bar .ruteo-app-layout {
                         </svg>
                     </div>
                     <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
-                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 24px 0;">Debes iniciar sesion para ver la auditoria de actividades del sistema.</p>
+                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 18px 0;">Debes iniciar sesion para ver la auditoria de actividades del sistema.</p>
+                    <button type="button" class="portal-btn portal-btn--purple" data-goto="login" style="gap:8px; display:inline-flex; align-items:center; margin:0 auto;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                        <span>Ir a Iniciar Sesion</span>
+                    </button>
                 </div>
             </div>
 
@@ -1475,7 +1490,17 @@ body.admin-bar .ruteo-app-layout {
                             <p style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);">Trazabilidad en tiempo real de inicios de sesion, firmas y cambios en el sistema</p>
                         </div>
                         <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                            <div class="portal-search-wrap" style="max-width:240px;">
+                            <div class="filter-group" style="margin:0;">
+                                <select id="audit-filter-action" style="padding:6px 12px; font-size:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
+                                    <option value="">Todas las acciones</option>
+                                </select>
+                            </div>
+                            <div class="filter-group" style="margin:0;">
+                                <select id="audit-filter-user" style="padding:6px 12px; font-size:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
+                                    <option value="">Todos los usuarios</option>
+                                </select>
+                            </div>
+                            <div class="portal-search-wrap" style="max-width:200px;">
                                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
                                 </svg>
@@ -1557,51 +1582,209 @@ body.admin-bar .ruteo-app-layout {
                 <div class="modal-body">
                     <p id="sla-modal-desc" style="color:var(--text-muted); margin-bottom:16px;">Complete los detalles para generar el documento estandarizado.</p>
                     <form id="form-generar-sla">
-                        <div class="form-group" style="margin-bottom:14px;">
-                            <label>Tramo de Intervencion</label>
-                            <div class="input-wrapper">
-                                <input type="text" id="sla-input-tramo" placeholder="Ej: Tramo Cusco - Sicuani" list="sla-tramos-list" autocomplete="off" required>
-                                <datalist id="sla-tramos-list">
-                                    <option value="Tramo Cusco - Sicuani">
-                                    <option value="Urubamba - Quillabamba">
-                                    <option value="Tramo Cusco - Abancay">
-                                    <option value="Tramo A">
-                                    <option value="Tramo B">
-                                    <option value="Tramo C">
-                                </datalist>
+                        <div class="ruteo-fields-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                            <div class="form-group">
+                                <label>Titulo del Informe / Incidencia</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="sla-input-titulo" placeholder="Ej: PERDIDA DE ENLACE MOYOBAMBA-MENDOZA" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>No. de Incidencia / Ticket</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="sla-input-incidencia" placeholder="Ej: 101-2026-RI-N2-RDNFO-DIOP" list="sla-tickets-list" autocomplete="off" required>
+                                    <datalist id="sla-tickets-list"></datalist>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Tramo / Nodos Afectados</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="sla-input-tramo" placeholder="Ej: Nodo Moyobamba - Nodo Mendoza" list="sla-tramos-list" autocomplete="off" required>
+                                    <datalist id="sla-tramos-list"></datalist>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Responsable / Supervisor O&M</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="sla-input-tecnico" placeholder="Ej: Elquin Castillo Siccha" list="sla-tecnicos-list" autocomplete="off" required>
+                                    <datalist id="sla-tecnicos-list"></datalist>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Causa Tipificada / Causa Real</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="sla-input-causa" placeholder="Ej: Dano por vandalismo (machetazo)" value="Dano por vandalismo (machetazo)">
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Detalle Resumen Ejecutivo y Acciones</label>
+                                <div class="input-wrapper">
+                                    <textarea id="sla-input-detalle" rows="3" placeholder="Escriba el resumen ejecutivo, cronologia y acciones correctivas realizadas..."></textarea>
+                                </div>
                             </div>
                         </div>
-                        <div class="form-group" style="margin-bottom:14px;">
-                            <label>No. de Incidencia / Ticket</label>
-                            <div class="input-wrapper">
-                                <input type="text" id="sla-input-incidencia" placeholder="Ej: INC-90412" list="sla-tickets-list" autocomplete="off" required>
-                                <datalist id="sla-tickets-list">
-                                    <option value="INC-90412">
-                                    <option value="INC-78093">
-                                    <option value="INC-65410">
-                                </datalist>
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-bottom:14px;">
-                            <label>Responsable / Tecnico</label>
-                            <div class="input-wrapper">
-                                <input type="text" id="sla-input-tecnico" placeholder="Nombre del responsable" list="sla-tecnicos-list" autocomplete="off" required>
-                                <datalist id="sla-tecnicos-list">
-                                </datalist>
-                            </div>
-                        </div>
-                        <div class="form-group" style="margin-bottom:20px;">
-                            <label>Detalle o Resumen del Informe</label>
-                            <div class="input-wrapper">
-                                <textarea id="sla-input-detalle" rows="3" placeholder="Escriba los hallazgos o acciones realizadas..."></textarea>
-                            </div>
-                        </div>
-                        <div style="display:flex; gap:12px; justify-content:flex-end;">
+                        <div style="margin-top:20px; display:flex; gap:12px; justify-content:flex-end;">
                             <button type="button" class="portal-btn portal-btn--refresh" id="btn-cancel-sla-modal">Cancelar</button>
-                            <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
-                                <span>Generar Documento</span>
+                            <button type="submit" class="ruteo-submit-btn" style="min-width:180px;">
+                                <span>📄 Generar PDF Oficial</span>
                             </button>
                         </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DE EDICION DE REGISTRO DE RUTEO -->
+        <div class="ruteo-modal-overlay" id="edit-registro-modal-overlay" style="display:none;">
+            <div class="ruteo-modal-card animate-fade-in" style="max-width: 680px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h3>Editar Registro de Ruteo</h3>
+                    <button type="button" class="btn-close-modal" id="btn-close-edit-registro-modal" title="Cerrar">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-editar-registro">
+                        <input type="hidden" id="edit-reg-idx" value="-1">
+                        <div class="ruteo-fields-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;">
+                            <div class="form-group">
+                                <label>Tramo de Intervencion</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-reg-tramo" required list="sla-tramos-list">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>ID Consolidado</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-reg-id-consol" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Estructura</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-reg-estructura" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Tipo de Estructura</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-reg-tipo-estructura">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Altura (m)</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-reg-altura">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Codigo de Estructura</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-reg-codigo">
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Ubicacion / Coordenadas</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-reg-ubicacion">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Mufa</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="edit-reg-mufa" value="0">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Retencion</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="edit-reg-retencion" value="0">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Suspension</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="edit-reg-suspension" value="0">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Cruceta</label>
+                                <div class="input-wrapper">
+                                    <input type="number" id="edit-reg-cruceta" value="0">
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Observaciones Tecnicas</label>
+                                <div class="input-wrapper">
+                                    <textarea id="edit-reg-observacion" rows="3" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:12px;">
+                            <button type="button" class="portal-btn portal-btn--refresh" id="btn-cancel-edit-registro">Cancelar</button>
+                            <button type="submit" class="ruteo-submit-btn" style="min-width:160px;">
+                                <span>Guardar Cambios</span>
+                            </button>
+                        </div>
+                        <div id="edit-reg-msg" class="ruteo-message" style="margin-top:12px;"></div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL DE EDICION DE CONSUMO DE MATERIALES -->
+        <div class="ruteo-modal-overlay" id="edit-material-modal-overlay" style="display:none;">
+            <div class="ruteo-modal-card animate-fade-in" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                <div class="modal-header">
+                    <h3>Editar Reporte de Consumo de Materiales</h3>
+                    <button type="button" class="btn-close-modal" id="btn-close-edit-material-modal" title="Cerrar">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="form-editar-material">
+                        <input type="hidden" id="edit-mat-id" value="">
+                        <div class="ruteo-fields-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px;">
+                            <div class="form-group">
+                                <label>Ticket INC / CRQ</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-mat-incidencia" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>CRQ (Opcional)</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-mat-crq">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Almacen / PM</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-mat-almacen-pm" required>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Tramo</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="edit-mat-tramo" required list="sla-tramos-list">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Fecha</label>
+                                <div class="input-wrapper">
+                                    <input type="date" id="edit-mat-fecha" required>
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Descripcion del Trabajo / Trabajo Realizado</label>
+                                <div class="input-wrapper">
+                                    <textarea id="edit-mat-descripcion" rows="3" style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="margin-top:20px; display:flex; justify-content:flex-end; gap:12px;">
+                            <button type="button" class="portal-btn portal-btn--refresh" id="btn-cancel-edit-material">Cancelar</button>
+                            <button type="submit" class="ruteo-submit-btn" style="min-width:160px;">
+                                <span>Guardar Cambios</span>
+                            </button>
+                        </div>
+                        <div id="edit-mat-msg" class="ruteo-message" style="margin-top:12px;"></div>
                     </form>
                 </div>
             </div>

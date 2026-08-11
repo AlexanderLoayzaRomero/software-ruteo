@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WPRuteoApp {
 
     // URL DEL WEBHOOK DE GOOGLE SHEETS
-    public $webhook_url = 'https://script.google.com/macros/s/AKfycbwA3yeXPpl2vNYy9E4nu-LyNc-4FyzA7D6w-MxaiwrKzhWsyRh00Kb5v4WXqJy_Yci4Xg/exec';
+    public $webhook_url = 'https://script.google.com/macros/s/AKfycbzh_RqLNFspow4yrqqCwLHOTjt3v4LUfA2KMVy3nH5TETRwwLRn3KXK3OtZHb75hKHzRA/exec';
     private $assets_enqueued = false;
 
     public function __construct() {
@@ -24,6 +24,8 @@ class WPRuteoApp {
         add_action( 'wp_enqueue_scripts', array( $this, 'maybe_enqueue_assets' ) );
         add_action( 'wp_ajax_ruteo_submit', array( $this, 'handle_ajax_submit' ) );
         add_action( 'wp_ajax_nopriv_ruteo_submit', array( $this, 'handle_ajax_submit' ) );
+        add_action( 'wp_ajax_ruteo_update_registro', array( $this, 'handle_ajax_update_registro' ) );
+        add_action( 'wp_ajax_nopriv_ruteo_update_registro', array( $this, 'handle_ajax_update_registro' ) );
         // Proxy GET: evita CORS del browser al llamar directamente a Google
         add_action( 'wp_ajax_ruteo_get_registros', array( $this, 'handle_ajax_get_registros' ) );
         add_action( 'wp_ajax_nopriv_ruteo_get_registros', array( $this, 'handle_ajax_get_registros' ) );
@@ -56,6 +58,8 @@ class WPRuteoApp {
         add_action( 'wp_ajax_nopriv_ruteo_save_materiales', array( $this, 'handle_ajax_save_materiales' ) );
         add_action( 'wp_ajax_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
         add_action( 'wp_ajax_nopriv_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
+        add_action( 'wp_ajax_ruteo_update_material', array( $this, 'handle_ajax_update_material' ) );
+        add_action( 'wp_ajax_nopriv_ruteo_update_material', array( $this, 'handle_ajax_update_material' ) );
 
         add_action( 'plugins_loaded', array( $this, 'maybe_upgrade_negativas_table' ) );
 
@@ -210,7 +214,7 @@ class WPRuteoApp {
         wp_enqueue_script( 'jspdf-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', array(), '2.5.1', true );
         wp_enqueue_script( 'jspdf-autotable-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js', array( 'jspdf-cdn' ), '3.5.28', true );
         wp_enqueue_script( 'xlsx-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', array(), '0.18.5', true );
-        wp_enqueue_script( 'wp-ruteo-app', plugin_dir_url( __FILE__ ) . 'assets/css/../assets/js/app.js', array( 'jquery', 'jspdf-cdn', 'jspdf-autotable-cdn', 'xlsx-cdn' ), $js_ver, true );
+        wp_enqueue_script( 'wp-ruteo-app', plugin_dir_url( __FILE__ ) . 'assets/js/app.js', array( 'jquery', 'jspdf-cdn', 'jspdf-autotable-cdn', 'xlsx-cdn' ), $js_ver, true );
 
         $current_user = wp_get_current_user();
         $is_logged_in = is_user_logged_in();
@@ -519,6 +523,83 @@ class WPRuteoApp {
         wp_send_json_success( array(
             'message' => 'Datos de ruteo guardados correctamente.',
             'time'    => current_time( 'mysql' ),
+        ) );
+    }
+
+    public function handle_ajax_update_registro() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado. Debe iniciar sesion.' ) );
+            return;
+        }
+
+        $fields = array(
+            'rowIndex', 'tramo', 'id_consol', 'estructura', 'tipo_estructura', 'altura',
+            'ubicacion', 'codigo', 'mufa', 'retencion', 'suspension', 'cruceta',
+            'observacion'
+        );
+
+        $data = array();
+        foreach ( $fields as $field ) {
+            $data[$field] = isset( $_POST[$field] ) ? sanitize_text_field( wp_unslash( $_POST[$field] ) ) : '';
+        }
+
+        $store = get_option( 'wp_ruteo_registros_store', array() );
+        if ( is_array( $store ) ) {
+            $updated = false;
+            foreach ( $store as &$item ) {
+                $targetId = ! empty( $data['id_consol'] ) ? $data['id_consol'] : $data['codigo'];
+                $rowId = isset( $item['id_consol'] ) && ! empty( $item['id_consol'] ) ? $item['id_consol'] : ( isset( $item['codigo'] ) ? $item['codigo'] : '' );
+                if ( ! empty( $targetId ) && (string)$rowId === (string)$targetId ) {
+                    foreach ( $data as $k => $v ) {
+                        $item[$k] = $v;
+                    }
+                    $updated = true;
+                    break;
+                }
+            }
+            if ( $updated ) {
+                update_option( 'wp_ruteo_registros_store', $store, false );
+            }
+        }
+
+        if ( $this->webhook_url ) {
+            $payload = array(
+                'action_type' => 'update_registro',
+                'record'      => $data,
+                'registro'    => $data,
+            );
+            $response = wp_remote_post( $this->webhook_url, array(
+                'body'    => json_encode( $payload ),
+                'headers' => array( 'Content-Type' => 'text/plain;charset=utf-8' ),
+                'timeout' => 15
+            ) );
+            
+            $gas_body = '';
+            if ( is_wp_error( $response ) ) {
+                wp_send_json_error( array( 'message' => 'Error de conexión con Google Sheets: ' . $response->get_error_message() ) );
+                return;
+            } else {
+                $gas_body = wp_remote_retrieve_body( $response );
+                $gas_code = wp_remote_retrieve_response_code( $response );
+                self::registrar_log( 'Debug GAS Update', 'Code: ' . $gas_code . ' | TargetID: ' . ( $data['id_consol'] ?? '' ) );
+
+                $gas_json = json_decode( $gas_body, true );
+                if ( $gas_json && isset( $gas_json['status'] ) && $gas_json['status'] === 'error' ) {
+                    wp_send_json_error( array( 'message' => 'Error de Google Sheets: ' . $gas_json['message'] ) );
+                    return;
+                }
+            }
+            self::registrar_log( 'Debug GAS Update', 'Response: ' . $gas_body . ' | TargetID: ' . $data['id_consol'] );
+        }
+
+        self::registrar_log( 'Registro de Campo', 'Edicion de Registro de Ruteo en tramo: ' . $data['tramo'] . ' (ID: ' . $data['id_consol'] . ' / Codigo: ' . $data['codigo'] . ')' );
+
+        wp_send_json_success( array(
+            'message'  => 'Registro de ruteo actualizado correctamente.',
+            'registro' => $data,
+            'time'     => current_time( 'mysql' ),
         ) );
     }
 
@@ -1007,6 +1088,55 @@ class WPRuteoApp {
         ) );
     }
 
+    public function handle_ajax_update_material() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado. Debes iniciar sesion.' ) );
+            return;
+        }
+
+        $id          = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
+        $incidencia  = isset( $_POST['incidencia'] ) ? sanitize_text_field( wp_unslash( $_POST['incidencia'] ) ) : '';
+        $crq         = isset( $_POST['crq'] ) ? sanitize_text_field( wp_unslash( $_POST['crq'] ) ) : '';
+        $descripcion = isset( $_POST['descripcion'] ) ? sanitize_text_field( wp_unslash( $_POST['descripcion'] ) ) : '';
+        $tramo       = isset( $_POST['tramo'] ) ? sanitize_text_field( wp_unslash( $_POST['tramo'] ) ) : '';
+        $fecha       = isset( $_POST['fecha'] ) ? sanitize_text_field( wp_unslash( $_POST['fecha'] ) ) : '';
+        $almacen_pm  = isset( $_POST['almacen_pm'] ) ? sanitize_text_field( wp_unslash( $_POST['almacen_pm'] ) ) : '';
+
+        if ( empty( $id ) ) {
+            wp_send_json_error( array( 'message' => 'ID de reporte no proporcionado.' ) );
+            return;
+        }
+
+        $materiales = get_option( 'wp_ruteo_materiales_store', array() );
+        if ( ! is_array( $materiales ) ) {
+            $materiales = array();
+        }
+
+        $updated = false;
+        foreach ( $materiales as &$mat ) {
+            if ( isset( $mat['id'] ) && $mat['id'] === $id ) {
+                $mat['incidencia']  = $incidencia;
+                $mat['crq']         = $crq;
+                $mat['descripcion'] = $descripcion;
+                $mat['tramo']       = $tramo;
+                if ( ! empty( $fecha ) ) $mat['fecha'] = $fecha;
+                if ( ! empty( $almacen_pm ) ) $mat['almacen_pm'] = $almacen_pm;
+                $updated = true;
+                break;
+            }
+        }
+
+        if ( $updated ) {
+            update_option( 'wp_ruteo_materiales_store', $materiales, false );
+            self::registrar_log( 'Consumo Materiales', 'Edicion de reporte de consumo de materiales ' . $id . ' (Incidencia ' . $incidencia . ')' );
+            wp_send_json_success( array( 'message' => 'Reporte de materiales actualizado correctamente.' ) );
+        } else {
+            wp_send_json_error( array( 'message' => 'No se encontro el reporte de materiales.' ) );
+        }
+    }
+
     public function handle_ajax_get_clientes() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
         if ( ! is_user_logged_in() ) {
@@ -1388,6 +1518,42 @@ class WPRuteoApp {
 
         $registro = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ), ARRAY_A );
 
+        if ( $registro ) {
+            $store = get_option( 'wp_ruteo_negativas_store', array() );
+            if ( ! is_array( $store ) ) $store = array();
+            $found = false;
+            foreach ( $store as &$item ) {
+                if ( isset( $item['id'] ) && (int) $item['id'] === (int) $id ) {
+                    $item = $registro;
+                    $found = true;
+                    break;
+                }
+            }
+            if ( ! $found ) {
+                array_unshift( $store, $registro );
+            }
+            update_option( 'wp_ruteo_negativas_store', $store, false );
+
+            if ( $this->webhook_url ) {
+                $webhook_resp = wp_remote_post( $this->webhook_url, array(
+                    'body'    => json_encode( array(
+                        'action_type'   => 'upload_document',
+                        'document_type' => 'negativa_hse_re_neg_01',
+                        'negativa'      => $registro,
+                        'save_drive'    => true
+                    ) ),
+                    'headers' => array( 'Content-Type' => 'application/json' ),
+                    'timeout' => 20
+                ) );
+                if ( ! is_wp_error( $webhook_resp ) ) {
+                    $b = wp_remote_retrieve_body( $webhook_resp );
+                    self::registrar_log('Webhook Negativa', 'Respuesta GAS: ' . $b);
+                } else {
+                    self::registrar_log('Webhook Negativa', 'Error de WP: ' . $webhook_resp->get_error_message());
+                }
+            }
+        }
+
         self::registrar_log( 'Negativa al Trabajo', 'Firma y actualizacion de etapa ' . strtoupper($etapa) . ' para registro ID #' . $id );
 
         wp_send_json_success( array(
@@ -1404,29 +1570,37 @@ class WPRuteoApp {
         }
         global $wpdb;
         $table = $wpdb->prefix . 'ruteo_negativas';
-        
-        // Reiniciar todas las firmas existentes a pendiente de firma (sin firmar)
-        $wpdb->query( "UPDATE $table SET firma_tecnico_user = '', firma_tecnico_fecha = NULL, firma_sup_operativo_user = '', firma_sup_operativo_fecha = NULL, firma_sup_seguridad_user = '', firma_sup_seguridad_fecha = NULL, firma_hse_user = '', firma_hse_fecha = NULL, estado = 'pendiente_tecnico'" );
 
         $registros = $wpdb->get_results( "SELECT * FROM $table ORDER BY id DESC", ARRAY_A );
         wp_send_json_success( array( 'registros' => $registros ) );
     }
 
-    public static function registrar_log( $accion, $detalle = '' ) {
+    public static function registrar_log( $accion, $detalles = '' ) {
         $logs = get_option( 'ruteo_audit_logs', array() );
         if ( ! is_array( $logs ) ) {
             $logs = array();
         }
-        $user     = wp_get_current_user();
-        $username = $user->exists() ? $user->display_name : 'Invitado/Sistema';
-        array_unshift( $logs, array(
-            'fecha'   => current_time( 'mysql' ),
-            'usuario' => $username,
-            'accion'  => $accion,
-            'detalle' => $detalle,
-        ) );
-        $logs = array_slice( $logs, 0, 80 );
-        update_option( 'ruteo_audit_logs', $logs );
+
+        $current_user = wp_get_current_user();
+        $user_name = $current_user->exists() ? $current_user->display_name : 'Sistema';
+
+        $entry = array(
+            'fecha'    => current_time( 'mysql' ),
+            'usuario'  => $user_name,
+            'accion'   => $accion,
+            'detalles' => $detalles,
+        );
+
+        array_unshift( $logs, $entry );
+
+        if ( count( $logs ) > 500 ) {
+            $logs = array_slice( $logs, 0, 500 );
+        }
+
+        update_option( 'ruteo_audit_logs', $logs, false );
+        
+        $log_line = "[" . current_time('mysql') . "] [" . $user_name . "] " . $accion . ": " . $detalles . PHP_EOL;
+        @file_put_contents( plugin_dir_path( __FILE__ ) . 'ruteo-debug.log', $log_line, FILE_APPEND );
     }
 
     public function handle_ajax_get_logs() {

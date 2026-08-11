@@ -1,12 +1,40 @@
 // ---------------------------------------------------------------
-// GET: Devuelve registros de ruteo o materiales del sheet como JSON
+// GET: Devuelve registros de ruteo, materiales o negativas del sheet como JSON
 // Usado por el Aplicativo de Ruteo en WordPress
 // ---------------------------------------------------------------
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-    // Si solicitan materiales via doGet ?action=get_materiales
+    // 1. Si solicitan negativas via doGet ?action=get_negativas
+    if (e && e.parameter && e.parameter.action === 'get_negativas') {
+      var negSheet = ss.getSheetByName('Negativas');
+      if (!negSheet) {
+        return outputResponse({ status: 'success', negativas: [], total: 0 }, e);
+      }
+      var negData = negSheet.getDataRange().getValues();
+      if (negData.length <= 1) {
+        return outputResponse({ status: 'success', negativas: [], total: 0 }, e);
+      }
+      var negHeaders = negData[0];
+      var negativas = [];
+      for (var k = 1; k < negData.length; k++) {
+        var nRow = {};
+        for (var l = 0; l < negHeaders.length; l++) {
+          var nKey = negHeaders[l].toString().toLowerCase().replace(/ /g, '_').replace(/[^a-z0-9_]/g, '');
+          var nVal = negData[k][l];
+          if (nVal instanceof Date) {
+            nVal = Utilities.formatDate(nVal, Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm');
+          }
+          nRow[nKey] = nVal !== undefined && nVal !== null ? nVal.toString() : '';
+        }
+        negativas.push(nRow);
+      }
+      negativas.reverse();
+      return outputResponse({ status: 'success', negativas: negativas, total: negativas.length }, e);
+    }
+
+    // 2. Si solicitan materiales via doGet ?action=get_materiales
     if (e && e.parameter && e.parameter.action === 'get_materiales') {
       var matSheet = ss.getSheetByName('Materiales');
       if (!matSheet) {
@@ -34,7 +62,7 @@ function doGet(e) {
       return outputResponse({ status: 'success', materiales: materiales, total: materiales.length }, e);
     }
 
-    // Por defecto: devuelve registros de ruteo de campo
+    // 3. Por defecto: devuelve registros de ruteo de campo
     var sheet = ss.getActiveSheet();
     var data  = sheet.getDataRange().getValues();
 
@@ -94,15 +122,91 @@ function doPost(e) {
     var FOLDER_ID = '1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
 
     var data = JSON.parse(e.postData.contents);
+
+    // 1. Peticion para guardar / registrar Negativa al Trabajo (Formato HSE-RE-NEG-01) en Google Sheets y Drive
+    if (data.action_type === 'save_negativa' || data.action_type === 'save_negativa_drive' || data.document_type === 'negativa_hse_re_neg_01') {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var negSheet = null;
+      var sheets = ss.getSheets();
+      for (var i = 0; i < sheets.length; i++) {
+        if (sheets[i].getName().toLowerCase() === 'negativas') {
+          negSheet = sheets[i];
+          break;
+        }
+      }
+      
+      if (!negSheet) {
+        try {
+          negSheet = ss.insertSheet('Negativas');
+        } catch (e) {
+          // Si falla, usar la primera hoja o manejar el error
+          negSheet = sheets[0]; 
+        }
+        negSheet.appendRow([
+          "ID", "Fecha Registro", "Estado", "Cliente", "Proceso / Proyecto", "CM / Localidad",
+          "Contratista", "Sub Contratista", "Relacionado A", "Lugar de Trabajo", "Fecha",
+          "Hora Inicio", "Hora Fin", "Total Horas", "Supervisor Operativo", "Trabajador Reportante",
+          "Razones Negativa", "Medidas Correctivas", "Satisface Negativa", "Reinicia Labores",
+          "Fecha Reinicio", "Hora Reinicio", "Supervisor Seguridad", "Observaciones Seguridad",
+          "Dictamen HSE", "Firma Tecnico", "Firma Sup. Operativo", "Firma Sup. Seguridad",
+          "Firma HSE", "Link Google Drive"
+        ]);
+      }
+
+      var neg = data.negativa || data || {};
+
+      // Generar documento oficial Google Doc / PDF para Negativas en Google Drive
+      var docUrl = generarGoogleDocNegativa(neg, FOLDER_ID);
+
+      negSheet.appendRow([
+        neg.id || new Date().getTime(),
+        neg.created_at || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm'),
+        neg.estado || 'pendiente_tecnico',
+        neg.cliente_nombre || 'CYMTEL',
+        neg.proceso || '',
+        neg.cm_localidad || '',
+        neg.contratista || '',
+        neg.sub_contratista || '',
+        neg.relacionado_a || '',
+        neg.lugar_trabajo || '',
+        neg.fecha || '',
+        neg.hora_inicio || '',
+        neg.hora_fin || '',
+        neg.total_horas || '',
+        neg.supervisor_operativo_nombre || '',
+        neg.trabajador_reportante || '',
+        neg.razones_negativa || '',
+        neg.medidas_correctivas || '',
+        neg.satisface_negativa || '',
+        neg.reinicia_labores || '',
+        neg.fecha_reinicio || '',
+        neg.hora_reinicio || '',
+        neg.supervisor_seguridad_nombre || '',
+        neg.observaciones_seguridad || '',
+        neg.dictamen_hse || '',
+        neg.firma_tecnico_user || '',
+        neg.firma_sup_operativo_user || '',
+        neg.firma_sup_seguridad_user || '',
+        neg.firma_hse_user || '',
+        docUrl
+      ]);
+
+      return ContentService.createTextOutput(JSON.stringify({
+        "status": "success",
+        "drive_url": docUrl,
+        "doc_url": docUrl,
+        "message": "Negativa registrada en pestaña 'Negativas' de Google Sheets y documento guardado en Google Drive."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
     
-    // Si la peticion es para crear/sincronizar documento Google Docs en Drive
+    // 2. Si la peticion es para crear/sincronizar documento Google Docs en Drive para Ruteo
     if (data.action_type === 'create_doc') {
       var docUrl = generarGoogleDoc(data.record || data, FOLDER_ID);
       return ContentService.createTextOutput(JSON.stringify({"status": "success", "doc_url": docUrl}))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // Si la peticion es para guardar reporte de materiales
+    // 3. Si la peticion es para guardar reporte de materiales
     if (data.action_type === 'save_materiales') {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
       var matSheet = ss.getSheetByName('Materiales');
@@ -131,20 +235,118 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
-    // Si la peticion es para subir un documento generado (Word)
-    if (data.action_type === 'save_document') {
+    // 4. Si la peticion es para actualizar/editar un Registro de Ruteo existente
+    if (data.action_type === 'update_registro') {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var sheet = null;
+      var allSheets = ss.getSheets();
+      for (var i = 0; i < allSheets.length; i++) {
+        var s = allSheets[i];
+        var sName = s.getName().toLowerCase();
+        if (sName !== 'negativas' && sName !== 'materiales') {
+          var lastCol = s.getLastColumn();
+          if (lastCol > 0) {
+            var firstRow = s.getRange(1, 1, 1, Math.min(10, lastCol)).getValues()[0];
+            // Verificar que la columna C (indice 2) sea ID Consol o que la H (indice 7) sea Codigo
+            if ((firstRow.length > 2 && firstRow[2] && String(firstRow[2]).toLowerCase().indexOf('id consol') !== -1) || 
+                (firstRow.length > 7 && firstRow[7] && String(firstRow[7]).toLowerCase().indexOf('codigo') !== -1)) {
+              sheet = s;
+              break;
+            }
+          }
+        }
+      }
+      if (!sheet) sheet = allSheets[0]; // Fallback
+
+      var dataRows = sheet.getDataRange().getValues();
+      var rec = data.record || data.registro || data || {};
+      var targetRowIndex = -1;
+
+      var targetIdConsol = String(rec.id_consol || rec.id || '').trim().toLowerCase();
+      var targetCodigo   = String(rec.codigo || '').trim().toLowerCase();
+
+      // Buscar por ID Consol o Codigo en la hoja de Google Sheets
+      for (var r = 1; r < dataRows.length; r++) {
+        var rowIdConsol = String(dataRows[r][2] || '').trim().toLowerCase(); // Col C: ID Consol
+        var rowCodigo   = String(dataRows[r][7] || '').trim().toLowerCase(); // Col H: Codigo
+
+        if (targetIdConsol && rowIdConsol === targetIdConsol) {
+          targetRowIndex = r + 1;
+          break;
+        }
+        if (targetCodigo && rowCodigo === targetCodigo) {
+          targetRowIndex = r + 1;
+          break;
+        }
+      }
+
+      // Si no se encontro por ID ni Codigo, calcular el indice considerando el orden invertido
+      if (targetRowIndex === -1 && rec.rowIndex) {
+        var totalRows = dataRows.length - 1; // sin encabezado
+        var realIdx = (totalRows - Number(rec.rowIndex) + 1) + 1;
+        if (realIdx >= 2 && realIdx <= dataRows.length) {
+          targetRowIndex = realIdx;
+        }
+      }
+
+      if (targetRowIndex >= 2) {
+        if (rec.tramo)            sheet.getRange(targetRowIndex, 2).setValue(rec.tramo);
+        if (rec.id_consol)        sheet.getRange(targetRowIndex, 3).setValue(rec.id_consol);
+        if (rec.estructura)       sheet.getRange(targetRowIndex, 4).setValue(rec.estructura);
+        if (rec.tipo_estructura)  sheet.getRange(targetRowIndex, 5).setValue(rec.tipo_estructura);
+        if (rec.altura !== undefined && rec.altura !== '') sheet.getRange(targetRowIndex, 6).setValue(rec.altura);
+        if (rec.ubicacion)       sheet.getRange(targetRowIndex, 7).setValue(rec.ubicacion);
+        if (rec.codigo)          sheet.getRange(targetRowIndex, 8).setValue(rec.codigo);
+        if (rec.mufa !== undefined && rec.mufa !== '') sheet.getRange(targetRowIndex, 9).setValue(rec.mufa);
+        if (rec.retencion !== undefined && rec.retencion !== '') sheet.getRange(targetRowIndex, 10).setValue(rec.retencion);
+        if (rec.suspension !== undefined && rec.suspension !== '') sheet.getRange(targetRowIndex, 11).setValue(rec.suspension);
+        if (rec.cruceta !== undefined && rec.cruceta !== '') sheet.getRange(targetRowIndex, 12).setValue(rec.cruceta);
+        if (rec.observacion !== undefined && rec.observacion !== '') sheet.getRange(targetRowIndex, 18).setValue(rec.observacion);
+
+        return ContentService.createTextOutput(JSON.stringify({"status": "success", "message": "Registro #" + targetRowIndex + " actualizado exitosamente en Google Sheets."}))
+          .setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": "No se encontro la fila para actualizar: " + (targetIdConsol || targetCodigo)}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // 5. Si la peticion es para actualizar/editar un reporte de materiales
+    if (data.action_type === 'update_material') {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var matSheet = ss.getSheetByName('Materiales');
+      if (matSheet) {
+        var mRows = matSheet.getDataRange().getValues();
+        var mRep = data.report || data || {};
+        var mTargetId = String(mRep.id || mRep.incidencia || '').trim();
+        for (var mIdx = 1; mIdx < mRows.length; mIdx++) {
+          var rowInc = String(mRows[mIdx][1] || '').trim();
+          if (mTargetId && (rowInc === mTargetId || String(mIdx) === mTargetId)) {
+            if (mRep.incidencia) matSheet.getRange(mIdx + 1, 2).setValue(mRep.incidencia);
+            if (mRep.crq !== undefined) matSheet.getRange(mIdx + 1, 3).setValue(mRep.crq);
+            if (mRep.almacen_pm) matSheet.getRange(mIdx + 1, 4).setValue(mRep.almacen_pm);
+            if (mRep.tramo) matSheet.getRange(mIdx + 1, 5).setValue(mRep.tramo);
+            if (mRep.descripcion) matSheet.getRange(mIdx + 1, 6).setValue(mRep.descripcion);
+            return ContentService.createTextOutput(JSON.stringify({"status": "success", "message": "Material actualizado en Google Sheets"})).setMimeType(ContentService.MimeType.JSON);
+          }
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({"status": "error", "message": "No se encontro reporte de material a actualizar"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 6. Si la peticion es para subir un documento generado (Word / PDF)
+    if (data.action_type === 'save_document' || data.action_type === 'upload_document') {
       var folder = DriveApp.getFolderById(FOLDER_ID);
-      var decoded = Utilities.base64Decode(data.file_base64);
-      var blob = Utilities.newBlob(decoded, data.mimeType, data.filename);
+      var decoded = Utilities.base64Decode(data.file_base64 || '');
+      var blob = Utilities.newBlob(decoded, data.mimeType || 'application/pdf', data.filename || ('Documento_' + new Date().getTime() + '.pdf'));
       var file = folder.createFile(blob);
       file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      return ContentService.createTextOutput(JSON.stringify({"status": "success", "url": file.getUrl()}))
+      return ContentService.createTextOutput(JSON.stringify({"status": "success", "drive_url": file.getUrl(), "url": file.getUrl()}))
         .setMimeType(ContentService.MimeType.JSON);
     }
-    
-    // Sino, es la subida normal del formulario de campo
+
+    // 7. Sino, es la subida normal del formulario de campo
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    
     var nextRow = sheet.getLastRow() + 1;
     
     if (nextRow === 1) {
@@ -226,6 +428,71 @@ function extraerFolderId(input) {
     return idPart || DEFAULT_ID;
   }
   return str || DEFAULT_ID;
+}
+
+function generarGoogleDocNegativa(data, folderId) {
+  try {
+    var validFolderId = extraerFolderId(folderId);
+    var docName = "Negativa_Trabajo_HSE-RE-NEG-01_ID_" + (data.id || new Date().getTime());
+    var doc = DocumentApp.create(docName);
+    var body = doc.getBody();
+
+    var titlePara = body.appendParagraph("FORMATO DE NEGATIVA AL TRABAJO POR RIESGO INMINENTE");
+    titlePara.setBold(true);
+    titlePara.setFontSize(14);
+    body.appendParagraph("CODIGO: HSE-RE-NEG-01  |  FECHA REGISTRO: " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"));
+    body.appendParagraph("----------------------------------------------------------------------------------");
+
+    body.appendParagraph("1. DATOS DE LA EMPRESA Y TRABAJO");
+    body.appendTable([
+      ["Cliente / Empresa", data.cliente_nombre || "CYMTEL"],
+      ["Proceso / Proyecto", data.proceso || "-"],
+      ["CM / Localidad", data.cm_localidad || "-"],
+      ["Contratista", data.contratista || "-"],
+      ["Sub Contratista", data.sub_contratista || "-"],
+      ["Lugar del Trabajo", data.lugar_trabajo || "-"],
+      ["Fecha y Hora", (data.fecha || "-") + " | " + (data.hora_inicio || "-") + " a " + (data.hora_fin || "-")]
+    ]);
+
+    body.appendParagraph("");
+    body.appendParagraph("2. PERSONAL Y DESCRIPCION DEL RIESGO");
+    body.appendTable([
+      ["Trabajador Reportante", data.trabajador_reportante || data.firma_tecnico_user || "-"],
+      ["Supervisor Operativo", data.supervisor_operativo_nombre || data.firma_sup_operativo_user || "-"],
+      ["Razones de la Negativa (Punto 3)", data.razones_negativa || "-"],
+      ["Medidas Correctivas (Punto 5)", data.medidas_correctivas || "-"]
+    ]);
+
+    body.appendParagraph("");
+    body.appendParagraph("3. VERIFICACION DE SEGURIDAD Y DICTAMEN HSE");
+    body.appendTable([
+      ["Satisface Negativa (Acuerdo Inseguro)", data.satisface_negativa || "-"],
+      ["Reinicia Labores (SI/NO)", data.reinicia_labores || "-"],
+      ["Supervisor Seguridad", data.supervisor_seguridad_nombre || data.firma_sup_seguridad_user || "-"],
+      ["Observaciones de Seguridad", data.observaciones_seguridad || "-"],
+      ["Dictamen Final HSE", data.dictamen_hse || "-"],
+      ["Firma Autorizada HSE", data.firma_hse_user || "-"]
+    ]);
+
+    doc.saveAndClose();
+
+    var docFile = DriveApp.getFileById(doc.getId());
+    if (validFolderId) {
+      try {
+        var targetFolder = DriveApp.getFolderById(validFolderId);
+        docFile.moveTo(targetFolder);
+      } catch(fErr) {}
+    }
+
+    try {
+      docFile.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    } catch(sErr) {}
+
+    return docFile.getUrl();
+  } catch (err) {
+    Logger.log("Error creando Google Doc Negativa: " + err.toString());
+    return "";
+  }
 }
 
 function generarGoogleDoc(data, folderId) {
@@ -355,11 +622,6 @@ function generarKMZ(data, folderId) {
   }
 }
 
-// ---------------------------------------------------------------
-// FUNCION MANUAL EN APPS SCRIPT: Genera/Regenera Google Docs para
-// TODOS los registros existentes en la hoja de Google Sheets.
-// Se ejecuta directamente desde el editor seleccionando la funcion.
-// ---------------------------------------------------------------
 function generarDocumentosTodosLosRegistros() {
   var FOLDER_ID = '1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
