@@ -416,6 +416,7 @@ jQuery(document).ready(function($) {
                     allMaterialesList = res.data.materiales;
                     $('#dash-stat-materiales').text(allMaterialesList.length);
                     renderTablaMateriales(allMaterialesList);
+                    poblarListasSla();
                 }
             }
         });
@@ -466,6 +467,81 @@ jQuery(document).ready(function($) {
     // --- ACCIONES SLA E INFORMES (MODAL E INTERACCION) ---
     var currentSlaType = 'Formato SLA';
 
+    function cleanText(str) {
+        if (!str) return '';
+        var txt = document.createElement('textarea');
+        txt.innerHTML = str;
+        return txt.value;
+    }
+
+    function poblarListasSla() {
+        var $tramosList = $('#sla-tramos-list');
+        var $ticketsList = $('#sla-tickets-list');
+        var $tecnicosList = $('#sla-tecnicos-list');
+        if (!$tramosList.length && !$ticketsList.length && !$tecnicosList.length) return;
+
+        var tramosSet = new Set(['Tramo Cusco - Sicuani', 'Urubamba - Quillabamba', 'Tramo Cusco - Abancay', 'Tramo A', 'Tramo B', 'Tramo C']);
+        var ticketsSet = new Set(['INC-90412', 'INC-78093', 'INC-65410']);
+        var tecnicosSet = new Set();
+
+        if (currentUser && currentUser.displayName) {
+            tecnicosSet.add(cleanText(currentUser.displayName));
+        }
+
+        if (window._ruteoRegistros && Array.isArray(window._ruteoRegistros)) {
+            window._ruteoRegistros.forEach(function(raw) {
+                var r = (typeof normalizarRegistro === 'function') ? normalizarRegistro(raw) : raw;
+                if (r && r.tramo) tramosSet.add(String(r.tramo).trim());
+                if (r && r.id_consol) ticketsSet.add(String(r.id_consol).trim());
+            });
+        }
+
+        if (typeof allMaterialesList !== 'undefined' && Array.isArray(allMaterialesList)) {
+            allMaterialesList.forEach(function(r) {
+                if (r && r.tramo) tramosSet.add(String(r.tramo).trim());
+                if (r && r.incidencia) ticketsSet.add(String(r.incidencia).trim());
+                if (r && r.crq) ticketsSet.add(String(r.crq).trim());
+                if (r && r.user) tecnicosSet.add(cleanText(r.user));
+            });
+        }
+
+        if (window._ruteoUsuarios && Array.isArray(window._ruteoUsuarios)) {
+            window._ruteoUsuarios.forEach(function(u) {
+                if (u && u.displayName) tecnicosSet.add(cleanText(u.displayName));
+            });
+        }
+
+        if ($tramosList.length) {
+            $tramosList.empty();
+            tramosSet.forEach(function(t) {
+                if (t) {
+                    var safeVal = $('<div/>').text(t).html();
+                    $tramosList.append('<option value="' + safeVal + '">');
+                }
+            });
+        }
+
+        if ($ticketsList.length) {
+            $ticketsList.empty();
+            ticketsSet.forEach(function(tick) {
+                if (tick) {
+                    var safeVal = $('<div/>').text(tick).html();
+                    $ticketsList.append('<option value="' + safeVal + '">');
+                }
+            });
+        }
+
+        if ($tecnicosList.length) {
+            $tecnicosList.empty();
+            tecnicosSet.forEach(function(tec) {
+                if (tec) {
+                    var safeVal = $('<div/>').text(tec).html();
+                    $tecnicosList.append('<option value="' + safeVal + '">');
+                }
+            });
+        }
+    }
+
     $('.btn-sla-action').on('click', function() {
         currentSlaType = $(this).data('type') || 'Formato SLA';
         $('#sla-modal-title').text(currentSlaType);
@@ -473,8 +549,9 @@ jQuery(document).ready(function($) {
         
         var user = (window.wpRuteoAjax && window.wpRuteoAjax.user) ? window.wpRuteoAjax.user : {};
         if (user.displayName || user.username) {
-            $('#sla-input-tecnico').val(user.displayName || user.username);
+            $('#sla-input-tecnico').val(cleanText(user.displayName || user.username));
         }
+        poblarListasSla();
         $('#sla-modal-overlay').fadeIn(200);
     });
 
@@ -1000,17 +1077,32 @@ jQuery(document).ready(function($) {
             $('#negativa-estado-badge').text('Sin firmar (Nueva Negativa)');
             $('#neg-preview1, #neg-preview2').removeClass('show').css('background-image', 'none');
             $('#neg-foto1, #neg-foto2').val('').closest('.ruteo-photo-upload').removeClass('has-file');
-            if ($('#form-negativa-tecnico')[0]) $('#form-negativa-tecnico')[0].reset();
-            $('#form-negativa-tecnico').find('.is-invalid').removeClass('is-invalid').css('border-color', '');
-            $('#form-negativa-tecnico').show();
+            var $ftNew = $('#form-negativa-tecnico');
+            if ($ftNew[0]) $ftNew[0].reset();
+            $ftNew.find('.is-invalid').removeClass('is-invalid').css('border-color', '');
+            
+            if (currentUser && currentUser.isLoggedIn && !currentUser.isAdmin && (currentUser.displayName || currentUser.username)) {
+                $ftNew.find('input[name="trabajador_reportante"]').val(currentUser.displayName || currentUser.username);
+            } else if (currentUser && currentUser.isAdmin) {
+                $ftNew.find('input[name="trabajador_reportante"]').val('').attr('placeholder', 'Escriba el nombre del Técnico o Trabajador Reportante...');
+            }
+
+            if (currentUser && currentUser.isAdmin) {
+                $ftNew.find('button[type="submit"]').text('Guardar y Registrar Negativa');
+            } else {
+                $ftNew.find('button[type="submit"]').text('Guardar y Firmar como Tecnico');
+            }
+
+            $ftNew.show();
             return;
         }
 
         $('#negativa-estado-badge').text(negativaEstadoLabel(registro.estado));
 
+        var tecLabel = registro.trabajador_reportante || registro.firma_tecnico_user || 'Pendiente';
         var resumenHtml = '<div style="font-size:13px; line-height:1.6;">';
         resumenHtml += '<strong>Cliente:</strong> ' + (registro.cliente_nombre || 'CYMTEL') + ' | <strong>Proceso:</strong> ' + (registro.proceso || '') + ' | <strong>Lugar:</strong> ' + (registro.lugar_trabajo || '') + '<br>';
-        resumenHtml += '<strong>Firmas:</strong> Tecnico: <span style="color:#0097D8;">' + (registro.firma_tecnico_user || 'Pendiente') + '</span>';
+        resumenHtml += '<strong>Firmas:</strong> Tecnico Reportante: <span style="color:#0097D8;">' + tecLabel + '</span>';
         resumenHtml += ' | Supervisor Op.: <span style="color:#0097D8;">' + (registro.firma_sup_operativo_user || 'Pendiente') + '</span>';
         resumenHtml += ' | Seguridad: <span style="color:#0097D8;">' + (registro.firma_sup_seguridad_user || 'Pendiente') + '</span>';
         resumenHtml += ' | HSE: <span style="color:#83CA16;">' + (registro.firma_hse_user || 'Pendiente') + '</span>';
@@ -1388,8 +1480,8 @@ jQuery(document).ready(function($) {
         var boxH = 26;
 
         var firmas = [
-            { titulo: 'TECNICO REPORTANTE', user: r.firma_tecnico_user, fecha: r.firma_tecnico_fecha },
-            { titulo: 'SUPERVISOR OPERATIVO', user: r.firma_sup_operativo_user, fecha: r.firma_sup_operativo_fecha },
+            { titulo: 'TECNICO REPORTANTE', user: r.trabajador_reportante || r.firma_tecnico_user, fecha: r.firma_tecnico_fecha },
+            { titulo: 'SUPERVISOR OPERATIVO', user: r.supervisor_operativo_nombre || r.firma_sup_operativo_user, fecha: r.firma_sup_operativo_fecha },
             { titulo: 'SUPERVISOR SEGURIDAD', user: r.firma_sup_seguridad_user, fecha: r.firma_sup_seguridad_fecha },
             { titulo: 'VISTO BUENO HSE', user: r.firma_hse_user, fecha: r.firma_hse_fecha }
         ];
@@ -1620,6 +1712,7 @@ jQuery(document).ready(function($) {
         poblarFiltroTramo(allRegistros);
         renderTabla(allRegistros);
         calcularStats(allRegistros);
+        poblarListasSla();
 
         var ahora = new Date();
         var elUpdate = document.getElementById('portal-last-update');

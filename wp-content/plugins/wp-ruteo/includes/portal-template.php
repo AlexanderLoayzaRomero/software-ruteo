@@ -1562,19 +1562,34 @@ body.admin-bar .ruteo-app-layout {
                         <div class="form-group" style="margin-bottom:14px;">
                             <label>Tramo de Intervencion</label>
                             <div class="input-wrapper">
-                                <input type="text" id="sla-input-tramo" placeholder="Ej: Tramo Cusco - Sicuani" required>
+                                <input type="text" id="sla-input-tramo" placeholder="Ej: Tramo Cusco - Sicuani" list="sla-tramos-list" autocomplete="off" required>
+                                <datalist id="sla-tramos-list">
+                                    <option value="Tramo Cusco - Sicuani">
+                                    <option value="Urubamba - Quillabamba">
+                                    <option value="Tramo Cusco - Abancay">
+                                    <option value="Tramo A">
+                                    <option value="Tramo B">
+                                    <option value="Tramo C">
+                                </datalist>
                             </div>
                         </div>
                         <div class="form-group" style="margin-bottom:14px;">
                             <label>No. de Incidencia / Ticket</label>
                             <div class="input-wrapper">
-                                <input type="text" id="sla-input-incidencia" placeholder="Ej: INC-90412" required>
+                                <input type="text" id="sla-input-incidencia" placeholder="Ej: INC-90412" list="sla-tickets-list" autocomplete="off" required>
+                                <datalist id="sla-tickets-list">
+                                    <option value="INC-90412">
+                                    <option value="INC-78093">
+                                    <option value="INC-65410">
+                                </datalist>
                             </div>
                         </div>
                         <div class="form-group" style="margin-bottom:14px;">
                             <label>Responsable / Tecnico</label>
                             <div class="input-wrapper">
-                                <input type="text" id="sla-input-tecnico" placeholder="Nombre del responsable" required>
+                                <input type="text" id="sla-input-tecnico" placeholder="Nombre del responsable" list="sla-tecnicos-list" autocomplete="off" required>
+                                <datalist id="sla-tecnicos-list">
+                                </datalist>
                             </div>
                         </div>
                         <div class="form-group" style="margin-bottom:20px;">
