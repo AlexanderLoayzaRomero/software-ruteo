@@ -2001,8 +2001,14 @@ jQuery(document).ready(function($) {
     $('#filter-tramo').on('change', filtrarRegistros);
     $('#btn-refresh-portal, #btn-retry-portal-fetch').on('click', function() { cargarDatosPortal(false); });
 
+    if (typeof wpRuteoAjax !== 'undefined' && wpRuteoAjax.userCount !== undefined) {
+        $('#dash-stat-users').text(wpRuteoAjax.userCount);
+    }
+
     if (currentUser.isLoggedIn) {
         cargarDatosPortal(false);
+        cargarMateriales();
+        cargarUsuarios();
     }
 
     window.abrirODocumentoGoogleDocs = function(idx) {

@@ -268,6 +268,7 @@ class WPRuteoApp {
             'nonce'     => wp_create_nonce( 'ruteo_submit_nonce' ),
             'siteLogo'  => get_option( 'ruteo_site_logo', '' ),
             'clientes'  => $clientes_list,
+            'userCount' => count( get_users( array( 'fields' => 'ID' ) ) ),
             'user'    => array(
                 'id'          => $is_logged_in ? $current_user->ID : 0,
                 'isLoggedIn'  => $is_logged_in,
