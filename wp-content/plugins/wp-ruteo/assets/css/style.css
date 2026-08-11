@@ -189,49 +189,49 @@ body.admin-bar .ruteo-app-layout {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    transition: var(--transition);
+    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 100;
     box-shadow: 2px 0 10px rgba(0,0,0,0.1);
     flex-shrink: 0;
     min-height: 100vh;
+    overflow-x: hidden;
 }
 
 .ruteo-sidebar.collapsed {
     width: 76px;
 }
 
-.ruteo-sidebar.collapsed .brand-text,
-.ruteo-sidebar.collapsed .btn-collapse-label,
-.ruteo-sidebar.collapsed .sidebar-item span,
-.ruteo-sidebar.collapsed .sidebar-footer {
-    display: none !important;
-}
-
-.ruteo-sidebar.collapsed .sidebar-item {
-    justify-content: center;
-    padding: 14px 0;
-}
-
-.ruteo-sidebar.collapsed .sidebar-brand {
-    justify-content: center;
-    padding: 16px 8px;
-}
-
 .sidebar-header {
-    padding: 20px 16px;
+    padding: 18px 16px;
     border-bottom: 1px solid rgba(255,255,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.ruteo-sidebar.collapsed .sidebar-header {
+    justify-content: center;
+    padding: 18px 8px;
 }
 
 .sidebar-brand {
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 16px;
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.ruteo-sidebar.collapsed .sidebar-brand {
+    flex: 0 0 auto;
 }
 
 .brand-logo-icon {
     width: 42px;
     height: 42px;
+    flex-shrink: 0;
     background: linear-gradient(135deg, #0097D8 0%, #0066A2 100%);
     border-radius: 10px;
     display: flex;
@@ -244,6 +244,16 @@ body.admin-bar .ruteo-app-layout {
 .brand-text {
     display: flex;
     flex-direction: column;
+    white-space: nowrap;
+    opacity: 1;
+    max-width: 160px;
+    transition: opacity 0.18s ease, max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ruteo-sidebar.collapsed .brand-text {
+    opacity: 0;
+    max-width: 0;
+    pointer-events: none;
 }
 
 .brand-title {
@@ -259,24 +269,32 @@ body.admin-bar .ruteo-app-layout {
 }
 
 .sidebar-collapse-btn {
-    width: 100%;
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
     background: rgba(255,255,255,0.06);
     border: none;
     color: var(--text-sidebar);
-    padding: 8px 12px;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    font-weight: 500;
-    transition: var(--transition);
+    justify-content: center;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
 .sidebar-collapse-btn:hover {
-    background: rgba(255,255,255,0.12);
+    background: rgba(255,255,255,0.14);
     color: white;
+}
+
+.sidebar-collapse-btn svg {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    flex-shrink: 0;
+}
+
+.ruteo-sidebar.collapsed .sidebar-collapse-btn svg {
+    transform: rotate(180deg);
 }
 
 .sidebar-menu {
@@ -300,9 +318,27 @@ body.admin-bar .ruteo-app-layout {
     font-family: inherit;
     border-radius: 8px;
     cursor: pointer;
-    transition: var(--transition);
+    transition: background-color 0.2s ease, color 0.2s ease;
     text-align: left;
     width: 100%;
+    overflow: hidden;
+}
+
+.sidebar-item svg {
+    flex-shrink: 0;
+}
+
+.sidebar-item span {
+    white-space: nowrap;
+    opacity: 1;
+    max-width: 160px;
+    transition: opacity 0.18s ease, max-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.ruteo-sidebar.collapsed .sidebar-item span {
+    opacity: 0;
+    max-width: 0;
+    pointer-events: none;
 }
 
 .sidebar-item:hover {
@@ -325,6 +361,20 @@ body.admin-bar .ruteo-app-layout {
     gap: 4px;
     font-size: 11px;
     color: var(--text-sidebar);
+    white-space: nowrap;
+    overflow: hidden;
+    opacity: 1;
+    max-height: 60px;
+    transition: opacity 0.18s ease, max-height 0.25s ease, padding 0.25s ease;
+}
+
+.ruteo-sidebar.collapsed .sidebar-footer {
+    opacity: 0;
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    border-top-color: transparent;
+    pointer-events: none;
 }
 
 /* --- CONTENIDO PRINCIPAL --- */
@@ -1654,3 +1704,434 @@ body.admin-bar .ruteo-app-layout {
     }
 }
 
+
+/* ============================================================
+   MEJORAS VISUALES - DEGRADADOS Y MODERNIZACION
+   Pegar esto al final de: assets/css/style.css
+   ============================================================ */
+
+/* --- 1. NUEVAS VARIABLES DE COLOR (violeta-azul de acento) --- */
+:root, .ruteo-app-layout {
+    --accent-violet: #6C5CE7;
+    --accent-violet-dark: #5849C2;
+    --gradient-brand: linear-gradient(135deg, var(--accent-violet) 0%, var(--secondary) 100%);
+    --shadow-accent: 0 6px 16px rgba(108, 92, 231, 0.35);
+    --shadow-accent-strong: 0 10px 24px rgba(108, 92, 231, 0.45);
+}
+
+/* --- 2. HEADER SUPERIOR CON WASH DE DEGRADADO (estilo Canva) --- */
+.ruteo-top-header {
+    background: linear-gradient(115deg, #E3F6F5 0%, #D9EEFB 30%, #E4DFFA 65%, #ECE0FC 100%);
+    border-radius: 18px;
+    border-bottom: none;
+    padding: 24px 28px;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+}
+[data-theme="dark"] .ruteo-top-header {
+    background: linear-gradient(115deg, rgba(108,92,231,0.22) 0%, rgba(0,151,216,0.18) 30%, rgba(142,68,173,0.2) 65%, rgba(108,92,231,0.25) 100%);
+}
+
+/* Aseguramos que el texto del header se lea bien sobre el fondo claro */
+.ruteo-top-header .header-title {
+    color: #1E1B4B;
+}
+.ruteo-top-header .header-subtitle-row {
+    color: #4C4A70;
+}
+
+/* --- 3. SIDEBAR Y LOGO CON DEGRADADO --- */
+.brand-logo-icon {
+    background: var(--gradient-brand) !important;
+    box-shadow: var(--shadow-accent) !important;
+}
+
+.sidebar-item.active {
+    background: var(--gradient-brand) !important;
+    box-shadow: var(--shadow-accent) !important;
+}
+
+/* --- 4. BOTONES CON DEGRADADO Y HOVER ANIMADO --- */
+.portal-btn--refresh:hover {
+    background: var(--gradient-brand);
+    color: #FFFFFF;
+    border-color: transparent;
+    box-shadow: var(--shadow-accent);
+    transform: translateY(-2px) scale(1.02);
+}
+
+.portal-btn--download {
+    background: var(--gradient-brand) !important;
+    box-shadow: var(--shadow-accent) !important;
+}
+.portal-btn--download:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: var(--shadow-accent-strong) !important;
+}
+
+.portal-btn--excel {
+    background: linear-gradient(135deg, var(--primary) 0%, #5F9C0F 100%) !important;
+}
+.portal-btn--excel:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: 0 10px 24px rgba(131,202,22,0.45) !important;
+}
+
+.ruteo-submit-btn {
+    background: var(--gradient-brand) !important;
+    box-shadow: var(--shadow-accent) !important;
+}
+.ruteo-submit-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px) scale(1.02) !important;
+    box-shadow: var(--shadow-accent-strong) !important;
+}
+
+/* --- 5. ICONOS CON DEGRADADO EN VEZ DE COLOR PLANO --- */
+.icon-blue, .icon-blue-bg {
+    background: linear-gradient(135deg, rgba(108,92,231,0.18), rgba(0,151,216,0.14)) !important;
+    color: var(--accent-violet) !important;
+}
+.icon-green, .icon-green-bg {
+    background: linear-gradient(135deg, rgba(131,202,22,0.2), rgba(131,202,22,0.08)) !important;
+}
+.icon-purple, .icon-purple-bg {
+    background: linear-gradient(135deg, rgba(142,68,173,0.2), rgba(108,92,231,0.14)) !important;
+}
+.icon-red {
+    background: linear-gradient(135deg, rgba(217,38,37,0.2), rgba(217,38,37,0.08)) !important;
+}
+
+.dash-stat-card:hover .stat-icon {
+    transform: scale(1.08) rotate(-4deg);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* --- 6. FILTROS CON MAS AIRE Y MEJOR DEFINICION --- */
+.portal-filters-row {
+    gap: 26px;
+    row-gap: 16px;
+}
+.filter-group {
+    gap: 10px;
+}
+.filter-group label {
+    color: var(--text-main);
+    font-weight: 700;
+}
+.filter-group select {
+    padding: 10px 16px;
+    border-width: 1.5px;
+    min-width: 170px;
+    font-weight: 500;
+}
+.filter-group select:focus {
+    box-shadow: 0 0 0 3px rgba(0, 151, 216, 0.15);
+}
+.portal-search-wrap {
+    flex: 1 1 240px;
+    min-width: 220px;
+    border-width: 1.5px;
+}
+.portal-search-wrap input {
+    width: 100%;
+}
+
+/* --- 7. TABLA CON ZEBRA-STRIPING Y HOVER CON ACENTO --- */
+.portal-table th {
+    border-bottom: 2px solid var(--accent-violet);
+    padding: 14px 16px;
+}
+.portal-table td {
+    padding: 13px 16px;
+}
+.portal-table tbody tr:nth-child(even) {
+    background: rgba(108, 92, 231, 0.02);
+}
+[data-theme="dark"] .portal-table tbody tr:nth-child(even) {
+    background: rgba(108, 92, 231, 0.05);
+}
+.portal-table tbody tr:hover {
+    background: rgba(108, 92, 231, 0.07) !important;
+}
+
+/* --- 8. BRILLO SUPERIOR ANIMADO EN TARJETAS --- */
+.dash-stat-card,
+.dash-panel {
+    position: relative;
+    overflow: hidden;
+}
+.dash-stat-card::before,
+.dash-panel::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--gradient-brand);
+    opacity: 0;
+    transition: opacity 0.25s ease;
+}
+.dash-stat-card:hover::before,
+.dash-panel:hover::before {
+    opacity: 1;
+}
+
+/* --- 9. REDISEÑO COMPLETO DE LA PANTALLA DE LOGIN --- */
+.ruteo-wrapper {
+    min-height: 100vh;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    background: #0B0F19;
+    box-sizing: border-box;
+}
+
+.ruteo-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: -20%;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(108,92,231,0.35), transparent 40%),
+        radial-gradient(circle at 80% 30%, rgba(0,151,216,0.3), transparent 45%),
+        radial-gradient(circle at 50% 90%, rgba(131,202,22,0.18), transparent 40%);
+    filter: blur(60px);
+    animation: gradientDrift 14s ease-in-out infinite alternate;
+    pointer-events: none;
+}
+
+@keyframes gradientDrift {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(-3%, 2%) scale(1.05); }
+}
+
+.ruteo-glass-container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 460px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 20px;
+    padding: 32px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+    box-sizing: border-box;
+}
+
+.animate-fade-in {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.ruteo-app-header { margin-bottom: 24px; }
+.ruteo-brand { display: flex; align-items: center; gap: 14px; }
+
+.ruteo-logo-icon {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: var(--gradient-brand);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #FFFFFF;
+    box-shadow: var(--shadow-accent);
+}
+
+.ruteo-title-area h2 { margin: 0; font-size: 20px; font-weight: 700; color: #FFFFFF; }
+.ruteo-title-area p  { margin: 4px 0 0; font-size: 13px; color: rgba(255,255,255,0.6); }
+
+.login-card-title h3 { margin: 0 0 4px; font-size: 17px; font-weight: 700; color: #FFFFFF; }
+.login-card-title p  { margin: 0 0 20px; font-size: 13px; color: rgba(255,255,255,0.55); }
+
+.login-card-container .form-group label {
+    color: rgba(255,255,255,0.75);
+    font-size: 13px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.login-card-container .input-wrapper input {
+    width: 100%;
+    box-sizing: border-box;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: #FFFFFF;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    outline: none;
+    transition: var(--transition);
+}
+.login-card-container .input-wrapper input::placeholder { color: rgba(255,255,255,0.35); }
+.login-card-container .input-wrapper input:focus {
+    border-color: var(--accent-violet);
+    background: rgba(255,255,255,0.12);
+    box-shadow: 0 0 0 3px rgba(108,92,231,0.25);
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #FFFFFF;
+    border-radius: 50%;
+    display: none;
+    animation: spin 0.7s linear infinite;
+}
+.ruteo-submit-btn.loading .spinner { display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.ruteo-message { margin-top: 12px; font-size: 13px; }
+.ruteo-message.error   { color: #FF6B6B; }
+.ruteo-message.success { color: #83CA16; }
+
+.demo-accounts-box p { color: rgba(255,255,255,0.5) !important; }
+.btn-demo-login {
+    background: rgba(255,255,255,0.08) !important;
+    border: 1px solid rgba(255,255,255,0.15) !important;
+    color: rgba(255,255,255,0.8) !important;
+}
+.btn-demo-login:hover {
+    background: var(--gradient-brand) !important;
+    color: #FFFFFF !important;
+    border-color: transparent !important;
+}
+
+
+/* ============================================================
+   MEJORAS VISUALES - RONDA 2 (sidebar, tarjetas, bordes, detalles)
+   ============================================================ */
+
+/* --- 10. SIDEBAR ACTIVO MAS VIBRANTE --- */
+.sidebar-item.active {
+    background: linear-gradient(135deg, var(--accent-violet) 0%, var(--secondary) 100%) !important;
+    box-shadow: 0 4px 14px rgba(108,92,231,0.45) !important;
+    border-radius: 10px !important;
+}
+
+/* --- 11. TARJETAS DE ACCIONES RAPIDAS: borde de color + mejor hover --- */
+.action-btn-card {
+    border-left: 3px solid transparent;
+    border-radius: 12px;
+}
+.action-btn-card:has(.icon-blue-bg)   { border-left-color: var(--accent-violet); }
+.action-btn-card:has(.icon-green-bg)  { border-left-color: var(--primary); }
+.action-btn-card:has(.icon-purple-bg) { border-left-color: #8E44AD; }
+
+.action-btn-card:hover {
+    box-shadow: var(--shadow-md);
+    background: var(--bg-card);
+}
+
+/* --- 12. BORDES MAS REDONDEADOS EN TODA LA INTERFAZ (estilo Canva) --- */
+:root, .ruteo-app-layout, [data-theme="light"], [data-theme="dark"] {
+    --radius: 14px;
+}
+.btn-card-icon {
+    border-radius: 12px;
+}
+.brand-logo-icon {
+    border-radius: 12px !important;
+}
+
+/* --- 13. BOTON "MODO NOCHE" CON MAS PERSONALIDAD --- */
+.theme-toggle-btn {
+    background: linear-gradient(135deg, rgba(108,92,231,0.08), rgba(0,151,216,0.06));
+    border: 1.5px solid rgba(108,92,231,0.25);
+    font-weight: 600;
+}
+.theme-toggle-btn:hover {
+    background: var(--gradient-brand);
+    color: #FFFFFF;
+    border-color: transparent;
+}
+
+/* --- 14. ANILLO DE COLOR EN EL AVATAR DEL USUARIO --- */
+.user-avatar {
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 4px var(--accent-violet);
+}
+.user-profile-badge {
+    border-radius: 999px;
+}
+
+
+/* ============================================================
+   MEJORAS VISUALES - RONDA 3 (sidebar inactivo + formularios)
+   ============================================================ */
+
+/* --- 15. ITEMS DEL SIDEBAR NO ACTIVOS: mejor hover --- */
+.sidebar-item {
+    border-radius: 10px;
+    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.sidebar-item:hover {
+    background: rgba(108, 92, 231, 0.15);
+    color: #FFFFFF;
+    transform: translateX(3px);
+}
+.sidebar-item svg {
+    transition: transform 0.2s ease;
+}
+.sidebar-item:hover svg {
+    transform: scale(1.1);
+}
+
+/* --- 16. CIRCULOS NUMERADOS DE PASOS EN FORMULARIOS --- */
+.step-badge {
+    background: var(--gradient-brand) !important;
+    box-shadow: var(--shadow-accent) !important;
+    border-radius: 50% !important;
+}
+
+/* --- 17. TARJETAS DE SECCION EN FORMULARIOS --- */
+.ruteo-form-section {
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    transition: box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.ruteo-form-section:hover {
+    box-shadow: var(--shadow);
+    border-color: rgba(108, 92, 231, 0.25);
+}
+.form-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* --- 18. INPUTS Y SELECTS DE FORMULARIOS --- */
+.input-wrapper input,
+.input-wrapper select,
+.input-wrapper textarea {
+    border-radius: 10px;
+    border: 1.5px solid var(--border);
+    transition: var(--transition);
+}
+.input-wrapper input:focus,
+.input-wrapper select:focus,
+.input-wrapper textarea:focus {
+    border-color: var(--accent-violet);
+    box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.15);
+}
+
+/* --- 19. TARJETAS DE MATERIALES --- */
+.material-card {
+    border-radius: 16px;
+    transition: box-shadow 0.25s ease;
+}
+.material-card:hover {
+    box-shadow: var(--shadow-md);
+}

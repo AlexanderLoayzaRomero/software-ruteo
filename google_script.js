@@ -235,125 +235,43 @@ function generarGoogleDoc(data, folderId) {
     var doc = DocumentApp.create(docName);
     var body = doc.getBody();
 
-    // Margenes compactos para garantizar 1 sola hoja
-    body.setMarginTop(24);
-    body.setMarginBottom(24);
-    body.setMarginLeft(28);
-    body.setMarginRight(28);
-
-    // Titulo Encabezado
-    var titlePara = body.appendParagraph("SOFTWARE O&M - FICHA TECNICA DE CAMPO");
-    titlePara.setBold(true).setFontSize(13);
+    var titlePara = body.appendParagraph("FICHA TECNICA DE REGISTRO DE CAMPO");
+    titlePara.setBold(true);
+    titlePara.setFontSize(16);
     try {
       if (DocumentApp.ParagraphHeading && DocumentApp.ParagraphHeading.HEADING1) {
         titlePara.setHeading(DocumentApp.ParagraphHeading.HEADING1);
       }
     } catch(hErr) {}
-    
-    var subPara = body.appendParagraph("Fecha: " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm") + "  |  Tramo: " + (data.tramo || "-") + "  |  ID Consol: " + (data.id_consol || "-"));
-    subPara.setFontSize(8.5).setItalic(true);
+    body.appendParagraph("Fecha: " + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm"));
+    body.appendParagraph("Tramo: " + (data.tramo || "-") + " | Codigo: " + (data.codigo || "-") + " | ID Consol: " + (data.id_consol || "-"));
+    body.appendParagraph("");
 
-    // Tabla Compacta de Especificaciones (4 columnas para ahorrar espacio vertical)
-    var specsTableData = [
-      ["ID Consol", String(data.id_consol || "-"), "Codigo Estructura", String(data.codigo || "-")],
-      ["Estructura", String(data.estructura || "-"), "Tipo Estructura", String(data.tipo_estructura || "-")],
-      ["Altura", String(data.altura_estructura || data.altura || "-") + " m", "Ubicacion Coordenadas", String(data.ubicacion || "-")],
-      ["Mufa / Herrajes", "Mufa: " + String(data.mufa || "0") + " | Ret: " + String(data.retencion || "0") + " | Susp: " + String(data.suspension || "0"), "Cruceta / Accesorios", "Cruceta: " + String(data.cruceta || "0") + " | Fleje: " + String(data.fleje || "0") + "m"],
-      ["Amortiguador / Kit", "Amort: " + String(data.amortiguador || "0") + " | Kit Ret: " + String(data.kit_retenida || "0"), "Hebillas / Extensor", "Hebillas: " + String(data.hebillas || "0") + " | Ext: " + String(data.brazo_extensor || "0")],
-      ["Observaciones", String(data.observacion || "-"), "Fecha Registro", String(data.fecha || "-")]
-    ];
+    body.appendTable([
+      ["Parametro", "Valor Registrado"],
+      ["Estructura", data.estructura || "-"],
+      ["Tipo Estructura", data.tipo_estructura || "-"],
+      ["Altura", (data.altura_estructura || data.altura || "-") + " m"],
+      ["Ubicacion Coordenadas", data.ubicacion || "-"],
+      ["Codigo", data.codigo || "-"],
+      ["Mufa", data.mufa || "0"],
+      ["Retencion", data.retencion || "0"],
+      ["Suspension", data.suspension || "0"],
+      ["Cruceta", data.cruceta || "0"],
+      ["Hebillas", data.hebillas || "0"],
+      ["Fleje", data.fleje || "0"],
+      ["Amortiguador", data.amortiguador || "0"],
+      ["Brazo Extensor", data.brazo_extensor || "0"],
+      ["Kit Retenida", data.kit_retenida || "0"],
+      ["Observaciones", data.observacion || "-"]
+    ]);
 
-    // Sanitizacion de tipos para Google Apps Script DocumentApp.appendTable (evita error String vs Number)
-    for (var stR = 0; stR < specsTableData.length; stR++) {
-      for (var stC = 0; stC < specsTableData[stR].length; stC++) {
-        specsTableData[stR][stC] = String(specsTableData[stR][stC] !== undefined && specsTableData[stR][stC] !== null ? specsTableData[stR][stC] : "-");
-      }
+    body.appendParagraph("");
+    if (data.foto1_url || data.foto_1) {
+      body.appendParagraph("Fotografia 1: " + (data.foto1_url || data.foto_1));
     }
-
-    var table = body.appendTable(specsTableData);
-    table.setBorderWidth(0.5);
-    table.setBorderColor("#CBD5E1");
-
-    for (var r = 0; r < table.getNumRows(); r++) {
-      var row = table.getRow(r);
-      for (var c = 0; c < row.getNumCells(); c++) {
-        var cell = row.getCell(c);
-        cell.setPaddingTop(2);
-        cell.setPaddingBottom(2);
-        cell.setPaddingLeft(4);
-        cell.setPaddingRight(4);
-        var p = cell.getChild(0).asParagraph();
-        p.setFontSize(8);
-        if (c % 2 === 0) {
-          p.setBold(true);
-          cell.setBackgroundColor("#F1F5F9");
-        }
-      }
-    }
-
-    var headingFotos = body.appendParagraph("\nEVIDENCIAS FOTOGRAFICAS DE CAMPO");
-    headingFotos.setBold(true).setFontSize(10);
-
-    // Tabla de 2 Columnas para colocar Fotos en la Misma Fila lado a lado
-    var photoTableData = [["Fotografia 1 - Estructura", "Fotografia 2 - Mufa / Detalle"]];
-    var photoTable = body.appendTable(photoTableData);
-    photoTable.setBorderWidth(0.5);
-    photoTable.setBorderColor("#CBD5E1");
-
-    var cell1 = photoTable.getRow(0).getCell(0);
-    var cell2 = photoTable.getRow(0).getCell(1);
-    
-    cell1.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(4).setPaddingRight(4);
-    cell2.setPaddingTop(4).setPaddingBottom(4).setPaddingLeft(4).setPaddingRight(4);
-
-    var pHeader1 = cell1.getChild(0).asParagraph();
-    pHeader1.setBold(true).setFontSize(8);
-
-    var pHeader2 = cell2.getChild(0).asParagraph();
-    pHeader2.setBold(true).setFontSize(8);
-
-    // Foto 1
-    var img1Url = data.foto1_url || data.foto_1 || data.foto1;
-    if (img1Url) {
-      var blob1 = obtenerBlobImagen(img1Url, "foto1.jpg");
-      if (blob1) {
-        try {
-          var imgObj1 = cell1.appendImage(blob1);
-          imgObj1.setWidth(235);
-          imgObj1.setHeight(165);
-        } catch(e1) {
-          var pErr1 = cell1.appendParagraph("Enlace: " + img1Url);
-          pErr1.setFontSize(7);
-        }
-      } else {
-        var pLink1 = cell1.appendParagraph("Enlace: " + img1Url);
-        pLink1.setFontSize(7);
-      }
-    } else {
-      var pNone1 = cell1.appendParagraph("Sin foto registrada");
-      pNone1.setFontSize(8).setItalic(true);
-    }
-
-    // Foto 2
-    var img2Url = data.foto2_url || data.foto_2 || data.foto2;
-    if (img2Url) {
-      var blob2 = obtenerBlobImagen(img2Url, "foto2.jpg");
-      if (blob2) {
-        try {
-          var imgObj2 = cell2.appendImage(blob2);
-          imgObj2.setWidth(235);
-          imgObj2.setHeight(165);
-        } catch(e2) {
-          var pErr2 = cell2.appendParagraph("Enlace: " + img2Url);
-          pErr2.setFontSize(7);
-        }
-      } else {
-        var pLink2 = cell2.appendParagraph("Enlace: " + img2Url);
-        pLink2.setFontSize(7);
-      }
-    } else {
-      var pNone2 = cell2.appendParagraph("Sin foto registrada");
-      pNone2.setFontSize(8).setItalic(true);
+    if (data.foto2_url || data.foto_2) {
+      body.appendParagraph("Fotografia 2: " + (data.foto2_url || data.foto_2));
     }
 
     doc.saveAndClose();
@@ -406,22 +324,19 @@ function generarKMZ(data, folderId) {
                     "Observacion: " + data.observacion + "<br>";
   if (data.foto1_url) descripcion += "<img src='" + data.foto1_url + "' width='300'>";
 
-  var safeNombre = String(nombrePunto).replace(/[&<>'"]/g, '');
-  var safeDesc = String(descripcion).replace(/]]>/g, ']]&gt;');
-
-  var kmlContent = '<?xml version="1.0" encoding="UTF-8"?>\n' +
-  '<kml xmlns="http://www.opengis.net/kml/2.2">\n' +
-  '  <Document>\n' +
-  '    <name>Ruteo_' + safeNombre + '.kml</name>\n' +
-  '    <Placemark>\n' +
-  '      <name>' + safeNombre + '</name>\n' +
-  '      <description><![CDATA[' + safeDesc + ']]></description>\n' +
-  '      <Point>\n' +
-  '        <coordinates>' + coords + '</coordinates>\n' +
-  '      </Point>\n' +
-  '    </Placemark>\n' +
-  '  </Document>\n' +
-  '</kml>';
+  var kmlContent = "<?xml version='1.0' UTF-8'?>\n" +
+  "<kml xmlns='http://www.opengis.net/kml/2.2'>\n" +
+  "  <Document>\n" +
+  "    <name>Ruteo_" + nombrePunto + ".kml</name>\n" +
+  "    <Placemark>\n" +
+  "      <name>" + nombrePunto + "</name>\n" +
+  "      <description><![CDATA[" + descripcion + "]]></description>\n" +
+  "      <Point>\n" +
+  "        <coordinates>" + coords + "</coordinates>\n" +
+  "      </Point>\n" +
+  "    </Placemark>\n" +
+  "  </Document>\n" +
+  "</kml>";
 
   var kmlBlob = Utilities.newBlob(kmlContent, "application/vnd.google-earth.kml+xml", "doc.kml");
   var zipBlob = Utilities.zip([kmlBlob], "Ruteo_" + nombrePunto + ".zip");
@@ -449,10 +364,7 @@ function generarDocumentosTodosLosRegistros() {
   var FOLDER_ID = '1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var data = sheet.getDataRange().getValues();
-  if (data.length <= 1) {
-    Logger.log("No hay registros para procesar.");
-    return;
-  }
+  if (data.length <= 1) return;
 
   var headers = data[0];
   var docxColIndex = -1;
@@ -467,9 +379,6 @@ function generarDocumentosTodosLosRegistros() {
     sheet.getRange(1, headers.length + 1).setValue("Link Docx");
     docxColIndex = headers.length;
   }
-
-  var total = data.length - 1;
-  Logger.log("Iniciando generacion de " + total + " documentos en Google Drive...");
 
   for (var i = 1; i < data.length; i++) {
     var record = {
@@ -495,89 +404,9 @@ function generarDocumentosTodosLosRegistros() {
       foto2_url: data[i][19]
     };
 
-    Logger.log("[" + i + "/" + total + "] Procesando: " + (record.id_consol || record.codigo || ("Ficha_" + i)));
-
-    try {
-      var docUrl = generarGoogleDoc(record, FOLDER_ID);
-      if (docUrl) {
-        sheet.getRange(i + 1, docxColIndex + 1).setValue(docUrl);
-        Logger.log("[" + i + "/" + total + "] OK -> Documento creado.");
-      }
-    } catch(errRow) {
-      Logger.log("[" + i + "/" + total + "] Error: " + errRow.toString());
-    }
-
-    if (i % 2 === 0) {
-      SpreadsheetApp.flush();
+    var docUrl = generarGoogleDoc(record, FOLDER_ID);
+    if (docUrl) {
+      sheet.getRange(i + 1, docxColIndex + 1).setValue(docUrl);
     }
   }
-  SpreadsheetApp.flush();
-  Logger.log("¡Proceso completado con exito! Todos los documentos fueron generados.");
-}
-
-function obtenerBlobImagen(inputStr, defaultName) {
-  if (!inputStr || typeof inputStr !== 'string') return null;
-  var str = inputStr.trim();
-  if (!str) return null;
-
-  // 1. Formato Base64
-  if (str.indexOf('data:image/') === 0) {
-    try {
-      var parts = str.split(',');
-      var header = parts[0];
-      var base64Data = parts[1] || parts[0];
-      var mime = 'image/jpeg';
-      if (header.indexOf('image/png') !== -1) mime = 'image/png';
-      else if (header.indexOf('image/webp') !== -1) mime = 'image/webp';
-      var decoded = Utilities.base64Decode(base64Data);
-      return Utilities.newBlob(decoded, mime, defaultName);
-    } catch(e) {
-      Logger.log("Error decodificando Base64: " + e.toString());
-    }
-  }
-
-  // 2. Extraer ID de archivo de Google Drive
-  var isDriveUrl = str.indexOf('google.com') !== -1 || str.indexOf('drive.google') !== -1;
-  var idMatch = str.match(/\/d\/([a-zA-Z0-9_-]{20,})/) || 
-                str.match(/[?&]id=([a-zA-Z0-9_-]{20,})/) || 
-                str.match(/^([a-zA-Z0-9_-]{25,50})$/);
-  
-  var fileId = idMatch ? idMatch[1] : null;
-  if (!fileId && isDriveUrl) {
-    var rawMatch = str.match(/([a-zA-Z0-9_-]{28,45})/);
-    if (rawMatch) fileId = rawMatch[1];
-  }
-
-  if (fileId) {
-    try {
-      var file = DriveApp.getFileById(fileId);
-      if (file) {
-        var blob = file.getBlob();
-        if (blob && blob.getContentType() && blob.getContentType().indexOf('image') !== -1) {
-          return blob;
-        }
-      }
-    } catch(eDrive) {
-      Logger.log("Error Drive ID " + fileId + ": " + eDrive.toString());
-    }
-    // Evitar realizar fetch HTTP de la pagina web de Drive si DriveApp no pudo obtener la foto
-    return null;
-  }
-
-  // 3. Descarga de URL HTTP/HTTPS externa (solo si no es de Google Drive)
-  if (!isDriveUrl && (str.indexOf('http://') === 0 || str.indexOf('https://') === 0)) {
-    try {
-      var resp = UrlFetchApp.fetch(str, { muteHttpExceptions: true, followRedirects: true });
-      if (resp.getResponseCode() === 200) {
-        var b = resp.getBlob();
-        if (b && b.getContentType() && b.getContentType().indexOf('image') !== -1) {
-          return b;
-        }
-      }
-    } catch(eFetch) {
-      Logger.log("Error UrlFetch: " + eFetch.toString());
-    }
-  }
-
-  return null;
 }

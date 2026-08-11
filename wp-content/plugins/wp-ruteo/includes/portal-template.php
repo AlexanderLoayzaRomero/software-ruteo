@@ -79,10 +79,9 @@ body.admin-bar .ruteo-app-layout {
                 </div>
             </div>
             <button class="sidebar-collapse-btn" id="btn-sidebar-collapse" title="Contraer panel">
-                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/>
                 </svg>
-                <span class="btn-collapse-label">Contraer</span>
             </button>
         </div>
 
@@ -159,7 +158,7 @@ body.admin-bar .ruteo-app-layout {
         </nav>
 
         <div class="sidebar-footer">
-            <span class="sidebar-copy">&copy; 2026 HSE Ruteo App</span>
+            <span class="sidebar-copy">&copy; 2026 Software O&M</span>
             <span class="sidebar-url">app.ruteo.org.pe</span>
         </div>
     </aside>
@@ -180,7 +179,7 @@ body.admin-bar .ruteo-app-layout {
                     <div class="header-subtitle-row">
                         <span class="header-date" id="current-date-str">--</span>
                         <span class="bullet-sep">•</span>
-                        <span class="header-subtext">Gestion Ruteo y Mantenimiento</span>
+                        <span class="header-subtext">Gestion O&M y Mantenimiento</span>
                     </div>
                 </div>
             </div>
@@ -357,7 +356,7 @@ body.admin-bar .ruteo-app-layout {
                             <h4 style="font-size: 14px; font-weight: 700; margin: 0 0 12px 0; color: var(--menu-title);">Accesos Directos a Google Sheets (Solo Admin)</h4>
                             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                                 <a href="https://docs.google.com/spreadsheets/d/1m19aeKOuPJYw01yvFPP9_SGmpdJgUg_q/edit" target="_blank" class="portal-btn portal-btn--excel" id="btn-link-gsheet-ruteo" style="font-size: 12px; padding: 8px 14px; text-decoration: none;">
-                                    📊 Abrir Google Sheet Ruteo
+                                    📊 Abrir Google Sheet O&M
                                 </a>
                                 <a href="https://docs.google.com/spreadsheets" target="_blank" class="portal-btn portal-btn--download" id="btn-link-gsheet-materiales" style="font-size: 12px; padding: 8px 14px; text-decoration: none;">
                                     📦 Abrir Google Sheet Materiales
@@ -900,9 +899,11 @@ body.admin-bar .ruteo-app-layout {
                             <h3 class="form-section-title"><span class="step-badge">1</span> Datos Generales y Empresa Cliente</h3>
                             <div class="ruteo-fields-grid">
                                 <div class="form-group"><label>Cliente / Empresa Principal</label><div class="input-wrapper">
-                                    <select name="cliente_nombre" class="neg-select-cliente" required>
+                                    <select name="cliente_nombre_select" class="neg-select-cliente">
                                         <option value="CYMTEL">CYMTEL</option>
+                                        <option value="__otro__">+ Otro (escribir nombre)</option>
                                     </select>
+                                    <input type="text" name="cliente_nombre" class="neg-input-cliente-otro" placeholder="Escribe el nombre del cliente" style="display:none; margin-top:8px;">
                                 </div></div>
                                 <div class="form-group"><label>Proceso</label><div class="input-wrapper"><input type="text" name="proceso" placeholder="Ej: Perdida de enlace..." required></div></div>
                                 <div class="form-group"><label>CM / Localidad</label><div class="input-wrapper"><input type="text" name="cm_localidad" required></div></div>
@@ -963,9 +964,11 @@ body.admin-bar .ruteo-app-layout {
                             <h3 class="form-section-title"><span class="step-badge">1</span> Revision y Edicion de Datos Generales</h3>
                             <div class="ruteo-fields-grid">
                                 <div class="form-group"><label>Cliente / Empresa Principal</label><div class="input-wrapper">
-                                    <select name="cliente_nombre" class="neg-select-cliente" required>
+                                    <select name="cliente_nombre_select" class="neg-select-cliente">
                                         <option value="CYMTEL">CYMTEL</option>
+                                        <option value="__otro__">+ Otro (escribir nombre)</option>
                                     </select>
+                                    <input type="text" name="cliente_nombre" class="neg-input-cliente-otro" placeholder="Escribe el nombre del cliente" style="display:none; margin-top:8px;">
                                 </div></div>
                                 <div class="form-group"><label>Proceso</label><div class="input-wrapper"><input type="text" name="proceso" required></div></div>
                                 <div class="form-group"><label>CM / Localidad</label><div class="input-wrapper"><input type="text" name="cm_localidad" required></div></div>
@@ -1023,9 +1026,9 @@ body.admin-bar .ruteo-app-layout {
                     <form id="form-negativa-seguridad" class="ruteo-form" style="display:none;">
                         <div class="ruteo-form-section">
                             <h3 class="form-section-title"><span class="step-badge">7</span> Verificacion del Supervisor de Seguridad / SST</h3>
+                            <p style="font-size:12.5px; color:var(--text-muted); margin:-4px 0 12px 0;">Firmando como: <strong id="neg-seguridad-firmante-nombre"></strong></p>
                             <div class="ruteo-fields-grid">
-                                <div class="form-group"><label>Nombre Supervisor Seguridad</label><div class="input-wrapper"><input type="text" name="supervisor_seguridad_nombre" required></div></div>
-                                <div class="form-group full-width"><label>Observaciones de Seguridad SST</label><div class="input-wrapper"><textarea name="observaciones_seguridad" rows="3" required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div></div>
+                                <div class="form-group full-width"><label>Observaciones de Seguridad SST (opcional)</label><div class="input-wrapper"><textarea name="observaciones_seguridad" rows="3" placeholder="Solo si tienes algo que anotar. Puedes firmar sin llenar este campo." style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div></div>
                             </div>
                         </div>
                         <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Supervisor de Seguridad</button>
@@ -1035,9 +1038,9 @@ body.admin-bar .ruteo-app-layout {
                     <form id="form-negativa-hse" class="ruteo-form" style="display:none;">
                         <div class="ruteo-form-section">
                             <h3 class="form-section-title"><span class="step-badge">8</span> Cierre Final por Area HSE</h3>
+                            <p style="font-size:12.5px; color:var(--text-muted); margin:-4px 0 12px 0;">Firmando como: <strong id="neg-hse-firmante-nombre"></strong></p>
                             <div class="ruteo-fields-grid">
-                                <div class="form-group"><label>Nombre del Responsable HSE</label><div class="input-wrapper"><input type="text" name="hse_nombre" required></div></div>
-                                <div class="form-group full-width"><label>Dictamen Final HSE</label><div class="input-wrapper"><textarea name="dictamen_hse" rows="3" required style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div></div>
+                                <div class="form-group full-width"><label>Dictamen Final HSE (opcional)</label><div class="input-wrapper"><textarea name="dictamen_hse" rows="3" placeholder="Solo si tienes algo que anotar. Puedes dar el Visto Bueno sin llenar este campo." style="width:100%; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--bg-subtle); color:var(--text-main);"></textarea></div></div>
                             </div>
                         </div>
                         <button type="submit" class="btn-primary ruteo-submit-btn">Guardar y Firmar como Area HSE</button>
@@ -1204,7 +1207,7 @@ body.admin-bar .ruteo-app-layout {
 
                     <!-- FORMULARIO CREAR / EDITAR USUARIO AMPLIADO -->
                     <div class="user-create-card" id="user-create-card" style="display:none;">
-                        <h4 id="user-form-title">Gestion de Cuenta y Permisos de Firmante</h4>
+                        <h4 id="user-form-title">Gestion de Cuenta y Rol en Negativa al Trabajo</h4>
                         <form id="form-create-user" enctype="multipart/form-data">
                             <input type="hidden" id="user-edit-id-input" value="0">
                             <div class="user-form-grid">
@@ -1239,7 +1242,7 @@ body.admin-bar .ruteo-app-layout {
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Rol del Sistema</label>
+                                    <label>Rol del Sistema <span style="font-weight:400; color:var(--text-muted); font-size:11px;">(acceso general a la plataforma)</span></label>
                                     <div class="input-wrapper">
                                         <select id="user-role-select">
                                             <option value="ruteo_worker">Operario de Campo (Worker)</option>
@@ -1250,7 +1253,7 @@ body.admin-bar .ruteo-app-layout {
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label>Rol Negativa al Trabajo</label>
+                                    <label>Rol Negativa al Trabajo <span style="font-weight:400; color:var(--accent); font-size:11px;">(define la etapa en la que puede firmar)</span></label>
                                     <div class="input-wrapper">
                                         <select id="user-negativa-rol-select">
                                             <option value="">-- Sin Rol Especifico --</option>
@@ -1261,28 +1264,13 @@ body.admin-bar .ruteo-app-layout {
                                         </select>
                                     </div>
                                 </div>
+                                <div class="form-group full-width" style="background: rgba(0, 151, 216, 0.06); padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); font-size: 12px; color: var(--text-muted);">
+                                    ℹ️ <strong>Rol del Sistema</strong> solo controla el acceso general a la plataforma. La <strong>UNICA</strong> que determina en que etapa del flujo de Negativa al Trabajo puede actuar/firmar un usuario (Tecnico &rarr; Supervisor Operativo &rarr; Supervisor de Seguridad &rarr; HSE) es <strong>"Rol Negativa al Trabajo"</strong>. Si un usuario necesita firmar en Negativa al Trabajo, este campo no puede quedar vacio.
+                                </div>
                                 <div class="form-group full-width">
                                     <label>Cargo / Puesto de Trabajo Formal</label>
                                     <div class="input-wrapper">
                                         <input type="text" id="user-position-input" placeholder="Ej: Especialista Fibra Optica / Supervisor SST / Tecnico PEXT">
-                                    </div>
-                                </div>
-
-                                <div class="form-group full-width" style="background: rgba(0, 151, 216, 0.05); padding: 14px 16px; border-radius: 10px; border: 1px solid var(--border);">
-                                    <label style="font-weight: 700; color: var(--accent); margin-bottom: 8px; display: block;">Atribuciones y Permisos de Firmante Digital</label>
-                                    <div style="display: flex; flex-wrap: wrap; gap: 16px; margin-top: 6px;">
-                                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                                            <input type="checkbox" class="chk-signer-cap" value="firmante_ejecutor">
-                                            <span>Firma Ejecutor (AST / Campo)</span>
-                                        </label>
-                                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                                            <input type="checkbox" class="chk-signer-cap" value="firmante_operativo">
-                                            <span>Firma Supervisor Operativo (Liberacion)</span>
-                                        </label>
-                                        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
-                                            <input type="checkbox" class="chk-signer-cap" value="firmante_hse">
-                                            <span>Firma Supervisor HSE (Seguridad SST)</span>
-                                        </label>
                                     </div>
                                 </div>
 
@@ -1329,7 +1317,7 @@ body.admin-bar .ruteo-app-layout {
                                         <th>Correo / Cargo</th>
                                         <th>PM Asignado</th>
                                         <th>Rol Sistema</th>
-                                        <th>Permisos de Firmante</th>
+                                        <th>Rol Negativa al Trabajo</th>
                                         <th>Acciones</th>
                                     </tr>
                                 </thead>
@@ -1442,6 +1430,16 @@ body.admin-bar .ruteo-app-layout {
                                 </div>
                             </div>
 
+                            <div class="form-group full-width">
+                                <label>Firma Digital</label>
+                                <p style="font-size:12px; color:var(--text-muted, #888); margin:2px 0 8px;">Sube una foto/captura de tu firma (fondo claro). Se usara automaticamente cada vez que firmes una etapa de "Negativa al Trabajo", y aparecera en el PDF exportado.</p>
+                                <div id="prof-firma-preview-box" style="display:none; width:220px; height:90px; border:1px solid var(--border); border-radius:8px; background:#fff; margin-bottom:10px; align-items:center; justify-content:center; overflow:hidden;">
+                                    <img id="prof-firma-preview-img" src="" alt="Firma" style="max-width:100%; max-height:100%; object-fit:contain;">
+                                </div>
+                                <input type="file" id="prof-firma-file" accept="image/*">
+                                <button type="button" id="prof-firma-remove" class="btn-secondary" style="display:none; margin-top:8px;">Quitar firma</button>
+                            </div>
+
                             <div class="form-footer-actions">
                                 <button type="submit" class="ruteo-submit-btn" style="min-width: 180px;">
                                     <span class="btn-text">Actualizar Perfil</span>
@@ -1514,7 +1512,7 @@ body.admin-bar .ruteo-app-layout {
         <section class="ruteo-tab-content" id="tab-login">
             <div class="login-card-container">
                 <div class="login-card-title">
-                    <h3>Acceso al Aplicativo HSE Ruteo</h3>
+                    <h3>Acceso a Software O&M</h3>
                     <p>Ingresa tus credenciales para acceder al sistema</p>
                 </div>
                 <form class="ruteo-auth-login-form" id="ruteo-login-form">
