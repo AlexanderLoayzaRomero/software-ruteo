@@ -582,16 +582,12 @@ class WPRuteoApp {
                 return;
             } else {
                 $gas_body = wp_remote_retrieve_body( $response );
-                $gas_code = wp_remote_retrieve_response_code( $response );
-                self::registrar_log( 'Debug GAS Update', 'Code: ' . $gas_code . ' | TargetID: ' . ( $data['id_consol'] ?? '' ) );
-
                 $gas_json = json_decode( $gas_body, true );
                 if ( $gas_json && isset( $gas_json['status'] ) && $gas_json['status'] === 'error' ) {
                     wp_send_json_error( array( 'message' => 'Error de Google Sheets: ' . $gas_json['message'] ) );
                     return;
                 }
             }
-            self::registrar_log( 'Debug GAS Update', 'Response: ' . $gas_body . ' | TargetID: ' . $data['id_consol'] );
         }
 
         self::registrar_log( 'Registro de Campo', 'Edicion de Registro de Ruteo en tramo: ' . $data['tramo'] . ' (ID: ' . $data['id_consol'] . ' / Codigo: ' . $data['codigo'] . ')' );
@@ -1631,7 +1627,11 @@ class WPRuteoApp {
                 $pm = get_user_meta( $u->ID, 'ruteo_pm_assigned', true );
                 $user_pm_map[ strtolower( trim( $u->display_name ) ) ] = $pm ?: '-';
             }
-            foreach ( $logs as &$l ) {
+            $clean_logs = array();
+            foreach ( $logs as $l ) {
+                if ( isset( $l['accion'] ) && $l['accion'] === 'Debug GAS Update' ) {
+                    continue;
+                }
                 if ( empty( $l['pm'] ) || $l['pm'] === '-' ) {
                     $uname_key = strtolower( trim( $l['usuario'] ?? '' ) );
                     if ( isset( $user_pm_map[ $uname_key ] ) ) {
@@ -1640,7 +1640,9 @@ class WPRuteoApp {
                         $l['pm'] = '-';
                     }
                 }
+                $clean_logs[] = $l;
             }
+            $logs = $clean_logs;
         }
         wp_send_json_success( array( 'logs' => $logs ) );
     }

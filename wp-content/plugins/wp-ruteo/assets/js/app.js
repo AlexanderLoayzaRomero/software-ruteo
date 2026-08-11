@@ -2774,12 +2774,18 @@ jQuery(document).ready(function($) {
             return;
         }
         logs.forEach(function(l) {
+            var rawDetalle = l.detalles || l.detalle || '-';
+            var safeDetalle = $('<div>').text(rawDetalle).html();
+            var safeUsuario = $('<div>').text(l.usuario || '').html();
+            var safeAccion  = $('<div>').text(l.accion || '').html();
+            var safePm      = $('<div>').text(l.pm || '-').html();
+
             var tr = '<tr>' +
                 '<td><span style="font-size:12px; font-weight:600; color:var(--text-muted);">' + l.fecha + '</span></td>' +
-                '<td><strong>' + l.usuario + '</strong></td>' +
-                '<td><span style="font-size:12px; font-weight:600; color:var(--accent);">' + (l.pm || '-') + '</span></td>' +
-                '<td><span class="status-badge-info" style="font-size:11px;">' + l.accion + '</span></td>' +
-                '<td>' + (l.detalles || l.detalle || '-') + '</td>' +
+                '<td><strong>' + safeUsuario + '</strong></td>' +
+                '<td><span style="font-size:12px; font-weight:600; color:var(--accent);">' + safePm + '</span></td>' +
+                '<td><span class="status-badge-info" style="font-size:11px;">' + safeAccion + '</span></td>' +
+                '<td>' + safeDetalle + '</td>' +
             '</tr>';
             $tbody.append(tr);
         });
