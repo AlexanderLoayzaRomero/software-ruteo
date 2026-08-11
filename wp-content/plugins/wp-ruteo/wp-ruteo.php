@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: Aplicacion de Ruteo
- * Description: Plugin para recopilar datos y fotos en campo, consumo de materiales y gestion de usuarios.
+ * Plugin Name: Software O&M
+ * Description: Software O&M - Plugin para recopilar datos y fotos en campo, consumo de materiales y gestion de usuarios.
  * Version: 2.0.0
  * Author: Antigravity
  */
@@ -14,13 +14,14 @@ class WPRuteoApp {
 
     // URL DEL WEBHOOK DE GOOGLE SHEETS
     public $webhook_url = 'https://script.google.com/macros/s/AKfycbwA3yeXPpl2vNYy9E4nu-LyNc-4FyzA7D6w-MxaiwrKzhWsyRh00Kb5v4WXqJy_Yci4Xg/exec';
+    private $assets_enqueued = false;
 
     public function __construct() {
         $this->register_roles();
         add_shortcode( 'formulario_ruteo', array( $this, 'render_form' ) );
         add_shortcode( 'portal_ruteo', array( $this, 'render_portal' ) );
         add_shortcode( 'login_ruteo', array( $this, 'render_login' ) );
-        add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
+        add_action( 'wp_enqueue_scripts', array( $this, 'maybe_enqueue_assets' ) );
         add_action( 'wp_ajax_ruteo_submit', array( $this, 'handle_ajax_submit' ) );
         add_action( 'wp_ajax_nopriv_ruteo_submit', array( $this, 'handle_ajax_submit' ) );
         // Proxy GET: evita CORS del browser al llamar directamente a Google
@@ -56,7 +57,7 @@ class WPRuteoApp {
         add_action( 'wp_ajax_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
         add_action( 'wp_ajax_nopriv_ruteo_get_materiales', array( $this, 'handle_ajax_get_materiales' ) );
 
-        ruteo_crear_tabla_negativas();
+        add_action( 'plugins_loaded', array( $this, 'maybe_upgrade_negativas_table' ) );
 
         // Clientes AJAX Endpoints
         add_action( 'wp_ajax_ruteo_get_clientes', array( $this, 'handle_ajax_get_clientes' ) );
@@ -70,38 +71,58 @@ class WPRuteoApp {
 
         // Image Base64 Proxy Endpoint
         add_action( 'wp_ajax_ruteo_get_image_base64', array( $this, 'handle_ajax_get_image_base64' ) );
-        add_action( 'wp_ajax_nopriv_ruteo_get_image_base64', array( $this, 'handle_ajax_get_image_base64' ) );
+        
 
-        add_action( 'init', array( $this, 'crear_cuentas_prueba' ) );
+        
     }
 
     public function register_roles() {
-        add_role( 'ruteo_admin', 'Administrador Ruteo', array(
+        add_role( 'ruteo_admin', 'Administrador O&M', array(
             'read'                  => true,
             'ruteo_admin_access'    => true,
             'ruteo_worker_access'   => true,
         ) );
-        add_role( 'ruteo_sup_operativo', 'Supervisor Operativo Ruteo', array(
+        add_role( 'ruteo_sup_operativo', 'Supervisor Operativo O&M', array(
             'read'                       => true,
             'ruteo_worker_access'        => true,
             'ruteo_sup_operativo_access' => true,
         ) );
-        add_role( 'ruteo_sup_hse', 'Supervisor HSE Ruteo', array(
+        add_role( 'ruteo_sup_hse', 'Supervisor HSE O&M', array(
             'read'                  => true,
             'ruteo_worker_access'   => true,
             'ruteo_sup_hse_access'  => true,
         ) );
-        add_role( 'ruteo_worker', 'Operario Ruteo', array(
+        add_role( 'ruteo_worker', 'Operario O&M', array(
             'read'                  => true,
             'ruteo_worker_access'   => true,
         ) );
+
+        // Si los roles ya existian en la base de datos (instalacion previa), add_role() no
+        // actualiza el nombre visible. Forzamos la actualizacion del label aqui.
+        global $wp_roles;
+        if ( ! isset( $wp_roles ) ) {
+            $wp_roles = new WP_Roles();
+        }
+        $nombres_roles = array(
+            'ruteo_admin'         => 'Administrador O&M',
+            'ruteo_sup_operativo' => 'Supervisor Operativo O&M',
+            'ruteo_sup_hse'       => 'Supervisor HSE O&M',
+            'ruteo_worker'        => 'Operario O&M',
+        );
+        foreach ( $nombres_roles as $rol_id => $nombre ) {
+            if ( isset( $wp_roles->roles[ $rol_id ] ) && $wp_roles->roles[ $rol_id ]['name'] !== $nombre ) {
+                $wp_roles->roles[ $rol_id ]['name'] = $nombre;
+                $wp_roles->role_names[ $rol_id ]    = $nombre;
+                update_option( $wp_roles->role_key, $wp_roles->roles );
+            }
+        }
     }
 
-    public function crear_cuentas_prueba() {
+    public static function activar_cuentas_prueba() {
         $cuentas = array(
             array(
                 'user'         => 'admingeneral',
-                'pass'         => 'AdminGeneral123!',
+                'pass'         => defined( 'RUTEO_PASS_ADMIN' ) ? RUTEO_PASS_ADMIN : wp_generate_password( 16 ),
                 'name'         => 'Administrador General O&M',
                 'email'        => 'admin@software-om.org.pe',
                 'role'         => 'ruteo_admin',
@@ -111,7 +132,7 @@ class WPRuteoApp {
             ),
             array(
                 'user'         => 'tecnico1',
-                'pass'         => 'Tecnico123!',
+                'pass'         => defined( 'RUTEO_PASS_TECNICO' ) ? RUTEO_PASS_TECNICO : wp_generate_password( 16 ),
                 'name'         => 'Juan Perez (Tecnico)',
                 'email'        => 'tecnico1@ruteo.org.pe',
                 'role'         => 'ruteo_worker',
@@ -121,7 +142,7 @@ class WPRuteoApp {
             ),
             array(
                 'user'         => 'supervisor1',
-                'pass'         => 'Supervisor123!',
+                'pass'         => defined( 'RUTEO_PASS_SUPERVISOR' ) ? RUTEO_PASS_SUPERVISOR : wp_generate_password( 16 ),
                 'name'         => 'Carlos Mendoza (Supervisor Op.)',
                 'email'        => 'supervisor1@ruteo.org.pe',
                 'role'         => 'ruteo_sup_operativo',
@@ -131,7 +152,7 @@ class WPRuteoApp {
             ),
             array(
                 'user'         => 'seguridad1',
-                'pass'         => 'Seguridad123!',
+                'pass'         => defined( 'RUTEO_PASS_SEGURIDAD' ) ? RUTEO_PASS_SEGURIDAD : wp_generate_password( 16 ),
                 'name'         => 'Roberto Silva (Supervisor Seg.)',
                 'email'        => 'seguridad1@ruteo.org.pe',
                 'role'         => 'ruteo_sup_hse',
@@ -141,7 +162,7 @@ class WPRuteoApp {
             ),
             array(
                 'user'         => 'hse1',
-                'pass'         => 'Hse123!',
+                'pass'         => defined( 'RUTEO_PASS_HSE' ) ? RUTEO_PASS_HSE : wp_generate_password( 16 ),
                 'name'         => 'Maria Fernandez (Area HSE)',
                 'email'        => 'hse1@ruteo.org.pe',
                 'role'         => 'ruteo_sup_hse',
@@ -179,6 +200,10 @@ class WPRuteoApp {
     }
 
     public function enqueue_assets() {
+        if ( $this->assets_enqueued ) {
+            return;
+        }
+        $this->assets_enqueued = true;
         $css_ver = filemtime( plugin_dir_path( __FILE__ ) . 'assets/css/style.css' );
         $js_ver  = filemtime( plugin_dir_path( __FILE__ ) . 'assets/js/app.js' );
         wp_enqueue_style( 'wp-ruteo-style', plugin_dir_url( __FILE__ ) . 'assets/css/style.css', array(), $css_ver );
@@ -194,6 +219,7 @@ class WPRuteoApp {
         $phone        = '';
         $pm_assigned   = '';
         $avatar       = '';
+        $firma_img    = '';
         $position     = '';
         $signer_caps  = array();
         $negativa_rol = '';
@@ -202,6 +228,7 @@ class WPRuteoApp {
             $phone        = get_user_meta( $current_user->ID, 'ruteo_phone', true );
             $pm_assigned  = get_user_meta( $current_user->ID, 'ruteo_pm_assigned', true );
             $avatar       = get_user_meta( $current_user->ID, 'ruteo_avatar', true );
+            $firma_img    = get_user_meta( $current_user->ID, 'ruteo_firma_img', true );
             $position     = get_user_meta( $current_user->ID, 'ruteo_position', true );
             $negativa_rol = get_user_meta( $current_user->ID, 'ruteo_negativa_rol', true );
             $signer_caps  = get_user_meta( $current_user->ID, 'ruteo_signer_caps', true );
@@ -233,13 +260,12 @@ class WPRuteoApp {
                     'logo'   => '',
                 )
             );
-            update_option( 'ruteo_clientes_list', $clientes_list );
+            update_option( 'ruteo_clientes_list', $clientes_list, false );
         }
 
         wp_localize_script( 'wp-ruteo-app', 'wpRuteoAjax', array(
             'ajaxurl'   => admin_url( 'admin-ajax.php' ),
             'nonce'     => wp_create_nonce( 'ruteo_submit_nonce' ),
-            'webhook'   => $this->webhook_url,
             'siteLogo'  => get_option( 'ruteo_site_logo', '' ),
             'clientes'  => $clientes_list,
             'user'    => array(
@@ -253,11 +279,29 @@ class WPRuteoApp {
                 'phone'       => $phone,
                 'pmAssigned'  => $pm_assigned,
                 'avatar'      => $avatar,
+                'firma'       => $firma_img,
                 'role'        => $user_role,
                 'position'    => $position ?: '',
                 'signerCaps'  => $signer_caps,
             ),
         ) );
+    }
+
+    public function maybe_enqueue_assets() {
+        if ( ! is_singular() ) {
+            return;
+        }
+        global $post;
+        if ( ! $post ) {
+            return;
+        }
+        $shortcodes = array( 'formulario_ruteo', 'portal_ruteo', 'login_ruteo' );
+        foreach ( $shortcodes as $sc ) {
+            if ( has_shortcode( $post->post_content, $sc ) ) {
+                $this->enqueue_assets();
+                return;
+            }
+        }
     }
 
     public function render_form() {
@@ -363,9 +407,16 @@ class WPRuteoApp {
             }
         }
 
+        $host = wp_parse_url( $url, PHP_URL_HOST );
+        $dominios_permitidos = array( 'drive.google.com', 'lh3.googleusercontent.com', 'docs.google.com' );
+        if ( ! $host || ! in_array( $host, $dominios_permitidos, true ) ) {
+            wp_send_json_error( array( 'message' => 'Dominio no permitido.' ) );
+            return;
+        }
+
         $response = wp_remote_get( $url, array(
             'timeout'   => 30,
-            'sslverify' => false,
+            'sslverify' => true,
         ) );
 
         if ( is_wp_error( $response ) ) {
@@ -479,6 +530,15 @@ class WPRuteoApp {
             return;
         }
 
+        $ip           = isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
+        $intentos_key = 'ruteo_login_intentos_' . md5( $ip . '|' . $raw_input );
+        $intentos     = (int) get_transient( $intentos_key );
+
+        if ( $intentos >= 5 ) {
+            wp_send_json_error( array( 'message' => 'Demasiados intentos fallidos. Intenta de nuevo en 10 minutos.' ) );
+            return;
+        }
+
         $username = $raw_input;
         if ( is_email( $raw_input ) ) {
             $user_by_email = get_user_by( 'email', $raw_input );
@@ -498,9 +558,12 @@ class WPRuteoApp {
         $user = wp_signon( $creds, is_ssl() );
 
         if ( is_wp_error( $user ) ) {
+            set_transient( $intentos_key, $intentos + 1, 10 * MINUTE_IN_SECONDS );
             wp_send_json_error( array( 'message' => 'Credenciales invalidas. Revisa usuario o correo y clave.' ) );
             return;
         }
+
+        delete_transient( $intentos_key );
 
         wp_set_current_user( $user->ID );
         wp_set_auth_cookie( $user->ID, $remember );
@@ -511,6 +574,7 @@ class WPRuteoApp {
         $phone        = get_user_meta( $user->ID, 'ruteo_phone', true );
         $pm_assigned  = get_user_meta( $user->ID, 'ruteo_pm_assigned', true );
         $avatar       = get_user_meta( $user->ID, 'ruteo_avatar', true );
+        $firma_img    = get_user_meta( $user->ID, 'ruteo_firma_img', true );
         $negativa_rol = get_user_meta( $user->ID, 'ruteo_negativa_rol', true );
         $position     = get_user_meta( $user->ID, 'ruteo_position', true );
         $signer_caps  = get_user_meta( $user->ID, 'ruteo_signer_caps', true );
@@ -528,6 +592,7 @@ class WPRuteoApp {
                 'phone'       => $phone,
                 'pmAssigned'  => $pm_assigned,
                 'avatar'      => $avatar,
+                'firma'       => $firma_img,
                 'role'        => $role,
                 'isAdmin'     => $is_admin,
                 'negativaRol' => $negativa_rol ?: '',
@@ -789,7 +854,21 @@ class WPRuteoApp {
             @unlink($tmp_file);
         }
 
-        wp_send_json_success( array( 'message' => 'Perfil actualizado correctamente.' ) );
+        $firma_actual = get_user_meta( $user_id, 'ruteo_firma_img', true );
+
+        if ( ! empty( $_FILES['firma']['tmp_name'] ) ) {
+            $tmp_file = $_FILES['firma']['tmp_name'];
+            $type     = mime_content_type($tmp_file);
+            $content  = file_get_contents($tmp_file);
+            $firma_actual = 'data:' . $type . ';base64,' . base64_encode($content);
+            update_user_meta( $user_id, 'ruteo_firma_img', $firma_actual );
+            @unlink($tmp_file);
+        } elseif ( isset( $_POST['firma_remove'] ) && $_POST['firma_remove'] === '1' ) {
+            delete_user_meta( $user_id, 'ruteo_firma_img' );
+            $firma_actual = '';
+        }
+
+        wp_send_json_success( array( 'message' => 'Perfil actualizado correctamente.', 'firma' => $firma_actual ) );
     }
     
     public function handle_ajax_update_site_logo() {
@@ -880,7 +959,7 @@ class WPRuteoApp {
         }
 
         array_unshift( $materiales, $new_report );
-        update_option( 'wp_ruteo_materiales_store', $materiales );
+        update_option( 'wp_ruteo_materiales_store', $materiales, false );
 
         // Enviar copia a Google Apps Script
         if ( $this->webhook_url ) {
@@ -936,7 +1015,7 @@ class WPRuteoApp {
                     'logo'   => '',
                 )
             );
-            update_option( 'ruteo_clientes_list', $clientes );
+            update_option( 'ruteo_clientes_list', $clientes, false );
         }
         wp_send_json_success( array( 'clientes' => $clientes ) );
     }
@@ -1001,7 +1080,7 @@ class WPRuteoApp {
             );
         }
 
-        update_option( 'ruteo_clientes_list', $clientes );
+        update_option( 'ruteo_clientes_list', $clientes, false );
         wp_send_json_success( array(
             'message'  => 'Cliente guardado con exito.',
             'clientes' => $clientes
@@ -1078,7 +1157,41 @@ class WPRuteoApp {
         $cliente_nombre = sanitize_text_field( wp_unslash( $_POST['cliente_nombre'] ?? 'CYMTEL' ) );
         $cliente_logo   = isset( $_POST['cliente_logo'] ) ? $_POST['cliente_logo'] : '';
 
+        // Firma digital guardada por el usuario en su Perfil; se "congela" en el registro al firmar.
+        $firma_img_firmante = get_user_meta( $current_user->ID, 'ruteo_firma_img', true );
+
         if ( $etapa === 'tecnico' ) {
+            // --- Validación obligatoria: no se puede crear el registro con datos incompletos ---
+            $campos_requeridos = array(
+                'proceso'                     => 'Proceso',
+                'cm_localidad'                => 'CM / Localidad',
+                'contratista'                 => 'Contratista',
+                'lugar_trabajo'               => 'Lugar del trabajo',
+                'fecha'                       => 'Fecha',
+                'hora_inicio'                 => 'Hora de inicio',
+                'hora_fin'                    => 'Hora de fin',
+                'supervisor_operativo_nombre' => 'Nombre del Supervisor Operativo',
+                'trabajador_reportante'       => 'Trabajador Reportante',
+                'razones_negativa'            => 'Razones para la negativa',
+            );
+            $faltantes = array();
+            foreach ( $campos_requeridos as $campo => $etiqueta ) {
+                $valor = isset( $_POST[ $campo ] ) ? trim( wp_unslash( $_POST[ $campo ] ) ) : '';
+                if ( $valor === '' ) {
+                    $faltantes[] = $etiqueta;
+                }
+            }
+            if ( empty( $_FILES['foto1']['tmp_name'] ) || empty( $_FILES['foto2']['tmp_name'] ) ) {
+                $faltantes[] = 'las 2 fotos de evidencia';
+            }
+            if ( empty( $firma_img_firmante ) ) {
+                $faltantes[] = 'tu firma digital (súbela en tu Perfil antes de firmar)';
+            }
+            if ( ! empty( $faltantes ) ) {
+                wp_send_json_error( array( 'message' => 'No se puede guardar: faltan datos obligatorios -> ' . implode( ', ', $faltantes ) . '.' ) );
+                return;
+            }
+
             $campos = array(
                 'proceso'                     => sanitize_text_field( wp_unslash( $_POST['proceso'] ?? '' ) ),
                 'cm_localidad'                => sanitize_text_field( wp_unslash( $_POST['cm_localidad'] ?? '' ) ),
@@ -1097,6 +1210,7 @@ class WPRuteoApp {
                 'cliente_logo'                => $cliente_logo,
                 'firma_tecnico_user'          => $current_user->display_name,
                 'firma_tecnico_fecha'         => $now,
+                'firma_tecnico_img'           => $firma_img_firmante,
                 'estado'                      => 'pendiente_supervisor',
                 'creado_por'                  => $current_user->display_name,
             );
@@ -1119,7 +1233,41 @@ class WPRuteoApp {
             $id = $wpdb->insert_id;
 
         } elseif ( $etapa === 'supervisor' ) {
-            $wpdb->update( $table, array(
+            $registro_actual = $wpdb->get_row( $wpdb->prepare( "SELECT estado FROM $table WHERE id = %d", $id ), ARRAY_A );
+            if ( ! $registro_actual ) {
+                wp_send_json_error( array( 'message' => 'El registro no existe.' ) );
+                return;
+            }
+            if ( $registro_actual['estado'] !== 'pendiente_supervisor' ) {
+                wp_send_json_error( array( 'message' => 'Este registro no esta en la etapa de Supervisor.' ) );
+                return;
+            }
+            // --- Validación obligatoria: Medidas Correctivas, Satisface Negativa y Reinicio de Labores ---
+            $faltantes = array();
+            $medidas    = isset( $_POST['medidas_correctivas'] ) ? trim( wp_unslash( $_POST['medidas_correctivas'] ) ) : '';
+            $satisface  = isset( $_POST['satisface_negativa'] ) ? sanitize_text_field( wp_unslash( $_POST['satisface_negativa'] ) ) : '';
+            $reinicia   = isset( $_POST['reinicia_labores'] ) ? sanitize_text_field( wp_unslash( $_POST['reinicia_labores'] ) ) : '';
+            if ( $medidas === '' ) {
+                $faltantes[] = 'Medidas Correctivas Aplicadas';
+            }
+            if ( ! in_array( $satisface, array( 'SI', 'NO' ), true ) ) {
+                $faltantes[] = 'Satisface Negativa al Trabajo (SI / NO)';
+            }
+            if ( ! in_array( $reinicia, array( 'SI', 'NO' ), true ) ) {
+                $faltantes[] = 'Se reinician las labores (SI / NO)';
+            }
+            if ( empty( $id ) ) {
+                $faltantes[] = 'un registro válido (id no recibido)';
+            }
+            if ( empty( $firma_img_firmante ) ) {
+                $faltantes[] = 'tu firma digital (súbela en tu Perfil antes de firmar)';
+            }
+            if ( ! empty( $faltantes ) ) {
+                wp_send_json_error( array( 'message' => 'No se puede guardar: faltan datos obligatorios -> ' . implode( ', ', $faltantes ) . '.' ) );
+                return;
+            }
+
+            $update_ok = $wpdb->update( $table, array(
                 'proceso'                     => sanitize_text_field( wp_unslash( $_POST['proceso'] ?? '' ) ),
                 'cm_localidad'                => sanitize_text_field( wp_unslash( $_POST['cm_localidad'] ?? '' ) ),
                 'contratista'                 => sanitize_text_field( wp_unslash( $_POST['contratista'] ?? '' ) ),
@@ -1133,28 +1281,97 @@ class WPRuteoApp {
                 'supervisor_operativo_nombre' => sanitize_text_field( wp_unslash( $_POST['supervisor_operativo_nombre'] ?? '' ) ),
                 'trabajador_reportante'       => sanitize_text_field( wp_unslash( $_POST['trabajador_reportante'] ?? '' ) ),
                 'razones_negativa'            => sanitize_textarea_field( wp_unslash( $_POST['razones_negativa'] ?? '' ) ),
-                'acciones_correctivas'        => sanitize_textarea_field( wp_unslash( $_POST['acciones_correctivas'] ?? '' ) ),
-                'acuerdo_inseguro'            => sanitize_text_field( wp_unslash( $_POST['acuerdo_inseguro'] ?? '' ) ),
+                'medidas_correctivas'         => sanitize_textarea_field( wp_unslash( $_POST['medidas_correctivas'] ?? '' ) ),
+                'satisface_negativa'          => $satisface,
+                'reinicia_labores'            => $reinicia,
+                'fecha_reinicio'              => sanitize_text_field( wp_unslash( $_POST['fecha_reinicio'] ?? '' ) ) ?: null,
+                'hora_reinicio'               => sanitize_text_field( wp_unslash( $_POST['hora_reinicio'] ?? '' ) ),
                 'cliente_nombre'              => $cliente_nombre,
                 'cliente_logo'                => $cliente_logo,
                 'firma_sup_operativo_user'    => $current_user->display_name,
                 'firma_sup_operativo_fecha'   => $now,
+                'firma_sup_operativo_img'     => $firma_img_firmante,
                 'estado'                      => 'pendiente_seguridad',
             ), array( 'id' => $id ) );
+            if ( false === $update_ok ) {
+                wp_send_json_error( array( 'message' => 'Error al guardar en base de datos: ' . $wpdb->last_error ) );
+                return;
+            }
 
         } elseif ( $etapa === 'seguridad' ) {
-            $wpdb->update( $table, array(
-                'firma_sup_seguridad_user'  => $current_user->display_name,
-                'firma_sup_seguridad_fecha' => $now,
-                'estado'                    => 'pendiente_hse',
+            $registro_actual = $wpdb->get_row( $wpdb->prepare( "SELECT estado FROM $table WHERE id = %d", $id ), ARRAY_A );
+            if ( ! $registro_actual ) {
+                wp_send_json_error( array( 'message' => 'El registro no existe.' ) );
+                return;
+            }
+            if ( $registro_actual['estado'] !== 'pendiente_seguridad' ) {
+                wp_send_json_error( array( 'message' => 'Este registro no esta en la etapa de Seguridad.' ) );
+                return;
+            }
+
+            // --- Esta etapa es solo de verificacion y firma: las observaciones son opcionales, no relleno obligatorio. ---
+            // El "nombre" ya no se pide por formulario: se toma automaticamente del usuario logueado.
+            $faltantes    = array();
+            $seg_observ   = isset( $_POST['observaciones_seguridad'] ) ? trim( wp_unslash( $_POST['observaciones_seguridad'] ) ) : '';
+            if ( empty( $id ) ) {
+                $faltantes[] = 'un registro válido (id no recibido)';
+            }
+            if ( empty( $firma_img_firmante ) ) {
+                $faltantes[] = 'tu firma digital (súbela en tu Perfil antes de firmar)';
+            }
+            if ( ! empty( $faltantes ) ) {
+                wp_send_json_error( array( 'message' => 'No se puede guardar: faltan datos obligatorios -> ' . implode( ', ', $faltantes ) . '.' ) );
+                return;
+            }
+            $update_ok = $wpdb->update( $table, array(
+                'supervisor_seguridad_nombre' => $current_user->display_name,
+                'observaciones_seguridad'     => sanitize_textarea_field( $seg_observ ),
+                'firma_sup_seguridad_user'    => $current_user->display_name,
+                'firma_sup_seguridad_fecha'   => $now,
+                'firma_sup_seguridad_img'     => $firma_img_firmante,
+                'estado'                      => 'pendiente_hse',
             ), array( 'id' => $id ) );
+            if ( false === $update_ok ) {
+                wp_send_json_error( array( 'message' => 'Error al guardar en base de datos: ' . $wpdb->last_error ) );
+                return;
+            }
 
         } elseif ( $etapa === 'hse' ) {
-            $wpdb->update( $table, array(
+            $registro_actual = $wpdb->get_row( $wpdb->prepare( "SELECT estado FROM $table WHERE id = %d", $id ), ARRAY_A );
+            if ( ! $registro_actual ) {
+                wp_send_json_error( array( 'message' => 'El registro no existe.' ) );
+                return;
+            }
+            if ( $registro_actual['estado'] !== 'pendiente_hse' ) {
+                wp_send_json_error( array( 'message' => 'Este registro no esta en la etapa de HSE.' ) );
+                return;
+            }
+            // --- Esta etapa es el Visto Bueno final: el dictamen es un comentario opcional, no relleno obligatorio. ---
+            // El "nombre" ya no se pide por formulario: se toma automaticamente del usuario logueado.
+            $faltantes   = array();
+            $hse_dictam  = isset( $_POST['dictamen_hse'] ) ? trim( wp_unslash( $_POST['dictamen_hse'] ) ) : '';
+            if ( empty( $id ) ) {
+                $faltantes[] = 'un registro válido (id no recibido)';
+            }
+            if ( empty( $firma_img_firmante ) ) {
+                $faltantes[] = 'tu firma digital (súbela en tu Perfil antes de firmar)';
+            }
+            if ( ! empty( $faltantes ) ) {
+                wp_send_json_error( array( 'message' => 'No se puede guardar: faltan datos obligatorios -> ' . implode( ', ', $faltantes ) . '.' ) );
+                return;
+            }
+            $update_ok = $wpdb->update( $table, array(
+                'hse_nombre'      => $current_user->display_name,
+                'dictamen_hse'    => sanitize_textarea_field( $hse_dictam ),
                 'firma_hse_user'  => $current_user->display_name,
                 'firma_hse_fecha' => $now,
+                'firma_hse_img'   => $firma_img_firmante,
                 'estado'          => 'completado',
             ), array( 'id' => $id ) );
+            if ( false === $update_ok ) {
+                wp_send_json_error( array( 'message' => 'Error al guardar en base de datos: ' . $wpdb->last_error ) );
+                return;
+            }
         }
 
         $registro = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ), ARRAY_A );
@@ -1228,10 +1445,17 @@ class WPRuteoApp {
             $url     = 'https://drive.google.com/uc?export=view&id=' . $file_id;
         }
 
+        $host = wp_parse_url( $url, PHP_URL_HOST );
+        $dominios_permitidos = array( 'drive.google.com', 'lh3.googleusercontent.com', 'docs.google.com' );
+        if ( ! $host || ! in_array( $host, $dominios_permitidos, true ) ) {
+            wp_send_json_error( array( 'message' => 'Dominio no permitido.' ) );
+            return;
+        }
+
         $response = wp_remote_get( $url, array(
             'timeout'     => 15,
             'redirection' => 5,
-            'sslverify'   => false,
+            'sslverify'   => true,
         ) );
 
         if ( is_wp_error( $response ) ) {
@@ -1254,6 +1478,20 @@ class WPRuteoApp {
         $base64 = 'data:' . $type . ';base64,' . base64_encode( $body );
         wp_send_json_success( array( 'base64' => $base64 ) );
     }
+
+    /**
+     * Verifica si la tabla wp_ruteo_negativas necesita columnas nuevas
+     * (p.ej. las de firma digital) y las agrega automaticamente via dbDelta,
+     * sin necesidad de reactivar el plugin ni ejecutarlo en cada carga de pagina.
+     */
+    public function maybe_upgrade_negativas_table() {
+        $version_actual = '2.3.0';
+        if ( get_option( 'ruteo_negativas_db_version' ) === $version_actual ) {
+            return;
+        }
+        ruteo_crear_tabla_negativas();
+        update_option( 'ruteo_negativas_db_version', $version_actual );
+    }
 }
 
 function ruteo_crear_tabla_negativas() {
@@ -1261,7 +1499,10 @@ function ruteo_crear_tabla_negativas() {
     $table = $wpdb->prefix . 'ruteo_negativas';
     $charset_collate = $wpdb->get_charset_collate();
 
-    $sql = "CREATE TABLE IF NOT EXISTS $table (
+    // IMPORTANTE: dbDelta() requiere "CREATE TABLE" SIN "IF NOT EXISTS" y (idealmente)
+    // una columna por linea, o no detecta correctamente el nombre de la tabla ni las
+    // columnas faltantes existentes, y nunca llega a agregar las columnas nuevas via ALTER.
+    $sql = "CREATE TABLE $table (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         proceso VARCHAR(255),
         cm_localidad VARCHAR(100),
@@ -1282,10 +1523,27 @@ function ruteo_crear_tabla_negativas() {
         foto2_url LONGTEXT,
         acciones_correctivas TEXT,
         acuerdo_inseguro VARCHAR(5),
-        firma_tecnico_user VARCHAR(150), firma_tecnico_fecha DATETIME,
-        firma_sup_operativo_user VARCHAR(150), firma_sup_operativo_fecha DATETIME,
-        firma_sup_seguridad_user VARCHAR(150), firma_sup_seguridad_fecha DATETIME,
-        firma_hse_user VARCHAR(150), firma_hse_fecha DATETIME,
+        medidas_correctivas TEXT,
+        satisface_negativa VARCHAR(5),
+        reinicia_labores VARCHAR(5),
+        fecha_reinicio DATE,
+        hora_reinicio VARCHAR(20),
+        supervisor_seguridad_nombre VARCHAR(150),
+        observaciones_seguridad TEXT,
+        hse_nombre VARCHAR(150),
+        dictamen_hse TEXT,
+        firma_tecnico_user VARCHAR(150),
+        firma_tecnico_fecha DATETIME,
+        firma_tecnico_img LONGTEXT,
+        firma_sup_operativo_user VARCHAR(150),
+        firma_sup_operativo_fecha DATETIME,
+        firma_sup_operativo_img LONGTEXT,
+        firma_sup_seguridad_user VARCHAR(150),
+        firma_sup_seguridad_fecha DATETIME,
+        firma_sup_seguridad_img LONGTEXT,
+        firma_hse_user VARCHAR(150),
+        firma_hse_fecha DATETIME,
+        firma_hse_img LONGTEXT,
         estado VARCHAR(30) DEFAULT 'pendiente_tecnico',
         creado_por VARCHAR(150),
         fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -1295,5 +1553,6 @@ function ruteo_crear_tabla_negativas() {
     dbDelta( $sql );
 }
 register_activation_hook( __FILE__, 'ruteo_crear_tabla_negativas' );
+register_activation_hook( __FILE__, array( 'WPRuteoApp', 'activar_cuentas_prueba' ) );
 
 new WPRuteoApp();

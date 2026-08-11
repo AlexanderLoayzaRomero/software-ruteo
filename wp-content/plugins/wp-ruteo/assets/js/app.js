@@ -70,7 +70,9 @@ jQuery(document).ready(function($) {
 
     // --- COLAPSAR / EXPANDIR SIDEBAR LATERAL ---
     $('#btn-sidebar-collapse').on('click', function() {
-        $('#ruteo-sidebar').toggleClass('collapsed');
+        var $sidebar = $('#ruteo-sidebar').toggleClass('collapsed');
+        var contraida = $sidebar.hasClass('collapsed');
+        $(this).attr('title', contraida ? 'Expandir panel' : 'Contraer panel');
     });
 
     // --- PREVISUALIZACION Y QUITAR FOTOS DE CAMPO ---
@@ -97,6 +99,30 @@ jQuery(document).ready(function($) {
                         $(this).attr('id') === 'neg-foto2' ? 'neg-preview2' :
                         $(this).attr('id') === 'foto1' ? 'preview1' : 'preview2';
         readURL(this, previewId);
+    });
+
+    function mostrarFirmaPerfil(base64) {
+        if (base64) {
+            $('#prof-firma-preview-img').attr('src', base64);
+            $('#prof-firma-preview-box').css('display', 'flex');
+            $('#prof-firma-remove').show();
+        } else {
+            $('#prof-firma-preview-img').attr('src', '');
+            $('#prof-firma-preview-box').hide();
+            $('#prof-firma-remove').hide();
+        }
+    }
+    $(document).on('change', '#prof-firma-file', function() {
+        var f = this.files && this.files[0];
+        if (!f) return;
+        var reader = new FileReader();
+        reader.onload = function(e) { mostrarFirmaPerfil(e.target.result); $('#prof-firma-remove').data('remove', '0'); };
+        reader.readAsDataURL(f);
+    });
+    $(document).on('click', '#prof-firma-remove', function() {
+        $('#prof-firma-file').val('');
+        mostrarFirmaPerfil('');
+        $(this).data('remove', '1');
     });
 
     $(document).on('click', '.btn-remove-photo', function(e) {
@@ -217,6 +243,8 @@ jQuery(document).ready(function($) {
             $('#prof-phone').val(user.phone || '');
             $('#prof-position').val(user.position || '');
             $('#prof-pm').val(user.pmAssigned || '');
+            if (typeof mostrarFirmaPerfil === 'function') { mostrarFirmaPerfil(user.firma || ''); }
+            $('#prof-firma-remove').data('remove', '0');
 
             if (typeof window.cargarDatosPortal === 'function' && (!window._ruteoRegistros || window._ruteoRegistros.length === 0)) {
                 window.cargarDatosPortal();
@@ -695,19 +723,18 @@ jQuery(document).ready(function($) {
                 roleBadge = '<span style="background:rgba(168,85,247,0.15); color:#A855F7; border:1px solid #A855F7; font-size:11px; padding:2px 8px; border-radius:12px; font-weight:600;">Supervisor HSE</span>';
             }
 
-            var signerBadges = '';
-            var caps = u.signerCaps || [];
-            if (caps.indexOf('firmante_ejecutor') !== -1) {
-                signerBadges += '<span style="display:inline-block; margin:2px; font-size:10px; background:rgba(34,197,94,0.12); color:#22C55E; padding:2px 6px; border-radius:4px; border:1px solid rgba(34,197,94,0.3);">✍️ Ejecutor</span> ';
-            }
-            if (caps.indexOf('firmante_operativo') !== -1) {
-                signerBadges += '<span style="display:inline-block; margin:2px; font-size:10px; background:rgba(0,151,216,0.12); color:#0097D8; padding:2px 6px; border-radius:4px; border:1px solid rgba(0,151,216,0.3);">✍️ Sup. Op.</span> ';
-            }
-            if (caps.indexOf('firmante_hse') !== -1) {
-                signerBadges += '<span style="display:inline-block; margin:2px; font-size:10px; background:rgba(168,85,247,0.12); color:#A855F7; padding:2px 6px; border-radius:4px; border:1px solid rgba(168,85,247,0.3);">✍️ HSE</span> ';
-            }
-            if (!signerBadges) {
-                signerBadges = '<span style="font-size:11px; color:var(--text-muted);">Sin firma autorizada</span>';
+            var negRolLabels = {
+                'tecnico': ['Tecnico Reportante', '#22C55E'],
+                'supervisor_operativo': ['Supervisor Operativo', '#0097D8'],
+                'supervisor_seguridad': ['Supervisor de Seguridad', '#F59E0B'],
+                'hse': ['Area HSE', '#A855F7']
+            };
+            var signerBadges;
+            if (u.negativaRol && negRolLabels[u.negativaRol]) {
+                var nrInfo = negRolLabels[u.negativaRol];
+                signerBadges = '<span style="display:inline-block; font-size:11px; background:' + nrInfo[1] + '22; color:' + nrInfo[1] + '; padding:3px 8px; border-radius:12px; border:1px solid ' + nrInfo[1] + '55; font-weight:600;">✍️ ' + nrInfo[0] + '</span>';
+            } else {
+                signerBadges = '<span style="font-size:11px; color:var(--text-muted);">Sin rol en Negativa al Trabajo</span>';
             }
 
             var avatarHtml = u.avatar ? '<img src="' + u.avatar + '" alt="Avatar">' : (u.displayName || u.username || '?').charAt(0).toUpperCase();
@@ -744,11 +771,6 @@ jQuery(document).ready(function($) {
                 $('#user-negativa-rol-select').val(u.negativaRol || '');
                 $('#user-position-input').val(u.position || '');
                 $('#user-pm-select').val(u.pmAssigned || '');
-                
-                $('.chk-signer-cap').prop('checked', false);
-                (u.signerCaps || []).forEach(function(cap) {
-                    $('.chk-signer-cap[value="' + cap + '"]').prop('checked', true);
-                });
 
                 $('#user-form-title').text('Editar Cuenta: ' + u.username);
                 $('#user-create-card').slideDown(300);
@@ -769,7 +791,6 @@ jQuery(document).ready(function($) {
         $('#user-edit-id-input').val('0');
         $('#user-username-input').prop('readonly', false);
         $('#form-create-user')[0].reset();
-        $('.chk-signer-cap').prop('checked', false);
         $('#user-form-title').text('Crear Nueva Cuenta de Usuario');
         $('#user-create-card').slideToggle(300);
     });
@@ -784,11 +805,6 @@ jQuery(document).ready(function($) {
         var $msg = $('#create-user-msg');
         $msg.removeClass('success error').hide();
 
-        var selectedCaps = [];
-        $('.chk-signer-cap:checked').each(function() {
-            selectedCaps.push($(this).val());
-        });
-
         var formData = new FormData();
         formData.append('action', 'ruteo_create_user');
         formData.append('nonce', wpRuteoAjax.nonce);
@@ -802,7 +818,6 @@ jQuery(document).ready(function($) {
         formData.append('position', $('#user-position-input').val() || '');
         formData.append('phone', $('#user-phone-input').val());
         formData.append('pm_assigned', $('#user-pm-select').val());
-        formData.append('signer_caps', selectedCaps.join(','));
 
         var fileInput = $('#user-avatar-input')[0];
         if (fileInput && fileInput.files && fileInput.files[0]) {
@@ -821,7 +836,6 @@ jQuery(document).ready(function($) {
                     $('#form-create-user')[0].reset();
                     $('#user-edit-id-input').val('0');
                     $('#user-username-input').prop('readonly', false);
-                    $('.chk-signer-cap').prop('checked', false);
                     $('#user-create-card').slideUp(300);
                     cargarUsuarios();
                 } else {
@@ -863,6 +877,13 @@ jQuery(document).ready(function($) {
         var fileInput = $('#prof-avatar-file')[0];
         if (fileInput && fileInput.files && fileInput.files[0]) {
             formData.append('avatar', fileInput.files[0]);
+        }
+
+        var firmaInput = $('#prof-firma-file')[0];
+        if (firmaInput && firmaInput.files && firmaInput.files[0]) {
+            formData.append('firma', firmaInput.files[0]);
+        } else if ($('#prof-firma-remove').data('remove') === '1') {
+            formData.append('firma_remove', '1');
         }
 
         $.ajax({
@@ -908,6 +929,15 @@ jQuery(document).ready(function($) {
         $selects.empty();
         clientes.forEach(function(c) {
             $selects.append('<option value="' + c.nombre + '">' + c.nombre + '</option>');
+        });
+        $selects.append('<option value="__otro__">+ Otro (escribir nombre)</option>');
+        // Mantener sincronizado el input de texto libre con el valor por defecto del select
+        $selects.each(function() {
+            var $sel = $(this);
+            var $txt = $sel.siblings('.neg-input-cliente-otro');
+            if ($txt.length && !$txt.val()) {
+                $txt.val($sel.val());
+            }
         });
 
         $('.btn-del-cliente').off('click').on('click', function() {
@@ -969,6 +999,31 @@ jQuery(document).ready(function($) {
     // --- MODULO: NEGATIVA AL TRABAJO POR RIESGO INMINENTE ---
     var negativaActual = null;
 
+    // Sincroniza el select de cliente (opciones registradas) con el input de texto libre
+    // que es el que realmente se envia al servidor como "cliente_nombre".
+    function setClienteNombreField($form, valor) {
+        var $sel = $form.find('select.neg-select-cliente');
+        var $txt = $form.find('input.neg-input-cliente-otro');
+        var opcionExiste = $sel.find('option[value="' + (valor || '').replace(/"/g, '\\"') + '"]').length > 0;
+        if (opcionExiste) {
+            $sel.val(valor);
+            $txt.val(valor).hide().prop('required', false);
+        } else {
+            $sel.val('__otro__');
+            $txt.val(valor || '').show().prop('required', true);
+        }
+    }
+
+    $(document).on('change', '.neg-select-cliente', function() {
+        var $sel = $(this);
+        var $txt = $sel.siblings('.neg-input-cliente-otro');
+        if ($sel.val() === '__otro__') {
+            $txt.show().prop('required', true).val('').focus();
+        } else {
+            $txt.hide().prop('required', false).val($sel.val());
+        }
+    });
+
     function negativaEstadoLabel(estado) {
         var labels = {
             'pendiente_tecnico': 'Pendiente: Tecnico',
@@ -994,12 +1049,13 @@ jQuery(document).ready(function($) {
     function renderNegativa(registro) {
         negativaActual = registro;
         $('#negativa-resumen').hide().empty();
-        $('#form-negativa-tecnico, #form-negativa-supervisor, #negativa-firma-simple, #btn-negativa-exportar-pdf').hide();
+        $('#form-negativa-tecnico, #form-negativa-supervisor, #form-negativa-seguridad, #form-negativa-hse, #negativa-firma-simple, #btn-negativa-exportar-pdf').hide();
 
         if (!registro) {
             $('#negativa-estado-badge').text('');
             $('#neg-preview1, #neg-preview2').removeClass('show').css('background-image', 'none');
             $('#neg-foto1, #neg-foto2').val('').closest('.ruteo-photo-upload').removeClass('has-file');
+            setClienteNombreField($('#form-negativa-tecnico'), 'CYMTEL');
             $('#form-negativa-tecnico').show();
             return;
         }
@@ -1013,6 +1069,26 @@ jQuery(document).ready(function($) {
         resumenHtml += ' | Seguridad: <span style="color:#0097D8;">' + (registro.firma_sup_seguridad_user || 'Pendiente') + '</span>';
         resumenHtml += ' | HSE: <span style="color:#83CA16;">' + (registro.firma_hse_user || 'Pendiente') + '</span>';
         resumenHtml += '</div>';
+
+        // Detalle completo de lo llenado hasta ahora (para que Seguridad y HSE revisen
+        // toda la informacion sin depender de recordar o volver a escribir nada).
+        if ( registro.estado === 'pendiente_seguridad' || registro.estado === 'pendiente_hse' || registro.estado === 'completado' ) {
+            resumenHtml += '<div style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border); font-size:13px; line-height:1.7;">';
+            resumenHtml += '<p><strong>2. Investigacion:</strong> Supervisor Operativo: ' + (registro.supervisor_operativo_nombre || '-') + ' | Trabajador Reportante: ' + (registro.trabajador_reportante || '-') + '</p>';
+            resumenHtml += '<p><strong>3. Razones para la Negativa:</strong><br>' + (registro.razones_negativa || '-') + '</p>';
+            resumenHtml += '<p><strong>5. Medidas Correctivas (Sup. Op.):</strong> ' + (registro.medidas_correctivas || '-') + '<br><strong>Satisface Negativa:</strong> ' + (registro.satisface_negativa || '-') + ' | <strong>Reinicia Labores:</strong> ' + (registro.reinicia_labores || '-');
+            if (registro.reinicia_labores === 'SI') {
+                resumenHtml += ' (' + (registro.fecha_reinicio || 'fecha no indicada') + ' ' + (registro.hora_reinicio || '') + ')';
+            }
+            resumenHtml += '</p>';
+            if ( (registro.estado === 'pendiente_hse' || registro.estado === 'completado') && registro.observaciones_seguridad ) {
+                resumenHtml += '<p><strong>Observaciones de Seguridad:</strong><br>' + registro.observaciones_seguridad + '</p>';
+            }
+            if ( registro.estado === 'completado' && registro.dictamen_hse ) {
+                resumenHtml += '<p><strong>Dictamen HSE:</strong><br>' + registro.dictamen_hse + '</p>';
+            }
+            resumenHtml += '</div>';
+        }
 
         if (registro.foto1_url || registro.foto2_url) {
             resumenHtml += '<div style="display:flex; gap:12px; margin-top:12px;">';
@@ -1032,7 +1108,7 @@ jQuery(document).ready(function($) {
         if (registro.estado === 'pendiente_supervisor') {
             if (puedeActuar) {
                 var $fs = $('#form-negativa-supervisor');
-                $fs.find('select[name="cliente_nombre"]').val(registro.cliente_nombre || 'CYMTEL');
+                setClienteNombreField($fs, registro.cliente_nombre || 'CYMTEL');
                 $fs.find('input[name="proceso"]').val(registro.proceso || '');
                 $fs.find('input[name="cm_localidad"]').val(registro.cm_localidad || '');
                 $fs.find('input[name="contratista"]').val(registro.contratista || '');
@@ -1046,10 +1122,12 @@ jQuery(document).ready(function($) {
                 $fs.find('input[name="supervisor_operativo_nombre"]').val(registro.supervisor_operativo_nombre || '');
                 $fs.find('input[name="trabajador_reportante"]').val(registro.trabajador_reportante || '');
                 $fs.find('textarea[name="razones_negativa"]').val(registro.razones_negativa || '');
-                $fs.find('textarea[name="acciones_correctivas"]').val(registro.acciones_correctivas || '');
-                if (registro.acuerdo_inseguro) {
-                    $fs.find('input[name="acuerdo_inseguro"][value="' + registro.acuerdo_inseguro + '"]').prop('checked', true);
-                }
+                $fs.find('textarea[name="medidas_correctivas"]').val(registro.medidas_correctivas || '');
+                $fs.find('select[name="satisface_negativa"]').val(registro.satisface_negativa || 'SI');
+                $fs.find('select[name="reinicia_labores"]').val(registro.reinicia_labores || 'SI');
+                $fs.find('input[name="fecha_reinicio"]').val(registro.fecha_reinicio || '');
+                $fs.find('input[name="hora_reinicio"]').val(registro.hora_reinicio || '');
+                $fs.find('.is-invalid').removeClass('is-invalid').css('border-color', '');
                 $fs.show();
             } else {
                 $('#negativa-firma-simple-texto').text('Esperando revision y firma del Supervisor Operativo.');
@@ -1057,16 +1135,22 @@ jQuery(document).ready(function($) {
             }
         } else if (registro.estado === 'pendiente_seguridad') {
             if (puedeActuar) {
-                $('#negativa-firma-simple-texto').text('Firmar como Supervisor de Seguridad.');
-                $('#negativa-firma-simple').show().find('button').show().data('etapa', 'seguridad');
+                var $fg = $('#form-negativa-seguridad');
+                $('#neg-seguridad-firmante-nombre').text(currentUser.displayName || currentUser.username || '');
+                $fg.find('textarea[name="observaciones_seguridad"]').val(registro.observaciones_seguridad || '');
+                $fg.find('.is-invalid').removeClass('is-invalid').css('border-color', '');
+                $fg.show();
             } else {
                 $('#negativa-firma-simple-texto').text('Esperando firma del Supervisor de Seguridad.');
                 $('#negativa-firma-simple').show().find('button').hide();
             }
         } else if (registro.estado === 'pendiente_hse') {
             if (puedeActuar) {
-                $('#negativa-firma-simple-texto').text('Otorgar Visto Bueno del Area HSE.');
-                $('#negativa-firma-simple').show().find('button').show().data('etapa', 'hse');
+                var $fh = $('#form-negativa-hse');
+                $('#neg-hse-firmante-nombre').text(currentUser.displayName || currentUser.username || '');
+                $fh.find('textarea[name="dictamen_hse"]').val(registro.dictamen_hse || '');
+                $fh.find('.is-invalid').removeClass('is-invalid').css('border-color', '');
+                $fh.show();
             } else {
                 $('#negativa-firma-simple-texto').text('Esperando visto bueno del Area HSE.');
                 $('#negativa-firma-simple').show().find('button').hide();
@@ -1176,6 +1260,50 @@ jQuery(document).ready(function($) {
         });
     });
 
+    function bindNegativaSubForm(formId, etapa, mensajeOk, mensajeInvalido) {
+        $(formId).on('submit', function(e) {
+            e.preventDefault();
+            var $f = $(this);
+            var invalido = false;
+            $f.find('[required]').each(function() {
+                if ($(this).is(':radio')) {
+                    var name = $(this).attr('name');
+                    if (!$f.find('input[name="' + name + '"]:checked').length) invalido = true;
+                } else if (!$(this).val() || !$(this).val().trim()) {
+                    invalido = true;
+                    $(this).addClass('is-invalid').css('border-color', '#D92625');
+                } else {
+                    $(this).removeClass('is-invalid').css('border-color', '');
+                }
+            });
+            if (invalido) {
+                alert(mensajeInvalido);
+                return;
+            }
+
+            var fd = new FormData(this);
+            fd.append('action', 'ruteo_negativa_guardar');
+            fd.append('nonce', wpRuteoAjax.nonce);
+            fd.append('etapa', etapa);
+            fd.append('id', negativaActual.id);
+            $.ajax({
+                url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
+                success: function(res) {
+                    if (res.success) {
+                        alert(mensajeOk);
+                        cargarNegativas();
+                        renderNegativa(res.data.registro);
+                    } else {
+                        alert('Error: ' + res.data.message);
+                    }
+                }
+            });
+        });
+    }
+
+    bindNegativaSubForm('#form-negativa-seguridad', 'seguridad', 'Etapa Supervisor de Seguridad firmada correctamente.', 'Por favor complete todos los datos antes de firmar como Supervisor de Seguridad.');
+    bindNegativaSubForm('#form-negativa-hse', 'hse', 'Visto Bueno de Area HSE registrado correctamente. La Negativa quedo Completada.', 'Por favor complete todos los datos antes de dar el Visto Bueno del Area HSE.');
+
     $('#btn-negativa-firmar-simple').on('click', function() {
         var etapa = $(this).data('etapa');
         $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_guardar', nonce: wpRuteoAjax.nonce, etapa: etapa, id: negativaActual.id }, function(res) {
@@ -1190,6 +1318,11 @@ jQuery(document).ready(function($) {
     });
 
     // GENERACION DE PDF FORMATO HSE-RE-NEG-01 CON LOGO DE CYMTEL / CLIENTE Y 4 FIRMAS
+    // Datos de control del formato oficial (no dependen del registro, son del documento en si)
+    var NEG_CODIGO_DOC     = 'HSE-RE-NEG-01';
+    var NEG_VERSION_DOC    = '1.0';
+    var NEG_NORMATIVA_TXT  = 'Ley Articulo 63. Interrupcion de actividades en caso inminente de peligro. El empleador establece las medidas y da instrucciones necesarias para que, en caso de un peligro inminente que constituya un riesgo importante o intolerable para la seguridad y salud de los trabajadores, estos puedan interrumpir sus actividades, e incluso, si fuera necesario, abandonar de inmediato el domicilio o lugar fisico donde se desarrollan las labores. No se pueden reanudar las labores mientras el riesgo no se haya reducido o controlado.';
+
     function generarPDFNegativa(r) {
         if (!r) { alert('No hay registro seleccionado.'); return; }
 
@@ -1200,208 +1333,314 @@ jQuery(document).ready(function($) {
         }
 
         var clienteNombre = r.cliente_nombre || 'CYMTEL';
-        var clienteObj = (window.wpRuteoAjax && window.wpRuteoAjax.clientes) ? window.wpRuteoAjax.clientes.find(function(c) { return c.nombre === clienteNombre; }) : null;
-        var clienteLogo = r.cliente_logo || (clienteObj ? clienteObj.logo : '');
+        var siteLogo = (window.wpRuteoAjax && wpRuteoAjax.siteLogo) ? wpRuteoAjax.siteLogo : '';
 
         var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         var pageW = doc.internal.pageSize.getWidth();
         var pageH = doc.internal.pageSize.getHeight();
 
-        // Cabecera principal azul
-        doc.setFillColor(0, 151, 216);
-        doc.rect(0, 0, pageW, 26, 'F');
-        doc.setFillColor(0, 90, 140);
-        doc.rect(0, 0, 6, 26, 'F');
+        var M = 14;                 // margen izquierdo / derecho
+        var CW = pageW - (2 * M);   // ancho de contenido
+        var COL_LABEL_FILL = [248, 250, 252];
+        var BAND_FILL = [225, 240, 252];
+        var BORDER = [150, 165, 185];
+        doc.setDrawColor(BORDER[0], BORDER[1], BORDER[2]);
+        doc.setLineWidth(0.25);
 
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('SOFTWARE O&M', 14, 11);
+        // ================= CABECERA (Logo | Titulo | Codigo-Version-Fecha) =================
+        var y = 10;
+        var headerH = 27;
+        var logoW = 32, codeColW = 46, titleW = CW - logoW - codeColW;
 
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'normal');
-        doc.text('FORMATO DE NEGATIVA AL TRABAJO POR RIESGO INMINENTE (HSE-RE-NEG-01)', 14, 19);
+        doc.setFillColor(255, 255, 255);
+        doc.rect(M, y, CW, headerH, 'FD');
+        doc.line(M + logoW, y, M + logoW, y + headerH);
+        doc.line(M + logoW + titleW, y, M + logoW + titleW, y + headerH);
 
-        // Cliente y Logo en derecha
-        if (clienteLogo && clienteLogo.indexOf('data:image') === 0) {
+        // --- Logo propio (empresa que opera el software) ---
+        if (siteLogo && siteLogo.indexOf('data:image') === 0) {
             try {
-                var mime = clienteLogo.indexOf('image/png') !== -1 ? 'PNG' : (clienteLogo.indexOf('image/svg') !== -1 ? 'SVG' : 'JPEG');
-                doc.setFillColor(255, 255, 255);
-                doc.roundedRect(pageW - 52, 3, 38, 20, 2, 2, 'F');
-                doc.addImage(clienteLogo, mime, pageW - 50, 4, 34, 18);
-            } catch(e) {
-                renderLogoInsignia(doc, pageW, clienteNombre);
+                var mimeSite = siteLogo.indexOf('image/png') !== -1 ? 'PNG' : (siteLogo.indexOf('image/svg') !== -1 ? 'SVG' : 'JPEG');
+                doc.addImage(siteLogo, mimeSite, M + 3, y + 3.5, logoW - 6, headerH - 7, undefined, 'FAST');
+            } catch (e) {
+                dibujarLogoGenerico(doc, M, y, logoW, headerH);
             }
         } else {
-            renderLogoInsignia(doc, pageW, clienteNombre);
+            dibujarLogoGenerico(doc, M, y, logoW, headerH);
         }
 
-        function renderLogoInsignia(pdf, pw, nombreCli) {
-            pdf.setFillColor(255, 255, 255);
-            pdf.roundedRect(pw - 52, 3, 38, 20, 2, 2, 'F');
-            pdf.setDrawColor(200, 215, 230);
-            pdf.setLineWidth(0.3);
-            pdf.roundedRect(pw - 52, 3, 38, 20, 2, 2, 'S');
-
-            // Icono corporativo cian y verde
+        function dibujarLogoGenerico(pdf, mx, my, w, h) {
             pdf.setFillColor(0, 151, 216);
-            pdf.rect(pw - 48, 6.5, 6, 6, 'F');
+            pdf.rect(mx + w / 2 - 6, my + h / 2 - 8, 6, 6, 'F');
             pdf.setFillColor(131, 202, 22);
-            pdf.rect(pw - 45, 9.5, 5, 5, 'F');
-
-            // Nombre de la Empresa Cliente
-            pdf.setFontSize(9); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(0, 151, 216);
-            pdf.text(String(nombreCli).toUpperCase(), pw - 37, 11);
-
-            pdf.setFontSize(5.5); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(131, 202, 22);
-            pdf.text('EMPRESA CLIENTE', pw - 37, 16);
+            pdf.rect(mx + w / 2, my + h / 2 - 5, 5.5, 5.5, 'F');
+            pdf.setFontSize(6.5); pdf.setFont('helvetica', 'bold'); pdf.setTextColor(60, 70, 85);
+            pdf.text('SOFTWARE O&M', mx + w / 2, my + h / 2 + 7, { align: 'center' });
         }
 
-        var y = 32;
+        // --- Titulo central ---
+        doc.setFontSize(11.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 30, 45);
+        var tituloLineas = doc.splitTextToSize('NEGATIVA AL TRABAJO POR INMINENTE PELIGRO', titleW - 8);
+        var tY = y + headerH / 2 - ((tituloLineas.length - 1) * 2.4);
+        tituloLineas.forEach(function(line) {
+            doc.text(line, M + logoW + titleW / 2, tY, { align: 'center' });
+            tY += 4.8;
+        });
 
-        // Seccion 1: Datos Generales
-        doc.setFillColor(239, 246, 255);
-        doc.rect(14, y, pageW - 28, 6, 'F');
-        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 80, 130);
-        doc.text('1. DATOS GENERALES', 16, y + 4.5);
-        y += 8;
+        // --- Tabla Codigo / Version / Fecha de modificacion ---
+        var codeX = M + logoW + titleW;
+        var codeRowH = headerH / 3;
+        var codeLabelW = 26;
+        [['Codigo:', NEG_CODIGO_DOC], ['Version:', NEG_VERSION_DOC], ['Fecha de modificacion:', r.fecha || '-']].forEach(function(row, i) {
+            var ry = y + (i * codeRowH);
+            if (i > 0) doc.line(codeX, ry, codeX + codeColW, ry);
+            doc.setFillColor(COL_LABEL_FILL[0], COL_LABEL_FILL[1], COL_LABEL_FILL[2]);
+            doc.rect(codeX, ry, codeLabelW, codeRowH, 'F');
+            doc.line(codeX + codeLabelW, ry, codeX + codeLabelW, ry + codeRowH);
+            doc.setFontSize(5.6); doc.setFont('helvetica', 'bold'); doc.setTextColor(70, 85, 100);
+            var labelLines = doc.splitTextToSize(row[0], codeLabelW - 2);
+            doc.text(labelLines, codeX + 1.5, ry + codeRowH / 2 - (labelLines.length > 1 ? 1.3 : 0) + 1, { align: 'left' });
+            doc.setFontSize(6.8); doc.setFont('helvetica', 'normal'); doc.setTextColor(20, 30, 45);
+            doc.text(String(row[1]), codeX + codeLabelW + 2, ry + codeRowH / 2 + 1.3, { align: 'left' });
+        });
 
-        var datosGen = [
-            ['Proceso:', r.proceso || '-', 'CM / Localidad:', r.cm_localidad || '-'],
-            ['Contratista:', r.contratista || '-', 'Sub Contratista:', r.sub_contratista || '-'],
-            ['Relacionado a:', r.relacionado_a || '-', 'Lugar de Trabajo:', r.lugar_trabajo || '-'],
-            ['Fecha:', r.fecha || '-', 'Horario:', (r.hora_inicio || '-') + ' a ' + (r.hora_fin || '-')],
-            ['Total Horas:', r.total_horas || '-', 'Cliente Principal:', clienteNombre]
-        ];
+        y += headerH + 4;
 
+        // ================= BLOQUE DE IDENTIFICACION =================
         doc.autoTable({
             startY: y,
-            body: datosGen,
+            body: [[ 'PROCESO:', r.proceso || '-', 'CM / LOCALIDAD:', r.cm_localidad || '-', 'PAG.:', '1 de 1' ]],
             theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 2 },
+            styles: { fontSize: 7.6, cellPadding: 2, textColor: [20, 30, 45] },
             columnStyles: {
-                0: { fontStyle: 'bold', cellWidth: 32, fillColor: [248, 250, 252] },
-                1: { cellWidth: 58 },
-                2: { fontStyle: 'bold', cellWidth: 32, fillColor: [248, 250, 252] },
-                3: { cellWidth: 'auto' }
+                0: { fontStyle: 'bold', cellWidth: 22, fillColor: COL_LABEL_FILL },
+                1: { cellWidth: 62 },
+                2: { fontStyle: 'bold', cellWidth: 30, fillColor: COL_LABEL_FILL },
+                3: { cellWidth: 40 },
+                4: { fontStyle: 'bold', cellWidth: 14, fillColor: COL_LABEL_FILL },
+                5: { cellWidth: 14 }
             },
-            margin: { left: 14, right: 14 }
+            margin: { left: M, right: M }
         });
-        y = doc.lastAutoTable.finalY + 6;
+        y = doc.lastAutoTable.finalY;
 
-        // Seccion 2: Investigacion
-        doc.setFillColor(239, 246, 255);
-        doc.rect(14, y, pageW - 28, 6, 'F');
-        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 80, 130);
-        doc.text('2. INVESTIGACION DEL SUPERVISOR OPERATIVO', 16, y + 4.5);
-        y += 8;
-
+        var relacTxt = '( ' + (r.relacionado_a === 'PEXT' ? 'X' : ' ') + ' ) PEXT   ( ' + (r.relacionado_a === 'PINT' ? 'X' : ' ') + ' ) PINT';
         doc.autoTable({
             startY: y,
-            body: [
-                ['Supervisor Operativo:', r.supervisor_operativo_nombre || '-', 'Trabajador Reportante:', r.trabajador_reportante || '-']
-            ],
+            body: [[ 'Contratista:', r.contratista || '-', 'Sub Contratista:', r.sub_contratista || '-', 'Relac.:', relacTxt ]],
             theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 2.5 },
+            styles: { fontSize: 7.6, cellPadding: 2, textColor: [20, 30, 45] },
             columnStyles: {
-                0: { fontStyle: 'bold', cellWidth: 36, fillColor: [248, 250, 252] },
-                1: { cellWidth: 54 },
-                2: { fontStyle: 'bold', cellWidth: 36, fillColor: [248, 250, 252] },
-                3: { cellWidth: 'auto' }
+                0: { fontStyle: 'bold', cellWidth: 24, fillColor: COL_LABEL_FILL },
+                1: { cellWidth: 46 },
+                2: { fontStyle: 'bold', cellWidth: 30, fillColor: COL_LABEL_FILL },
+                3: { cellWidth: 46 },
+                4: { fontStyle: 'bold', cellWidth: 16, fillColor: COL_LABEL_FILL },
+                5: { cellWidth: 20 }
             },
-            margin: { left: 14, right: 14 }
+            margin: { left: M, right: M }
         });
-        y = doc.lastAutoTable.finalY + 6;
-
-        // Seccion 3: Razones para la Negativa
-        doc.setFillColor(239, 246, 255);
-        doc.rect(14, y, pageW - 28, 6, 'F');
-        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 80, 130);
-        doc.text('3. RAZONES PARA LA NEGATIVA (CONDICIONES ADVERSAS / BASE LEGAL)', 16, y + 4.5);
-        y += 8;
+        y = doc.lastAutoTable.finalY;
 
         doc.autoTable({
             startY: y,
-            body: [ [ r.razones_negativa || '-' ] ],
+            body: [[ 'Lugar del trabajo:', r.lugar_trabajo || '-' ]],
             theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 3 },
-            margin: { left: 14, right: 14 }
-        });
-        y = doc.lastAutoTable.finalY + 6;
-
-        // Seccion 4: Acciones Correctivas y Acuerdo
-        doc.setFillColor(239, 246, 255);
-        doc.rect(14, y, pageW - 28, 6, 'F');
-        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 80, 130);
-        doc.text('4. ACCIONES CORRECTIVAS Y ACUERDO DE CONDICIONES', 16, y + 4.5);
-        y += 8;
-
-        doc.autoTable({
-            startY: y,
-            body: [
-                ['Acciones Correctivas:', r.acciones_correctivas || '-'],
-                ['Acuerdo de Condiciones Inseguras:', (r.acuerdo_inseguro || 'NO') === 'SI' ? 'SI - Se acuerdo corregir la condicion antes de reiniciar.' : 'NO - No hay acuerdo de reinicio.']
-            ],
-            theme: 'grid',
-            styles: { fontSize: 8, cellPadding: 2.5 },
+            styles: { fontSize: 7.6, cellPadding: 2, textColor: [20, 30, 45] },
             columnStyles: {
-                0: { fontStyle: 'bold', cellWidth: 50, fillColor: [248, 250, 252] },
-                1: { cellWidth: 'auto' }
+                0: { fontStyle: 'bold', cellWidth: 34, fillColor: COL_LABEL_FILL },
+                1: { cellWidth: 148 }
             },
-            margin: { left: 14, right: 14 }
+            margin: { left: M, right: M }
         });
-        y = doc.lastAutoTable.finalY + 8;
+        y = doc.lastAutoTable.finalY;
 
-        // Seccion 5: Cuadro de Firmas (4 Firmas Digitales)
-        doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 151, 216);
-        doc.text('REGISTRO DE FIRMAS Y VALIDADORES', 14, y);
-        y += 4;
+        doc.autoTable({
+            startY: y,
+            body: [[ 'Fecha:', r.fecha || '-', 'H. Inicio:', r.hora_inicio || '-', 'H. Fin:', r.hora_fin || '-', 'Total:', r.total_horas || '-' ]],
+            theme: 'grid',
+            styles: { fontSize: 7.6, cellPadding: 2, textColor: [20, 30, 45] },
+            columnStyles: {
+                0: { fontStyle: 'bold', cellWidth: 16, fillColor: COL_LABEL_FILL },
+                1: { cellWidth: 30 },
+                2: { fontStyle: 'bold', cellWidth: 20, fillColor: COL_LABEL_FILL },
+                3: { cellWidth: 22 },
+                4: { fontStyle: 'bold', cellWidth: 16, fillColor: COL_LABEL_FILL },
+                5: { cellWidth: 22 },
+                6: { fontStyle: 'bold', cellWidth: 16, fillColor: COL_LABEL_FILL },
+                7: { cellWidth: 40 }
+            },
+            margin: { left: M, right: M }
+        });
+        y = doc.lastAutoTable.finalY + 4;
 
-        var colW = (pageW - 28) / 4;
-        var boxH = 26;
+        // ================= DESCRIPCION DE LA NORMATIVA =================
+        doc.setFontSize(7.4); doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 30, 45);
+        doc.text('Descripcion de la normativa:', M + 2, y + 4);
+        doc.setFont('helvetica', 'normal'); doc.setTextColor(55, 65, 80);
+        doc.setFontSize(6.9);
+        var normLines = doc.splitTextToSize(NEG_NORMATIVA_TXT, CW - 4);
+        var normBoxH = 7 + (normLines.length * 3.1) + 2;
+        doc.rect(M, y, CW, normBoxH, 'S');
+        doc.text(normLines, M + 2, y + 8);
+        y += normBoxH + 4;
 
-        var firmas = [
-            { titulo: 'TECNICO REPORTANTE', user: r.firma_tecnico_user, fecha: r.firma_tecnico_fecha },
-            { titulo: 'SUPERVISOR OPERATIVO', user: r.firma_sup_operativo_user, fecha: r.firma_sup_operativo_fecha },
-            { titulo: 'SUPERVISOR SEGURIDAD', user: r.firma_sup_seguridad_user, fecha: r.firma_sup_seguridad_fecha },
-            { titulo: 'VISTO BUENO HSE', user: r.firma_hse_user, fecha: r.firma_hse_fecha }
-        ];
+        // ================= SECCION A: INVESTIGACION DEL SUPERVISOR OPERATIVO =================
+        function bandaSeccion(titulo) {
+            doc.setFillColor(BAND_FILL[0], BAND_FILL[1], BAND_FILL[2]);
+            doc.rect(M, y, CW, 6.5, 'FD');
+            doc.setFontSize(8.4); doc.setFont('helvetica', 'bold'); doc.setTextColor(0, 80, 130);
+            doc.text(titulo, M + CW / 2, y + 4.4, { align: 'center' });
+            y += 6.5;
+        }
 
-        firmas.forEach(function(f, i) {
-            var xBox = 14 + (i * colW);
-            doc.setFillColor(255, 255, 255);
-            doc.setDrawColor(200, 210, 225);
-            doc.rect(xBox, y, colW - 2, boxH, 'FD');
+        function filaSimple(numero, etiqueta, valor) {
+            doc.rect(M, y, CW, 6.5, 'S');
+            doc.setFontSize(7.6); doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 30, 45);
+            doc.text(numero + '. ' + etiqueta + ':', M + 2, y + 4.4);
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(50, 60, 75);
+            var labelW = doc.getTextWidth(numero + '. ' + etiqueta + ': ') + 4;
+            doc.text(String(valor || '-'), M + labelW, y + 4.4);
+            y += 6.5;
+        }
 
-            doc.setFillColor(0, 151, 216);
-            doc.rect(xBox, y, colW - 2, 5, 'F');
-            doc.setFontSize(6.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-            doc.text(f.titulo, xBox + (colW - 2)/2, y + 3.5, { align: 'center' });
+        function bloqueParrafo(numero, etiqueta, valor) {
+            doc.setFontSize(7.6); doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 30, 45);
+            var lines = doc.splitTextToSize(String(valor || '-'), CW - 4);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7.3);
+            var boxH = 6 + (lines.length * 3.4) + 2;
+            doc.rect(M, y, CW, boxH, 'S');
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(7.6); doc.setTextColor(20, 30, 45);
+            doc.text(numero + '. ' + etiqueta + ':', M + 2, y + 4.4);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(7.3); doc.setTextColor(50, 60, 75);
+            doc.text(lines, M + 2, y + 8.6);
+            y += boxH;
+        }
 
-            if (f.user) {
-                doc.setFontSize(7.5); doc.setFont('helvetica', 'bold'); doc.setTextColor(15, 23, 42);
-                doc.text(f.user, xBox + (colW - 2)/2, y + 13, { align: 'center' });
-                doc.setFontSize(6.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-                doc.text('Fecha: ' + (f.fecha || '-'), xBox + (colW - 2)/2, y + 19, { align: 'center' });
-                doc.setFontSize(6); doc.setTextColor(131, 202, 22);
-                doc.text('[FIRMA DIGITAL CONFIRMADA]', xBox + (colW - 2)/2, y + 23, { align: 'center' });
+        if (y + 60 > pageH - 12) { doc.addPage(); y = 14; }
+
+        bandaSeccion('A. INVESTIGACION DEL SUPERVISOR OPERATIVO');
+        filaSimple('1', 'Nombre del Supervisor Operativo', r.supervisor_operativo_nombre);
+        filaSimple('2', 'Trabajador Reportante', r.trabajador_reportante);
+        bloqueParrafo('3', 'Razones para la negativa', r.razones_negativa);
+
+        // 4. Evidencias fotograficas
+        if (y + 46 > pageH - 12) { doc.addPage(); y = 14; }
+        doc.setFontSize(7.6); doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 30, 45);
+        doc.text('4. Evidencias fotograficas:', M + 2, y + 4.4);
+        y += 6;
+        var fotoBoxW = (CW - 4) / 2, fotoBoxH = 42;
+        [r.foto1_url, r.foto2_url].forEach(function(f, i) {
+            var fx = M + i * (fotoBoxW + 4);
+            doc.rect(fx, y, fotoBoxW, fotoBoxH, 'S');
+            if (f) {
+                try {
+                    var mimeFoto = f.indexOf('image/png') !== -1 ? 'PNG' : 'JPEG';
+                    doc.addImage(f, mimeFoto, fx + 1, y + 1, fotoBoxW - 2, fotoBoxH - 2, undefined, 'FAST');
+                } catch (e) {
+                    doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+                    doc.text('Imagen no disponible', fx + fotoBoxW / 2, y + fotoBoxH / 2, { align: 'center' });
+                }
             } else {
-                doc.setFontSize(7); doc.setFont('helvetica', 'italic'); doc.setTextColor(165, 172, 184);
-                doc.text('Pendiente de Firma', xBox + (colW - 2)/2, y + 16, { align: 'center' });
+                doc.setFontSize(7); doc.setTextColor(150, 150, 150);
+                doc.text('Sin evidencia', fx + fotoBoxW / 2, y + fotoBoxH / 2, { align: 'center' });
             }
         });
+        y += fotoBoxH + 4;
+
+        if (y + 40 > pageH - 12) { doc.addPage(); y = 14; }
+
+        bloqueParrafo('5', 'Acciones Correctivas', r.medidas_correctivas);
+
+        // 6. Existe acuerdo (checkbox SI/NO)
+        var acuerdoSi = r.satisface_negativa === 'SI';
+        doc.rect(M, y, CW, 7, 'S');
+        doc.setFontSize(7.4); doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 30, 45);
+        var txt6 = '6. Existe acuerdo en que las condiciones de trabajo se han hecho inseguras :';
+        doc.text(txt6, M + 2, y + 4.6);
+        var checkX = M + doc.getTextWidth(txt6) + 6;
+        doc.setFont('helvetica', 'normal');
+        doc.text('( ' + (acuerdoSi ? 'X' : ' ') + ' ) SI    (  ' + (!acuerdoSi && r.satisface_negativa ? 'X' : ' ') + ' ) NO', checkX, y + 4.6);
+        y += 7;
+
+        if (r.reinicia_labores) {
+            doc.setFontSize(6.6); doc.setFont('helvetica', 'italic'); doc.setTextColor(90, 100, 115);
+            doc.text('Reinicio de labores: ' + r.reinicia_labores + (r.fecha_reinicio ? ' - ' + r.fecha_reinicio + ' ' + (r.hora_reinicio || '') : ''), M + 2, y + 3.5);
+            y += 5.5;
+        }
+        y += 2;
+
+        // Notas adicionales opcionales (solo si existen, sin recuadros forzados por puesto)
+        var notasExtra = [];
+        if (r.observaciones_seguridad) notasExtra.push('Seguridad: ' + r.observaciones_seguridad);
+        if (r.dictamen_hse) notasExtra.push('HSE: ' + r.dictamen_hse);
+        if (notasExtra.length) {
+            if (y + 16 > pageH - 45) { doc.addPage(); y = 14; }
+            doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 30, 45);
+            doc.text('Notas adicionales:', M + 2, y + 4);
+            doc.setFont('helvetica', 'normal'); doc.setTextColor(60, 70, 85);
+            var notasLines = doc.splitTextToSize(notasExtra.join('  |  '), CW - 4);
+            var notasH = 6 + notasLines.length * 3.2;
+            doc.rect(M, y, CW, notasH, 'S');
+            doc.text(notasLines, M + 2, y + 7.5);
+            y += notasH + 3;
+        }
+
+        // ================= CUADRO DE FIRMAS (2x2, estilo formato oficial) =================
+        if (y + 40 > pageH - 12) { doc.addPage(); y = 14; }
+        y += 2;
+
+        var firmas = [
+            { titulo: 'FIRMA DEL TRABAJADOR REPORTANTE', user: r.firma_tecnico_user || r.trabajador_reportante, img: r.firma_tecnico_img },
+            { titulo: 'FIRMA DEL SUPERVISOR OPERATIVO', user: r.firma_sup_operativo_user || r.supervisor_operativo_nombre, img: r.firma_sup_operativo_img },
+            { titulo: 'FIRMA DEL SUPERVISOR DE SEGURIDAD', user: r.firma_sup_seguridad_user, img: r.firma_sup_seguridad_img },
+            { titulo: 'VoBo HSE', user: r.firma_hse_user, img: r.firma_hse_img }
+        ];
+
+        var fCellW = CW / 2, fCellH = 32;
+        firmas.forEach(function(f, i) {
+            var col = i % 2, row = Math.floor(i / 2);
+            var fx = M + col * fCellW;
+            var fy = y + row * fCellH;
+            doc.rect(fx, fy, fCellW, fCellH, 'S');
+
+            var imgOk = false;
+            if (f.img) {
+                try {
+                    var mimeFirma = f.img.indexOf('image/png') !== -1 ? 'PNG' : 'JPEG';
+                    doc.addImage(f.img, mimeFirma, fx + fCellW / 2 - 16, fy + 3, 32, 12, undefined, 'FAST');
+                    imgOk = true;
+                } catch (e) { imgOk = false; }
+            }
+            doc.line(fx + fCellW / 2 - 26, fy + 19, fx + fCellW / 2 + 26, fy + 19);
+            doc.setFontSize(7.6); doc.setFont('helvetica', 'bold'); doc.setTextColor(20, 30, 45);
+            doc.text(f.user || (imgOk ? '' : ' '), fx + fCellW / 2, fy + 23.5, { align: 'center' });
+            doc.setFontSize(6.4); doc.setFont('helvetica', 'normal'); doc.setTextColor(80, 90, 105);
+            doc.text(f.titulo, fx + fCellW / 2, fy + 28, { align: 'center' });
+            if (!f.user) {
+                doc.setFontSize(6.6); doc.setFont('helvetica', 'italic'); doc.setTextColor(165, 172, 184);
+                doc.text('Pendiente de firma', fx + fCellW / 2, fy + 12, { align: 'center' });
+            }
+        });
+        y += (2 * fCellH) + 6;
 
         // Pie de pagina
-        doc.setFontSize(7); doc.setTextColor(148, 163, 184);
-        doc.line(14, pageH - 8, pageW - 14, pageH - 8);
-        doc.text('Software O&M  -  Formatos Oficiales  -  Cliente: ' + clienteNombre, 14, pageH - 4);
-        doc.text('Pagina 1 de 1', pageW - 14, pageH - 4, { align: 'right' });
+        doc.setFontSize(6.6); doc.setTextColor(148, 163, 184);
+        doc.line(M, pageH - 8, pageW - M, pageH - 8);
+        doc.text('Cliente: ' + clienteNombre, M, pageH - 4);
+        doc.text('Pagina 1 de 1', pageW - M, pageH - 4, { align: 'right' });
 
         doc.save('Negativa_' + (r.id || 'HSE') + '_' + (r.proceso || 'Trabajo').replace(/ /g, '_') + '.pdf');
     }
 
     $('#btn-negativa-exportar-pdf').on('click', function() {
-        generarPDFNegativa(negativaActual);
+        var r = negativaActual;
+        var completo = r && (r.estado === 'completado' || (r.firma_hse_user && r.firma_hse_user.length > 0));
+        if (!completo) {
+            alert('Aun no se puede exportar el PDF: faltan firmas por completar (Tecnico, Supervisor Operativo, Supervisor de Seguridad y HSE).');
+            return;
+        }
+        generarPDFNegativa(r);
     });
 
     if ($('.sidebar-item[data-tab="negativa"]').length) {
@@ -1649,30 +1888,26 @@ jQuery(document).ready(function($) {
     window.abrirODocumentoGoogleDocs = function(idx) {
         var raw = window._ruteoRegistros ? window._ruteoRegistros[idx] : null; if (!raw) return;
         var r = normalizarRegistro(raw);
+        if (r.link_docx && r.link_docx.length > 5) {
+            window.open(r.link_docx, '_blank');
+            return;
+        }
         var win = window.open('about:blank', '_blank');
         if (win) {
-            win.document.write('<div style="font-family:sans-serif; padding:40px; text-align:center; color:#0097D8;"><h2>Generando Ficha Tecnica en Google Docs con imagenes...</h2><p>Por favor espere unos segundos mientras se incrustan las evidencias fotograficas y se abre en Google Drive.</p></div>');
+            win.document.write('<div style="font-family:sans-serif; padding:40px; text-align:center; color:#0097D8;"><h2>Generando documento Google Docs en Drive...</h2><p>Por favor espere unos segundos mientras se abre en Google Drive.</p></div>');
         }
-        var recordPayload = $.extend({}, r, {
-            foto1_url: r.foto_1 || r.foto1_url || '',
-            foto2_url: r.foto_2 || r.foto2_url || ''
-        });
         var fd = new FormData();
         fd.append('action', 'ruteo_proxy_post');
         fd.append('nonce', wpRuteoAjax.nonce);
-        fd.append('payload', JSON.stringify({ action_type: 'create_doc', record: recordPayload }));
+        fd.append('payload', JSON.stringify({ action_type: 'create_doc', record: r }));
         fetch(wpRuteoAjax.ajaxurl, { method: 'POST', body: fd })
         .then(function(res) { return res.json(); })
         .then(function(json) {
-            var docUrl = '';
-            if (json.success && json.data) {
-                var parsed = typeof json.data === 'string' ? JSON.parse(json.data) : json.data;
-                docUrl = parsed.doc_url || parsed.url || '';
-            }
-            if (win) win.location.href = docUrl || r.link_docx || 'https://drive.google.com/drive/folders/1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
+            var docUrl = (json.success && json.data) ? (typeof json.data === 'string' ? JSON.parse(json.data).doc_url : json.data.doc_url) : '';
+            if (win) win.location.href = docUrl || 'https://drive.google.com/drive/folders/1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
         })
         .catch(function() {
-            if (win) win.location.href = r.link_docx || 'https://drive.google.com/drive/folders/1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
+            if (win) win.location.href = 'https://drive.google.com/drive/folders/1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
         });
     };
     window.generarDocumentoWord = window.abrirODocumentoGoogleDocs;

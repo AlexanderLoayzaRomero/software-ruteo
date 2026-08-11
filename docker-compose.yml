@@ -26,6 +26,12 @@ services:
       WORDPRESS_DB_USER: wordpress
       WORDPRESS_DB_PASSWORD: ruteopassword
       WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_CONFIG_EXTRA: |
+        define('RUTEO_PASS_ADMIN', 'TuClaveReal123!');
+        define('RUTEO_PASS_TECNICO', 'TuClaveReal123!');
+        define('RUTEO_PASS_SUPERVISOR', 'TuClaveReal123!');
+        define('RUTEO_PASS_SEGURIDAD', 'TuClaveReal123!');
+        define('RUTEO_PASS_HSE', 'TuClaveReal123!');
     volumes:
       - ./wp-content:/var/www/html/wp-content
 

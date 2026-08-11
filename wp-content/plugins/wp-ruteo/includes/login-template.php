@@ -23,7 +23,7 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                     </svg>
                 </div>
                 <div class="ruteo-title-area">
-                    <h2>Acceso al Aplicativo de Ruteo</h2>
+                    <h2>Acceso a Software O&M</h2>
                     <p>Ingresa tus credenciales para administrar o registrar datos</p>
                 </div>
             </div>
