@@ -1583,10 +1583,12 @@ class WPRuteoApp {
 
         $current_user = wp_get_current_user();
         $user_name = $current_user->exists() ? $current_user->display_name : 'Sistema';
+        $user_pm   = $current_user->exists() ? get_user_meta( $current_user->ID, 'ruteo_pm_assigned', true ) : '';
 
         $entry = array(
             'fecha'    => current_time( 'mysql' ),
             'usuario'  => $user_name,
+            'pm'       => $user_pm ?: '-',
             'accion'   => $accion,
             'detalles' => $detalles,
         );
@@ -1599,7 +1601,7 @@ class WPRuteoApp {
 
         update_option( 'ruteo_audit_logs', $logs, false );
         
-        $log_line = "[" . current_time('mysql') . "] [" . $user_name . "] " . $accion . ": " . $detalles . PHP_EOL;
+        $log_line = "[" . current_time('mysql') . "] [" . $user_name . "] [PM: " . ($user_pm ?: '-') . "] " . $accion . ": " . $detalles . PHP_EOL;
         @file_put_contents( plugin_dir_path( __FILE__ ) . 'ruteo-debug.log', $log_line, FILE_APPEND );
     }
 
@@ -1613,13 +1615,32 @@ class WPRuteoApp {
         if ( empty( $logs ) || ! is_array( $logs ) ) {
             $logs = array(
                 array(
-                    'fecha'   => current_time( 'mysql' ),
-                    'usuario' => 'Administrador General O&M',
-                    'accion'  => 'Sistema Inicializado',
-                    'detalle' => 'Modulos y registro de auditoria cargados correctamente.',
+                    'fecha'    => current_time( 'mysql' ),
+                    'usuario'  => 'Administrador General O&M',
+                    'pm'       => 'PM-PRINCIPAL',
+                    'accion'   => 'Sistema Inicializado',
+                    'detalles' => 'Modulos y registro de auditoria cargados correctamente.',
                 )
             );
             update_option( 'ruteo_audit_logs', $logs );
+        } else {
+            // Mapear PM a registros existentes que no lo tengan guardado
+            $all_users = get_users();
+            $user_pm_map = array();
+            foreach ( $all_users as $u ) {
+                $pm = get_user_meta( $u->ID, 'ruteo_pm_assigned', true );
+                $user_pm_map[ strtolower( trim( $u->display_name ) ) ] = $pm ?: '-';
+            }
+            foreach ( $logs as &$l ) {
+                if ( empty( $l['pm'] ) || $l['pm'] === '-' ) {
+                    $uname_key = strtolower( trim( $l['usuario'] ?? '' ) );
+                    if ( isset( $user_pm_map[ $uname_key ] ) ) {
+                        $l['pm'] = $user_pm_map[ $uname_key ];
+                    } else {
+                        $l['pm'] = '-';
+                    }
+                }
+            }
         }
         wp_send_json_success( array( 'logs' => $logs ) );
     }

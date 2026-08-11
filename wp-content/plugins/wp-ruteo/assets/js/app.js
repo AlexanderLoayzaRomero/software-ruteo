@@ -2754,14 +2754,14 @@ jQuery(document).ready(function($) {
     // --- MODULO AUDITORIA Y LOGS ---
     function cargarAuditLogs() {
         var $tbody = $('#tbody-audit-logs');
-        $tbody.html('<tr><td colspan="4" style="text-align:center; padding:20px;">Cargando registros de auditoria...</td></tr>');
+        $tbody.html('<tr><td colspan="5" style="text-align:center; padding:20px;">Cargando registros de auditoria...</td></tr>');
         $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_get_logs', nonce: wpRuteoAjax.nonce }, function(res) {
             if (res.success && res.data && res.data.logs) {
                 window.ruteoAuditLogsCache = res.data.logs;
                 poblarFiltrosAuditLogs(res.data.logs);
                 filtrarAuditLogs();
             } else {
-                $tbody.html('<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No se pudieron obtener los logs de auditoria.</td></tr>');
+                $tbody.html('<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">No se pudieron obtener los logs de auditoria.</td></tr>');
             }
         });
     }
@@ -2770,15 +2770,16 @@ jQuery(document).ready(function($) {
         var $tbody = $('#tbody-audit-logs');
         $tbody.empty();
         if (!logs || !logs.length) {
-            $tbody.append('<tr><td colspan="4" style="text-align:center; padding:20px;">No hay actividades registradas en el sistema.</td></tr>');
+            $tbody.append('<tr><td colspan="5" style="text-align:center; padding:20px;">No hay actividades registradas en el sistema.</td></tr>');
             return;
         }
         logs.forEach(function(l) {
             var tr = '<tr>' +
                 '<td><span style="font-size:12px; font-weight:600; color:var(--text-muted);">' + l.fecha + '</span></td>' +
                 '<td><strong>' + l.usuario + '</strong></td>' +
+                '<td><span style="font-size:12px; font-weight:600; color:var(--accent);">' + (l.pm || '-') + '</span></td>' +
                 '<td><span class="status-badge-info" style="font-size:11px;">' + l.accion + '</span></td>' +
-                '<td>' + (l.detalle || '-') + '</td>' +
+                '<td>' + (l.detalles || l.detalle || '-') + '</td>' +
             '</tr>';
             $tbody.append(tr);
         });
@@ -2789,12 +2790,14 @@ jQuery(document).ready(function($) {
         var query = $('#audit-log-search').val() ? $('#audit-log-search').val().toLowerCase().trim() : '';
         var actionFilter = $('#audit-filter-action').val() || '';
         var userFilter = $('#audit-filter-user').val() || '';
+        var pmFilter = $('#audit-filter-pm').val() || '';
 
         var filtered = allLogs.filter(function(l) {
             if (actionFilter && (l.accion || '').toLowerCase().indexOf(actionFilter.toLowerCase()) === -1) return false;
             if (userFilter && (l.usuario || '').toLowerCase() !== userFilter.toLowerCase()) return false;
+            if (pmFilter && (l.pm || '').toLowerCase() !== pmFilter.toLowerCase()) return false;
             if (query) {
-                var haystack = (l.fecha + ' ' + l.usuario + ' ' + l.accion + ' ' + (l.detalle || '')).toLowerCase();
+                var haystack = (l.fecha + ' ' + l.usuario + ' ' + (l.pm || '') + ' ' + l.accion + ' ' + (l.detalles || l.detalle || '')).toLowerCase();
                 if (haystack.indexOf(query) === -1) return false;
             }
             return true;
@@ -2805,17 +2808,21 @@ jQuery(document).ready(function($) {
     function poblarFiltrosAuditLogs(logs) {
         var $userSel = $('#audit-filter-user');
         var $actionSel = $('#audit-filter-action');
+        var $pmSel = $('#audit-filter-pm');
         if (!$userSel.length || !$actionSel.length) return;
 
         var currentUserVal = $userSel.val();
         var currentActionVal = $actionSel.val();
+        var currentPmVal = $pmSel.length ? $pmSel.val() : '';
 
         var users = new Set();
         var actions = new Set();
+        var pms = new Set();
 
         (logs || []).forEach(function(l) {
             if (l.usuario) users.add(l.usuario);
             if (l.accion) actions.add(l.accion);
+            if (l.pm && l.pm !== '-') pms.add(l.pm);
         });
 
         $userSel.html('<option value="">Todos los usuarios</option>');
@@ -2827,10 +2834,17 @@ jQuery(document).ready(function($) {
         Array.from(actions).sort().forEach(function(a) {
             $actionSel.append('<option value="' + a + '"' + (a === currentActionVal ? ' selected' : '') + '>' + a + '</option>');
         });
+
+        if ($pmSel.length) {
+            $pmSel.html('<option value="">Todos los PM</option>');
+            Array.from(pms).sort().forEach(function(p) {
+                $pmSel.append('<option value="' + p + '"' + (p === currentPmVal ? ' selected' : '') + '>' + p + '</option>');
+            });
+        }
     }
 
     $('#audit-log-search').on('input', filtrarAuditLogs);
-    $('#audit-filter-action, #audit-filter-user').on('change', filtrarAuditLogs);
+    $('#audit-filter-action, #audit-filter-user, #audit-filter-pm').on('change', filtrarAuditLogs);
 
     $('#btn-refresh-audit-logs').on('click', cargarAuditLogs);
 

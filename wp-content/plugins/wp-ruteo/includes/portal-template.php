@@ -1500,6 +1500,11 @@ body.admin-bar .ruteo-app-layout {
                                     <option value="">Todos los usuarios</option>
                                 </select>
                             </div>
+                            <div class="filter-group" style="margin:0;">
+                                <select id="audit-filter-pm" style="padding:6px 12px; font-size:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
+                                    <option value="">Todos los PM</option>
+                                </select>
+                            </div>
                             <div class="portal-search-wrap" style="max-width:200px;">
                                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
@@ -1520,12 +1525,13 @@ body.admin-bar .ruteo-app-layout {
                                 <tr>
                                     <th>Fecha y Hora</th>
                                     <th>Usuario</th>
+                                    <th>PM Asignado</th>
                                     <th>Accion Realizada</th>
                                     <th>Detalles del Evento</th>
                                 </tr>
                             </thead>
                             <tbody id="tbody-audit-logs">
-                                <tr><td colspan="4" style="text-align:center; padding:20px;">Cargando historial de auditoria...</td></tr>
+                                <tr><td colspan="5" style="text-align:center; padding:20px;">Cargando historial de auditoria...</td></tr>
                             </tbody>
                         </table>
                     </div>
