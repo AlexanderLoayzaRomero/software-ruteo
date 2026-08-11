@@ -1998,13 +1998,34 @@ body.admin-bar .ruteo-app-layout {
 .ruteo-message.error   { color: #FF6B6B; }
 .ruteo-message.success { color: #83CA16; }
 
-.demo-accounts-box p { color: rgba(255,255,255,0.5) !important; }
+.demo-accounts-box p {
+    color: var(--text-secondary, #475569) !important;
+}
+.ruteo-wrapper .demo-accounts-box p,
+.ruteo-glass-container .demo-accounts-box p {
+    color: rgba(255,255,255,0.7) !important;
+}
+
 .btn-demo-login {
-    background: rgba(255,255,255,0.08) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    color: rgba(255,255,255,0.8) !important;
+    background: var(--bg-subtle, #F1F5F9);
+    border: 1px solid var(--border, #CBD5E1);
+    color: var(--text-main, #0F172A) !important;
+    font-weight: 600;
 }
 .btn-demo-login:hover {
+    background: var(--gradient-brand) !important;
+    color: #FFFFFF !important;
+    border-color: transparent !important;
+    box-shadow: var(--shadow-accent);
+}
+.ruteo-wrapper .btn-demo-login,
+.ruteo-glass-container .btn-demo-login {
+    background: rgba(255,255,255,0.12) !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    color: #FFFFFF !important;
+}
+.ruteo-wrapper .btn-demo-login:hover,
+.ruteo-glass-container .btn-demo-login:hover {
     background: var(--gradient-brand) !important;
     color: #FFFFFF !important;
     border-color: transparent !important;
