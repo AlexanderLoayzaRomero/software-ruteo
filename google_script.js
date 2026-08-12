@@ -123,7 +123,7 @@ function doPost(e) {
 
     var data = JSON.parse(e.postData.contents);
 
-    // 1. Peticion para guardar / registrar Negativa al Trabajo (Formato HSE-RE-NEG-01) en Google Sheets y Drive
+    // 1. Peticion para guardar / registrar / actualizar Negativa al Trabajo en Google Sheets y Drive
     if (data.action_type === 'save_negativa' || data.action_type === 'save_negativa_drive' || data.document_type === 'negativa_hse_re_neg_01') {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
       var negSheet = null;
@@ -139,9 +139,11 @@ function doPost(e) {
         try {
           negSheet = ss.insertSheet('Negativas');
         } catch (e) {
-          // Si falla, usar la primera hoja o manejar el error
           negSheet = sheets[0]; 
         }
+      }
+
+      if (negSheet.getLastRow() === 0) {
         negSheet.appendRow([
           "ID", "Fecha Registro", "Estado", "Cliente", "Proceso / Proyecto", "CM / Localidad",
           "Contratista", "Sub Contratista", "Relacionado A", "Lugar de Trabajo", "Fecha",
@@ -158,7 +160,7 @@ function doPost(e) {
       // Generar documento oficial Google Doc / PDF para Negativas en Google Drive
       var docUrl = generarGoogleDocNegativa(neg, FOLDER_ID);
 
-      negSheet.appendRow([
+      var rowValues = [
         neg.id || new Date().getTime(),
         neg.created_at || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm'),
         neg.estado || 'pendiente_tecnico',
@@ -189,13 +191,113 @@ function doPost(e) {
         neg.firma_sup_seguridad_user || '',
         neg.firma_hse_user || '',
         docUrl
-      ]);
+      ];
+
+      // Buscar si ya existe la fila por ID (Columna A)
+      var targetId = String(neg.id || '').trim();
+      var dataRows = negSheet.getDataRange().getValues();
+      var foundIndex = -1;
+
+      if (targetId && dataRows.length > 1) {
+        for (var r = 1; r < dataRows.length; r++) {
+          if (String(dataRows[r][0] || '').trim() === targetId) {
+            foundIndex = r + 1;
+            break;
+          }
+        }
+      }
+
+      if (foundIndex >= 2) {
+        for (var c = 0; c < rowValues.length; c++) {
+          negSheet.getRange(foundIndex, c + 1).setValue(rowValues[c]);
+        }
+      } else {
+        negSheet.appendRow(rowValues);
+      }
 
       return ContentService.createTextOutput(JSON.stringify({
         "status": "success",
         "drive_url": docUrl,
         "doc_url": docUrl,
-        "message": "Negativa registrada en pestaña 'Negativas' de Google Sheets y documento guardado en Google Drive."
+        "message": "Negativa id #" + (neg.id || '') + " procesada en pestaña 'Negativas' de Google Sheets."
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 1b. Peticion masiva para sincronizar/poblar la lista completa de Negativas en Google Sheets
+    if (data.action_type === 'sync_all_negativas') {
+      var ss = SpreadsheetApp.getActiveSpreadsheet();
+      var negSheet = null;
+      var sheets = ss.getSheets();
+      for (var i = 0; i < sheets.length; i++) {
+        if (sheets[i].getName().toLowerCase() === 'negativas') {
+          negSheet = sheets[i];
+          break;
+        }
+      }
+      
+      if (!negSheet) {
+        try {
+          negSheet = ss.insertSheet('Negativas');
+        } catch (e) {
+          negSheet = sheets[0];
+        }
+      }
+
+      // Limpiar datos previos manteniendo encabezados
+      negSheet.clearContents();
+      negSheet.appendRow([
+        "ID", "Fecha Registro", "Estado", "Cliente", "Proceso / Proyecto", "CM / Localidad",
+        "Contratista", "Sub Contratista", "Relacionado A", "Lugar de Trabajo", "Fecha",
+        "Hora Inicio", "Hora Fin", "Total Horas", "Supervisor Operativo", "Trabajador Reportante",
+        "Razones Negativa", "Medidas Correctivas", "Satisface Negativa", "Reinicia Labores",
+        "Fecha Reinicio", "Hora Reinicio", "Supervisor Seguridad", "Observaciones Seguridad",
+        "Dictamen HSE", "Firma Tecnico", "Firma Sup. Operativo", "Firma Sup. Seguridad",
+        "Firma HSE", "Link Google Drive"
+      ]);
+
+      var meList = data.negativas || [];
+      var count = 0;
+
+      for (var nIdx = 0; nIdx < meList.length; nIdx++) {
+        var negItem = meList[nIdx];
+        negSheet.appendRow([
+          negItem.id || (nIdx + 1),
+          negItem.created_at || Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd/MM/yyyy HH:mm'),
+          negItem.estado || 'pendiente_tecnico',
+          negItem.cliente_nombre || 'CYMTEL',
+          negItem.proceso || '',
+          negItem.cm_localidad || '',
+          negItem.contratista || '',
+          negItem.sub_contratista || '',
+          negItem.relacionado_a || '',
+          negItem.lugar_trabajo || '',
+          negItem.fecha || '',
+          negItem.hora_inicio || '',
+          negItem.hora_fin || '',
+          negItem.total_horas || '',
+          negItem.supervisor_operativo_nombre || '',
+          negItem.trabajador_reportante || '',
+          negItem.razones_negativa || '',
+          negItem.medidas_correctivas || '',
+          negItem.satisface_negativa || '',
+          negItem.reinicia_labores || '',
+          negItem.fecha_reinicio || '',
+          negItem.hora_reinicio || '',
+          negItem.supervisor_seguridad_nombre || '',
+          negItem.observaciones_seguridad || '',
+          negItem.dictamen_hse || '',
+          negItem.firma_tecnico_user || '',
+          negItem.firma_sup_operativo_user || '',
+          negItem.firma_sup_seguridad_user || '',
+          negItem.firma_hse_user || '',
+          negItem.doc_url || negItem.drive_url || ''
+        ]);
+        count++;
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        "status": "success",
+        "message": "Se sincronizaron " + count + " negativas en la pestaña 'Negativas'."
       })).setMimeType(ContentService.MimeType.JSON);
     }
     

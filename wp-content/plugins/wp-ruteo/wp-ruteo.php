@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WPRuteoApp {
 
     // URL DEL WEBHOOK DE GOOGLE SHEETS
-    public $webhook_url = 'https://script.google.com/macros/s/AKfycbzh_RqLNFspow4yrqqCwLHOTjt3v4LUfA2KMVy3nH5TETRwwLRn3KXK3OtZHb75hKHzRA/exec';
+    public $webhook_url = 'https://script.google.com/macros/s/AKfycbwOkeyflnS0fHr2mtmuo8HPKMfeSda6Yjmq7unarGIQ_sExZ0Mdl1BS2mDYZNAf4NcwOA/exec';
     private $assets_enqueued = false;
 
     public function __construct() {
@@ -49,6 +49,8 @@ class WPRuteoApp {
         add_action( 'wp_ajax_nopriv_ruteo_negativa_guardar', array( $this, 'handle_ajax_negativa_guardar' ) );
         add_action( 'wp_ajax_ruteo_negativa_listar', array( $this, 'handle_ajax_negativa_listar' ) );
         add_action( 'wp_ajax_nopriv_ruteo_negativa_listar', array( $this, 'handle_ajax_negativa_listar' ) );
+        add_action( 'wp_ajax_ruteo_sync_negativas_sheets', array( $this, 'handle_ajax_sync_negativas_sheets' ) );
+        add_action( 'wp_ajax_nopriv_ruteo_sync_negativas_sheets', array( $this, 'handle_ajax_sync_negativas_sheets' ) );
         
         // Logo del sistema (solo Admin)
         add_action( 'wp_ajax_ruteo_update_site_logo', array( $this, 'handle_ajax_update_site_logo' ) );
@@ -1564,11 +1566,82 @@ class WPRuteoApp {
             wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
             return;
         }
+
+        set_time_limit( 30 );
+        nocache_headers();
+        header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
+        header( 'Pragma: no-cache' );
+        header( 'Expires: 0' );
+
+        // Leer 100% directamente desde Google Sheets (pestaña Negativas) como en Ruteo
+        if ( $this->webhook_url ) {
+            $target_url = add_query_arg( array(
+                'action' => 'get_negativas',
+                '_ts'    => microtime( true )
+            ), $this->webhook_url );
+
+            $response = wp_remote_get( $target_url, array(
+                'timeout'     => 25,
+                'redirection' => 5,
+                'sslverify'   => false,
+                'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            ) );
+
+            if ( ! is_wp_error( $response ) ) {
+                $code = wp_remote_retrieve_response_code( $response );
+                $body = wp_remote_retrieve_body( $response );
+                if ( $code === 200 && ! empty( $body ) ) {
+                    $json = json_decode( $body, true );
+                    if ( isset( $json['status'] ) && $json['status'] === 'success' && isset( $json['negativas'] ) ) {
+                        update_option( 'ruteo_cache_negativas', $json['negativas'], false );
+                        wp_send_json_success( array( 'registros' => $json['negativas'] ) );
+                        return;
+                    }
+                }
+            }
+        }
+
+        // Fallback a registros cacheados si falla la conexión con Google Sheets
+        $cached = get_option( 'ruteo_cache_negativas', array() );
+        wp_send_json_success( array( 'registros' => is_array( $cached ) ? $cached : array() ) );
+    }
+
+    public function handle_ajax_sync_negativas_sheets() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+            return;
+        }
         global $wpdb;
         $table = $wpdb->prefix . 'ruteo_negativas';
+        $registros = $wpdb->get_results( "SELECT * FROM $table ORDER BY id ASC", ARRAY_A );
 
-        $registros = $wpdb->get_results( "SELECT * FROM $table ORDER BY id DESC", ARRAY_A );
-        wp_send_json_success( array( 'registros' => $registros ) );
+        if ( empty( $registros ) ) {
+            wp_send_json_error( array( 'message' => 'No hay negativas registradas en la base de datos para sincronizar.' ) );
+            return;
+        }
+
+        if ( ! $this->webhook_url ) {
+            wp_send_json_error( array( 'message' => 'URL de Webhook no configurada.' ) );
+            return;
+        }
+
+        $response = wp_remote_post( $this->webhook_url, array(
+            'body'    => json_encode( array(
+                'action_type' => 'sync_all_negativas',
+                'negativas'   => $registros
+            ) ),
+            'headers' => array( 'Content-Type' => 'text/plain;charset=utf-8' ),
+            'timeout' => 25
+        ) );
+
+        if ( is_wp_error( $response ) ) {
+            wp_send_json_error( array( 'message' => 'Error de conexión con Google Sheets: ' . $response->get_error_message() ) );
+            return;
+        }
+
+        self::registrar_log( 'Sincronizacion Negativas', 'Se sincronizaron ' . count( $registros ) . ' negativas a Google Sheets' );
+        wp_send_json_success( array( 'message' => 'Se sincronizaron ' . count( $registros ) . ' negativas en Google Sheets exitosamente.' ) );
     }
 
     public static function registrar_log( $accion, $detalles = '' ) {

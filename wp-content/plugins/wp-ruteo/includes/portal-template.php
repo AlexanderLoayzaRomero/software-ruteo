@@ -128,6 +128,13 @@ body.admin-bar .ruteo-app-layout {
                 <span>Negativa al Trabajo</span>
             </button>
 
+            <button class="sidebar-item" data-tab="lista-negativas" id="tab-btn-lista-negativas">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                <span>Negativas</span>
+            </button>
+
             <button class="sidebar-item" data-tab="auditoria" id="tab-btn-auditoria">
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
@@ -1459,6 +1466,78 @@ body.admin-bar .ruteo-app-layout {
                                 <div id="profile-form-msg" class="ruteo-message"></div>
                             </div>
                         </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCION HISTORIAL DE NEGATIVAS -->
+        <section class="ruteo-tab-content" id="tab-lista-negativas">
+            <div class="ruteo-tab-protected-notice" style="display:none;">
+                <div class="login-card-container" style="max-width:520px; margin: 30px auto; text-align:center; padding:32px 24px; background:var(--bg-glass); border:1px solid var(--border); border-radius:16px; backdrop-filter:blur(10px);">
+                    <div style="width:64px; height:64px; margin:0 auto 16px auto; background:rgba(0, 151, 216, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="32" height="32" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                        </svg>
+                    </div>
+                    <h3 style="font-size:20px; font-weight:700; margin:0 0 8px 0; color:var(--menu-title);">Acceso Restringido - Inicia Sesion</h3>
+                    <p style="font-size:14px; color:var(--text-muted); margin:0 0 18px 0;">Debes iniciar sesion para consultar las Negativas al Trabajo.</p>
+                    <button type="button" class="portal-btn portal-btn--purple" data-goto="login" style="gap:8px; display:inline-flex; align-items:center; margin:0 auto;">
+                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"/></svg>
+                        <span>Ir a Iniciar Sesion</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="ruteo-tab-protected-content">
+                <div class="portal-card">
+                    <div class="portal-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                        <div>
+                            <h3 style="margin:0; font-size:18px; font-weight:700;">Historial y Registro de Negativas al Trabajo</h3>
+                            <p style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);">Formato HSE-RE-NEG-01 - Lista de registros y firmas de etapas</p>
+                        </div>
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                            <div class="filter-group" style="margin:0;">
+                                <select id="negativas-filter-estado" style="padding:6px 12px; font-size:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
+                                    <option value="">Todos los estados</option>
+                                    <option value="pendiente_supervisor">Pendiente Supervisor</option>
+                                    <option value="pendiente_seguridad">Pendiente Seguridad</option>
+                                    <option value="pendiente_hse">Pendiente HSE</option>
+                                    <option value="completado">Completado</option>
+                                </select>
+                            </div>
+                            <div class="portal-search-wrap" style="max-width:200px;">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                                </svg>
+                                <input type="text" id="negativas-search" placeholder="Buscar en negativas...">
+                            </div>
+                            <button type="button" class="portal-btn portal-btn--refresh" id="btn-refresh-negativas">
+                                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                </svg>
+                                Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="portal-table-wrapper" style="margin-top:16px;">
+                        <table class="portal-table" id="table-lista-negativas">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Fecha Registro</th>
+                                    <th>Estado</th>
+                                    <th>Cliente</th>
+                                    <th>Proceso / Localidad</th>
+                                    <th>Reportante</th>
+                                    <th>Supervisor</th>
+                                    <th>Documento Drive / PDF</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-lista-negativas">
+                                <tr><td colspan="8" style="text-align:center; padding:20px;">Cargando lista de negativas...</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>

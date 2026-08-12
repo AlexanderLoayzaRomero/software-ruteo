@@ -379,6 +379,8 @@ jQuery(document).ready(function($) {
             cargarMateriales();
         } else if (targetTab === 'auditoria') {
             cargarAuditLogs();
+        } else if (targetTab === 'lista-negativas') {
+            cargarListaNegativas();
         } else if (targetTab === 'registros' && currentUser.isLoggedIn) {
             if (typeof window.cargarDatosPortal === 'function') {
                 var hayRegistros = window._ruteoRegistros && window._ruteoRegistros.length > 0;
@@ -2853,6 +2855,94 @@ jQuery(document).ready(function($) {
     $('#audit-filter-action, #audit-filter-user, #audit-filter-pm').on('change', filtrarAuditLogs);
 
     $('#btn-refresh-audit-logs').on('click', cargarAuditLogs);
+
+    // --- MODULO HISTORIAL DE NEGATIVAS ---
+    function cargarListaNegativas() {
+        var $tbody = $('#tbody-lista-negativas');
+        $tbody.html('<tr><td colspan="8" style="text-align:center; padding:20px;">Cargando lista de negativas...</td></tr>');
+        $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_listar', nonce: wpRuteoAjax.nonce }, function(res) {
+            if (res.success && res.data && res.data.registros) {
+                window.ruteoNegativasCache = res.data.registros;
+                filtrarListaNegativas();
+            } else {
+                $tbody.html('<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-muted);">No hay negativas registradas o no se pudieron cargar.</td></tr>');
+            }
+        });
+    }
+
+    function renderTablaListaNegativas(list) {
+        var $tbody = $('#tbody-lista-negativas');
+        $tbody.empty();
+        if (!list || !list.length) {
+            $tbody.append('<tr><td colspan="8" style="text-align:center; padding:20px;">No se encontraron negativas en el Excel de Google Sheets.</td></tr>');
+            return;
+        }
+        list.forEach(function(item) {
+            var id = item.id || '-';
+            var fecha = item.fecha_registro || item.created_at || item.fecha || '-';
+            var estadoRaw = (item.estado || 'pendiente_tecnico').toLowerCase();
+            var cliente = item.cliente || item.cliente_nombre || 'CYMTEL';
+            var proceso = item.proceso__proyecto || item.proceso || '-';
+            var localidad = item.cm__localidad || item.cm_localidad || '-';
+            var reportante = item.trabajador_reportante || item.firma_tecnico || item.firma_tecnico_user || '-';
+            var supervisor = item.supervisor_operativo || item.supervisor_operativo_nombre || item.firma_sup_operativo_user || '-';
+            var docUrl = item.link_google_drive || item.doc_url || item.drive_url || item.foto1_url || '';
+
+            var estadoBadge = '<span class="status-badge-pending" style="font-size:11px;">' + estadoRaw + '</span>';
+            if (estadoRaw === 'completado') {
+                estadoBadge = '<span class="status-badge-success" style="font-size:11px;">Completado</span>';
+            } else if (estadoRaw === 'pendiente_seguridad') {
+                estadoBadge = '<span class="status-badge-info" style="font-size:11px;">Pendiente Seguridad</span>';
+            } else if (estadoRaw === 'pendiente_hse') {
+                estadoBadge = '<span class="status-badge-warning" style="font-size:11px;">Pendiente HSE</span>';
+            } else if (estadoRaw === 'pendiente_supervisor') {
+                estadoBadge = '<span class="status-badge-pending" style="font-size:11px;">Pendiente Supervisor</span>';
+            }
+
+            var docLink = docUrl ? '<a href="' + docUrl + '" target="_blank" style="color:var(--accent); font-weight:600; text-decoration:none;">📄 Abrir Documento</a>' : '<span style="color:var(--text-muted); font-size:11px;">No generado</span>';
+
+            var tr = '<tr>' +
+                '<td><strong>#' + id + '</strong></td>' +
+                '<td><span style="font-size:12px; font-weight:600; color:var(--text-muted);">' + fecha + '</span></td>' +
+                '<td>' + estadoBadge + '</td>' +
+                '<td>' + cliente + '</td>' +
+                '<td>' + proceso + ' (' + localidad + ')</td>' +
+                '<td>' + reportante + '</td>' +
+                '<td>' + supervisor + '</td>' +
+                '<td>' + docLink + '</td>' +
+            '</tr>';
+            $tbody.append(tr);
+        });
+    }
+
+    function filtrarListaNegativas() {
+        var allNeg = window.ruteoNegativasCache || [];
+        var query = $('#negativas-search').val() ? $('#negativas-search').val().toLowerCase().trim() : '';
+        var estadoFilter = $('#negativas-filter-estado').val() || '';
+
+        var filtered = allNeg.filter(function(n) {
+            var nEstado = (n.estado || '').toLowerCase();
+            if (estadoFilter && nEstado !== estadoFilter.toLowerCase()) return false;
+            if (query) {
+                var haystack = (
+                    (n.id || '') + ' ' +
+                    (n.cliente || n.cliente_nombre || '') + ' ' +
+                    (n.proceso__proyecto || n.proceso || '') + ' ' +
+                    (n.cm__localidad || n.cm_localidad || '') + ' ' +
+                    (n.trabajador_reportante || n.firma_tecnico || '') + ' ' +
+                    (n.supervisor_operativo || n.supervisor_operativo_nombre || '') + ' ' +
+                    nEstado
+                ).toLowerCase();
+                if (haystack.indexOf(query) === -1) return false;
+            }
+            return true;
+        });
+        renderTablaListaNegativas(filtered);
+    }
+
+    $('#negativas-search').on('input', filtrarListaNegativas);
+    $('#negativas-filter-estado').on('change', filtrarListaNegativas);
+    $('#btn-refresh-negativas').on('click', cargarListaNegativas);
 
     // EXPORTAR A EXCEL MULTI-HOJA (.XLSX CON PESTAÑA PARA NEGATIVAS)
     function exportarCSVRegistros() {
