@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Informe de Avance de Software de Pruebas</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .report-card {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+        }
+        .header-title {
+            text-align: center;
+            border-bottom: 3px solid #0097D8;
+            padding-bottom: 16px;
+            margin-bottom: 28px;
+        }
+        .header-title h1 {
+            color: #0097D8;
+            font-size: 24px;
+            margin: 0 0 6px 0;
+            text-transform: uppercase;
+        }
+        .header-title p {
+            color: #64748b;
+            font-size: 14px;
+            margin: 0;
+        }
+        .info-table, .activity-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 28px;
+        }
+        .info-table td, .info-table th, .activity-table td, .activity-table th {
+            border: 1px solid #cbd5e1;
+            padding: 10px 14px;
+            font-size: 13.5px;
+            text-align: left;
+        }
+        .info-table th, .activity-table th {
+            background-color: #0097D8;
+            color: #ffffff;
+            font-weight: 700;
+        }
+        .info-table tr:nth-child(even), .activity-table tr:nth-child(even) {
+            background-color: #f1f5f9;
+        }
+        .section-h2 {
+            font-size: 16px;
+            color: #0097D8;
+            border-left: 4px solid #83CA16;
+            padding-left: 10px;
+            margin: 28px 0 12px 0;
+        }
+        .box-text {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 14px;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .img-placeholder {
+            border: 2px dashed #cbd5e1;
+            border-radius: 6px;
+            padding: 20px;
+            text-align: center;
+            color: #94a3b8;
+            font-size: 12px;
+            background: #fafafa;
+        }
+    </style>
+</head>
+<body>
+
+<div class="report-card">
+    <div class="header-title">
+        <h1>Informe de Avance de Software de Pruebas</h1>
+        <p>Aplicativo de Ruteo de Campo  |  Reporte de Pasantia</p>
+    </div>
+
+    <table class="info-table">
+        <tr>
+            <th style="width:30%;">Nombre Completo</th>
+            <td>Loayza Romero Alexander Luis</td>
+        </tr>
+        <tr>
+            <th>Fecha</th>
+            <td>01/08/2026</td>
+        </tr>
+        <tr>
+            <th>Modalidad - Tipo</th>
+            <td>Virtual - Pasantia</td>
+        </tr>
+        <tr>
+            <th>Supervisor(es)</th>
+            <td>Ing. Gian Franco Rodriguez - Claudia Barrios Salazar</td>
+        </tr>
+    </table>
+
+    <h2 class="section-h2">Objetivo de la actividad del dia</h2>
+    <div class="box-text">
+        Redisenar la interfaz del aplicativo, integrar la sincronizacion automatica de fichas tecnicas en Google Docs dentro de la carpeta compartida de Google Drive (1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO), optimizar el formulario de nuevo registro de campo y corregir errores de sintaxis y visualizacion en el portal.
+    </div>
+
+    <h2 class="section-h2">Actividades realizadas</h2>
+    <table class="activity-table">
+        <thead>
+            <tr>
+                <th style="width:18%;">Horas</th>
+                <th>Actividad</th>
+                <th style="width:32%;">Imagenes / Evidencias</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><b>09:00 – 09:15</b></td>
+                <td>Se registro la asistencia correspondiente al turno de la manana mediante el grupo oficial de WhatsApp. Posteriormente, se revisaron las actividades planificadas para la jornada y las instrucciones comunicadas por el supervisor sobre la vinculacion de la carpeta de Google Drive 1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO.</td>
+                <td><div class="img-placeholder">[ Captura Asistencia Manana ]</div></td>
+            </tr>
+            <tr>
+                <td><b>09:15 – 11:00</b></td>
+                <td>Se corrigio la visibilidad del encabezado principal (.ruteo-top-header), se oculto la barra de administracion de WordPress (#wpadminbar) y se aplico un tema oscuro con gradientes suaves, bordes traslucidos y sombras elevadas en style.css.</td>
+                <td><div class="img-placeholder">[ Captura Encabezado y Tema Oscuro ]</div></td>
+            </tr>
+            <tr>
+                <td><b>11:00 – 13:00</b></td>
+                <td>Se realizo el rediseno estetico completo de todas las secciones del portal (Usuarios, Registros, Materiales, SLA y Formulario), eliminando titulos duplicados &lt;h3&gt; y organizando botones de accion e insignias de codigo (.portal-code y .portal-link).</td>
+                <td><div class="img-placeholder">[ Captura Vistas Redisenadas Portal ]</div></td>
+            </tr>
+            <tr>
+                <td><b>14:30 – 15:00</b></td>
+                <td>Se registro la asistencia correspondiente al turno de la tarde mediante el grupo oficial de WhatsApp. Asimismo, se revisaron los requerimientos tecnicos para generar documentos de Google Docs por cada registro de campo.</td>
+                <td><div class="img-placeholder">[ Captura Asistencia Tarde ]</div></td>
+            </tr>
+            <tr>
+                <td><b>15:00 – 16:15</b></td>
+                <td>Se actualizo google_script.js agregando la funcion generarGoogleDoc vinculada a la carpeta de Drive 1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO para crear y almacenar automaticamente una ficha en Google Docs al guardar cada registro.</td>
+                <td><div class="img-placeholder">[ Captura Google Apps Script ]</div></td>
+            </tr>
+            <tr>
+                <td><b>16:15 – 17:15</b></td>
+                <td>Se creo la funcion generarDocumentosTodosLosRegistros para la generacion masiva de fichas, se configuro el boton Doc Drive en la tabla de registros para abrir los documentos directamente en Google Drive, se rediseno la vista de Nuevo Registro (form-template.php), se depuraron errores JS y se subieron los cambios a Git (origin/master).</td>
+                <td><div class="img-placeholder">[ Captura Boton Doc Drive y Nuevo Registro ]</div></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2 class="section-h2">Resultado del avance</h2>
+    <div class="box-text">
+        Se entrego el Software de Ruteo de Campo actualizado con sincronizacion automatica a Google Docs en la carpeta compartida de Google Drive (1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO), acceso directo mediante el boton Doc Drive en la tabla de registros, el formulario de nuevo registro redisenado en tarjetas estructuradas y todas las correcciones esteticas y de consola confirmadas en Git (origin/master).
+    </div>
+
+    <h2 class="section-h2">Conclusion</h2>
+    <div class="box-text">
+        Las actividades desarrolladas permitieron cumplir satisfactoriamente con el requerimiento de ingenieria para almacenar y sincronizar un documento Google Docs por cada registro en Google Drive, optimizando la usabilidad del portal y garantizando un acceso rapido y fluido a la informacion desde cualquier dispositivo.
+    </div>
+</div>
+
+</body>
+</html>

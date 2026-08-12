@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: ruteo-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ruteopassword
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wordpress
+      MYSQL_PASSWORD: ruteopassword
+    volumes:
+      - db_data:/var/lib/mysql
+
+  wordpress:
+    image: wordpress:latest
+    container_name: ruteo-wp
+    depends_on:
+      - db
+    restart: always
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wordpress
+      WORDPRESS_DB_PASSWORD: ruteopassword
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_CONFIG_EXTRA: |
+        define('RUTEO_PASS_ADMIN', 'TuClaveReal123!');
+        define('RUTEO_PASS_TECNICO', 'TuClaveReal123!');
+        define('RUTEO_PASS_SUPERVISOR', 'TuClaveReal123!');
+        define('RUTEO_PASS_SEGURIDAD', 'TuClaveReal123!');
+        define('RUTEO_PASS_HSE', 'TuClaveReal123!');
+    volumes:
+      - ./wp-content:/var/www/html/wp-content
+
+volumes:
+  db_data:
