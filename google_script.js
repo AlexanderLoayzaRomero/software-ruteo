@@ -340,25 +340,26 @@ function doPost(e) {
     // 4. Si la peticion es para actualizar/editar un Registro de Ruteo existente
     if (data.action_type === 'update_registro') {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
-      var sheet = null;
-      var allSheets = ss.getSheets();
-      for (var i = 0; i < allSheets.length; i++) {
-        var s = allSheets[i];
-        var sName = s.getName().toLowerCase();
-        if (sName !== 'negativas' && sName !== 'materiales') {
-          var lastCol = s.getLastColumn();
-          if (lastCol > 0) {
-            var firstRow = s.getRange(1, 1, 1, Math.min(10, lastCol)).getValues()[0];
-            // Verificar que la columna C (indice 2) sea ID Consol o que la H (indice 7) sea Codigo
-            if ((firstRow.length > 2 && firstRow[2] && String(firstRow[2]).toLowerCase().indexOf('id consol') !== -1) || 
-                (firstRow.length > 7 && firstRow[7] && String(firstRow[7]).toLowerCase().indexOf('codigo') !== -1)) {
-              sheet = s;
-              break;
+      var sheet = ss.getSheetByName('Ruteo');
+      if (!sheet) {
+        var allSheets = ss.getSheets();
+        for (var i = 0; i < allSheets.length; i++) {
+          var s = allSheets[i];
+          var sName = s.getName().toLowerCase();
+          if (sName !== 'negativas' && sName !== 'materiales') {
+            var lastCol = s.getLastColumn();
+            if (lastCol > 0) {
+              var firstRow = s.getRange(1, 1, 1, Math.min(10, lastCol)).getValues()[0];
+              if ((firstRow.length > 2 && firstRow[2] && String(firstRow[2]).toLowerCase().indexOf('id consol') !== -1) || 
+                  (firstRow.length > 7 && firstRow[7] && String(firstRow[7]).toLowerCase().indexOf('codigo') !== -1)) {
+                sheet = s;
+                break;
+              }
             }
           }
         }
       }
-      if (!sheet) sheet = allSheets[0]; // Fallback
+      if (!sheet) sheet = ss.getSheets()[0]; // Fallback final
 
       var dataRows = sheet.getDataRange().getValues();
       var rec = data.record || data.registro || data || {};

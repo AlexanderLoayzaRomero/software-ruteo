@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WPRuteoApp {
 
     // URL DEL WEBHOOK DE GOOGLE SHEETS
-    public $webhook_url = 'https://script.google.com/macros/s/AKfycbwOkeyflnS0fHr2mtmuo8HPKMfeSda6Yjmq7unarGIQ_sExZ0Mdl1BS2mDYZNAf4NcwOA/exec';
+    public $webhook_url = 'https://script.google.com/macros/s/AKfycbzwhHt13NqHOWEMbtoQhD6TjNs4X-S1SzNySiPzJJgCdqE1oxqWA7l8i3ZI-2QoivjB/exec';
     private $assets_enqueued = false;
 
     public function __construct() {
@@ -580,11 +580,16 @@ class WPRuteoApp {
             
             $gas_body = '';
             if ( is_wp_error( $response ) ) {
-                wp_send_json_error( array( 'message' => 'Error de conexión con Google Sheets: ' . $response->get_error_message() ) );
+                wp_send_json_error( array( 'message' => 'Error de conexion con Google Sheets: ' . $response->get_error_message() ) );
                 return;
             } else {
+                $code = wp_remote_retrieve_response_code( $response );
                 $gas_body = wp_remote_retrieve_body( $response );
                 $gas_json = json_decode( $gas_body, true );
+                if ( $code !== 200 ) {
+                    wp_send_json_error( array( 'message' => 'Google Sheets respondio con codigo HTTP ' . $code ) );
+                    return;
+                }
                 if ( $gas_json && isset( $gas_json['status'] ) && $gas_json['status'] === 'error' ) {
                     wp_send_json_error( array( 'message' => 'Error de Google Sheets: ' . $gas_json['message'] ) );
                     return;
