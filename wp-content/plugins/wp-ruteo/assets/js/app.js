@@ -778,7 +778,7 @@ jQuery(document).ready(function($) {
 
         var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
         if (!jsPDFConstructor) {
-            alert('Cargando libreria PDF, intente de nuevo en un instante.');
+            showToast('Cargando libreria PDF, intente de nuevo en un instante.', 'error');
             return;
         }
 
@@ -1106,7 +1106,7 @@ jQuery(document).ready(function($) {
             }
         } catch(err) {
             console.error(err);
-            alert('Error generando documento PDF.');
+            showToast('Error generando documento PDF.', 'error');
         }
 
         $('#sla-modal-overlay').fadeOut(200);
@@ -1354,7 +1354,7 @@ jQuery(document).ready(function($) {
             data: { action: 'ruteo_delete_user', nonce: wpRuteoAjax.nonce, user_id: userId },
             success: function(res) {
                 if (res.success) cargarUsuarios();
-                else alert(res.data.message || 'No se pudo eliminar el usuario.');
+                else showToast(res.data.message || 'No se pudo eliminar el usuario.', 'error');
             }
         });
     }
@@ -1737,7 +1737,7 @@ jQuery(document).ready(function($) {
             }
         });
         if (invalido) {
-            alert('Por favor complete todos los campos obligatorios antes de firmar.');
+            showToast('Por favor complete todos los campos obligatorios antes de firmar.', 'error');
             return;
         }
 
@@ -1756,11 +1756,11 @@ jQuery(document).ready(function($) {
             url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
             success: function(res) {
                 if (res.success) {
-                    alert('Etapa Tecnico guardada y firmada exitosamente.');
+                    showToast('Etapa Tecnico guardada y firmada exitosamente.', 'success');
                     cargarNegativas();
                     renderNegativa(res.data.registro);
                 } else {
-                    alert('Error: ' + res.data.message);
+                    showToast('Error: ' + res.data.message, 'error');
                 }
             }
         });
@@ -1782,7 +1782,7 @@ jQuery(document).ready(function($) {
             }
         });
         if (invalido) {
-            alert('Por favor complete todos los datos antes de firmar como Supervisor Operativo.');
+            showToast('Por favor complete todos los datos antes de firmar como Supervisor Operativo.', 'error');
             return;
         }
 
@@ -1795,11 +1795,11 @@ jQuery(document).ready(function($) {
             url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
             success: function(res) {
                 if (res.success) {
-                    alert('Etapa Supervisor Operativo actualizada y firmada correctamente.');
+                    showToast('Etapa Supervisor Operativo actualizada y firmada correctamente.', 'success');
                     cargarNegativas();
                     renderNegativa(res.data.registro);
                 } else {
-                    alert('Error: ' + res.data.message);
+                    showToast('Error: ' + res.data.message, 'error');
                 }
             }
         });
@@ -1822,7 +1822,7 @@ jQuery(document).ready(function($) {
                 }
             });
             if (invalido) {
-                alert(mensajeInvalido);
+                showToast(mensajeInvalido, 'error');
                 return;
             }
 
@@ -1835,11 +1835,11 @@ jQuery(document).ready(function($) {
                 url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
                 success: function(res) {
                     if (res.success) {
-                        alert(mensajeOk);
+                        showToast(mensajeOk, 'success');
                         cargarNegativas();
                         renderNegativa(res.data.registro);
                     } else {
-                        alert('Error: ' + res.data.message);
+                        showToast('Error: ' + res.data.message, 'error');
                     }
                 }
             });
@@ -1853,11 +1853,11 @@ jQuery(document).ready(function($) {
         var etapa = $(this).data('etapa');
         $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_guardar', nonce: wpRuteoAjax.nonce, etapa: etapa, id: negativaActual.id }, function(res) {
             if (res.success) {
-                alert('Etapa firmada correctamente.');
+                showToast('Etapa firmada correctamente.', 'success');
                 cargarNegativas();
                 renderNegativa(res.data.registro);
             } else {
-                alert('Error: ' + res.data.message);
+                showToast('Error: ' + res.data.message, 'error');
             }
         });
     });
@@ -1879,11 +1879,11 @@ jQuery(document).ready(function($) {
     }
 
     function generarPDFNegativa(r) {
-        if (!r) { alert('No hay registro seleccionado.'); return; }
+        if (!r) { showToast('No hay registro seleccionado.', 'error'); return; }
 
         var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
         if (!jsPDFConstructor) {
-            alert('Cargando libreria PDF, intente de nuevo en un instante.');
+            showToast('Cargando libreria PDF, intente de nuevo en un instante.', 'error');
             return;
         }
 
@@ -2316,7 +2316,7 @@ jQuery(document).ready(function($) {
     window.abrirPDFNegativaIndex = function(idx) {
         var list = window.ruteoNegativasFilteredCache || window.ruteoNegativasCache || [];
         var r = list[idx];
-        if (!r) { alert('No se encontro el registro de negativa.'); return; }
+        if (!r) { showToast('No se encontro el registro de negativa.', 'error'); return; }
         loadImagesAndGeneratePDF(r, function(rPrepared) {
             generarPDFNegativa(rPrepared);
         });
@@ -2332,7 +2332,7 @@ jQuery(document).ready(function($) {
         var r = negativaActual;
         var completo = r && (r.estado === 'completado' || (r.firma_hse_user && r.firma_hse_user.length > 0));
         if (!completo) {
-            alert('Aun no se puede exportar el PDF: faltan firmas por completar (Tecnico, Supervisor Operativo, Supervisor de Seguridad y HSE).');
+            showToast('Aun no se puede exportar el PDF: faltan firmas por completar (Tecnico, Supervisor Operativo, Supervisor de Seguridad y HSE).', 'error');
             return;
         }
         generarPDFNegativa(r);
@@ -2685,7 +2685,7 @@ jQuery(document).ready(function($) {
     window.generarReportePDFGeneral = function(registros) {
         var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || window.jspdf);
         if (!jsPDFConstructor) {
-            alert('Libreria PDF no disponible. Por favor recargue la pagina.');
+            showToast('Libreria PDF no disponible. Por favor recargue la pagina.', 'error');
             return;
         }
         var doc = new jsPDFConstructor({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -2720,7 +2720,7 @@ jQuery(document).ready(function($) {
     $('#btn-download-pdf').on('click', function() {
         var registros = window._ruteoRegistros || [];
         if (!registros.length) {
-            alert('No hay registros disponibles para exportar.');
+            showToast('No hay registros disponibles para exportar.', 'error');
             return;
         }
         window.generarReportePDFGeneral(registros);
@@ -2793,7 +2793,7 @@ jQuery(document).ready(function($) {
         var r = normalizarRegistro(raw);
         var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || window.jspdf);
         if (!jsPDFConstructor) {
-            alert('Libreria PDF no disponible. Por favor recargue la pagina.');
+            showToast('Libreria PDF no disponible. Por favor recargue la pagina.', 'error');
             return;
         }
 
@@ -3124,7 +3124,7 @@ jQuery(document).ready(function($) {
         var negativas = window.ruteoNegativasCache || [];
 
         if (!registros.length && !materiales.length && !negativas.length) {
-            alert('No hay registros para exportar a Excel.');
+            showToast('No hay registros para exportar a Excel.', 'error');
             return;
         }
 
