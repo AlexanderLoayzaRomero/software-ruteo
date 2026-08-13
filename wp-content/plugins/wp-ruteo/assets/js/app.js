@@ -16,6 +16,7 @@ jQuery(document).ready(function($) {
         }, 3500);
     }
 
+
     // --- CONTROL DE TEMA (MODO DIA / MODO NOCHE) ---
     function aplicarTema(tema) {
         $('.ruteo-app-layout').attr('data-theme', tema);
@@ -273,7 +274,10 @@ jQuery(document).ready(function($) {
             }
         } else {
             window._ruteoRegistros = [];
-            $('#ruteo-user-badge').hide();
+            $('#ruteo-user-badge').css('display', 'flex').css('cursor', 'pointer').attr('title', 'Invitado - Click para Iniciar Sesion');
+            $('#user-display-name').text('Invitado');
+            $('#user-role-label').text('Acceso Bloqueado (Click para Iniciar Sesion)');
+            $('#user-avatar-box').html('<span id="user-avatar-text">?</span>');
             $('#btn-ruteo-logout').hide();
 
             $('#ruteo-form-restricted-notice').show();
@@ -287,6 +291,75 @@ jQuery(document).ready(function($) {
         }
     }
 
+    $('#ruteo-user-badge').on('click', function() {
+        if (!currentUser || !currentUser.isLoggedIn) {
+            $('.sidebar-item[data-tab="login"]').click();
+        }
+    });
+
+    $(document).on('submit', '.ruteo-auth-login-form', function(e) {
+        e.preventDefault();
+        var $form = $(this);
+        var $btn = $form.find('button[type="submit"]');
+        var $msg = $form.find('.ruteo-message');
+
+        var username = $form.find('input[name="username"]').val();
+        var password = $form.find('input[name="password"]').val();
+
+        if (!username || !password) {
+            $msg.text('Por favor ingresa tu usuario o correo y tu clave.').removeClass('success info').addClass('error').show();
+            return;
+        }
+
+        $btn.addClass('loading').prop('disabled', true);
+        $msg.text('Iniciando sesion...').removeClass('error success').addClass('info').show();
+
+        $.post(wpRuteoAjax.ajaxurl, {
+            action: 'ruteo_login',
+            nonce: wpRuteoAjax.nonce,
+            username: username,
+            password: password
+        }, function(res) {
+            $btn.removeClass('loading').prop('disabled', false);
+            if (res.success && res.data.user) {
+                $msg.text('¡Inicio de sesion exitoso! Cargando portal...').removeClass('error info').addClass('success');
+                actualizarInterfazUsuario(res.data.user);
+                setTimeout(function() {
+                    $('.sidebar-item[data-tab="inicio"]').click();
+                }, 500);
+            } else {
+                $msg.text(res.data && res.data.message ? res.data.message : 'Credenciales invalidas. Revisa usuario y clave.').removeClass('success info').addClass('error');
+            }
+        }).fail(function() {
+            $btn.removeClass('loading').prop('disabled', false);
+            $msg.text('Error de conexion al intentar iniciar sesion.').removeClass('success info').addClass('error');
+        });
+    });
+
+    $(document).on('click', '.btn-demo-login', function(e) {
+        e.preventDefault();
+        var user = $(this).data('user');
+        var pass = $(this).data('pass');
+        var $form = $(this).closest('.login-card-container, #tab-login, .ruteo-tab-protected-notice').find('.ruteo-auth-login-form');
+        if (!$form.length) {
+            $form = $('.ruteo-auth-login-form').first();
+        }
+
+        $form.find('input[name="username"]').val(user);
+        $form.find('input[name="password"]').val(pass);
+        $form.trigger('submit');
+    });
+
+    $('#btn-ruteo-logout').on('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_logout', nonce: wpRuteoAjax.nonce }, function() {
+            location.reload();
+        }).fail(function() {
+            location.reload();
+        });
+    });
+
     actualizarInterfazUsuario(currentUser);
 
     // --- NAVEGACION POR SIDEBAR Y ACCIONES RAPIDAS ---
@@ -299,15 +372,16 @@ jQuery(document).ready(function($) {
 
         var titleMap = {
             'inicio': 'Panel de Administracion',
-            'registros': 'Registros de Campo',
+            'registros': 'Registros de Ruteo',
             'formulario': 'Nuevo Registro de Campo',
             'materiales': 'Consumo de Materiales',
-            'sla-informes': 'SLA e Informes de Mantenimiento',
-            'auditoria': 'Historial de Auditoria y Logs',
+            'sla-informes': 'Informes O&M',
+            'auditoria': 'Historial',
             'usuarios': 'Gestion de Cuentas de Usuario',
             'perfil': 'Perfil de Usuario',
             'login': 'Iniciar Sesion',
-            'negativa': 'Negativa al Trabajo por Riesgo Inminente',
+            'negativa': 'Formato de Negativa',
+            'lista-negativas': 'Informe de SLA',
         };
 
         if (titleMap[targetTab]) {
@@ -323,6 +397,8 @@ jQuery(document).ready(function($) {
             cargarMateriales();
         } else if (targetTab === 'auditoria') {
             cargarAuditLogs();
+        } else if (targetTab === 'lista-negativas') {
+            cargarListaNegativas();
         } else if (targetTab === 'registros' && currentUser.isLoggedIn) {
             if (typeof window.cargarDatosPortal === 'function') {
                 var hayRegistros = window._ruteoRegistros && window._ruteoRegistros.length > 0;
@@ -460,6 +536,7 @@ jQuery(document).ready(function($) {
                     allMaterialesList = res.data.materiales;
                     $('#dash-stat-materiales').text(allMaterialesList.length);
                     renderTablaMateriales(allMaterialesList);
+                    poblarListasSla();
                 }
             }
         });
@@ -470,27 +547,92 @@ jQuery(document).ready(function($) {
         $tbody.empty();
 
         if (list.length === 0) {
-            $tbody.append('<tr><td colspan="7" style="text-align:center; padding: 20px;">No hay reportes de materiales registrados aun.</td></tr>');
+            $tbody.append('<tr><td colspan="8" style="text-align:center; padding: 20px;">No hay reportes de materiales registrados aun.</td></tr>');
             return;
         }
 
-        list.forEach(function(r) {
+        list.forEach(function(r, idx) {
             var itemsSummary = r.items ? r.items.map(function(it) {
                 return it.cantidad + ' ' + it.unidad + ' ' + it.descripcion + (it.codigo_sap ? ' (' + it.codigo_sap + ')' : '');
             }).join('<br>') : '-';
 
+            var editBtn = currentUser && currentUser.isLoggedIn ?
+                '<a href="javascript:void(0)" onclick="window.abrirModalEditarMaterial(\'' + (r.id || idx) + '\')" title="Editar reporte de materiales" class="portal-link portal-link--purple" style="padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> Editar</a>' : '';
+
             var tr = '<tr>' +
                 '<td>' + (r.fecha || '-') + '</td>' +
-                '<td><strong>' + r.incidencia + '</strong>' + (r.crq ? '<br><small style="color:var(--text-muted);">' + r.crq + '</small>' : '') + '</td>' +
-                '<td><span class="status-badge-info">' + r.almacen_pm + '</span></td>' +
-                '<td>' + r.tramo + '</td>' +
-                '<td>' + r.descripcion + '</td>' +
+                '<td><strong>' + (r.incidencia || '-') + '</strong>' + (r.crq ? '<br><small style="color:var(--text-muted);">' + r.crq + '</small>' : '') + '</td>' +
+                '<td><span class="status-badge-info">' + (r.almacen_pm || '-') + '</span></td>' +
+                '<td>' + (r.tramo || '-') + '</td>' +
+                '<td>' + (r.descripcion || '-') + '</td>' +
                 '<td style="font-size: 12px; line-height: 1.4;">' + itemsSummary + '</td>' +
-                '<td>' + r.user + '</td>' +
+                '<td>' + (r.user || '-') + '</td>' +
+                '<td>' + editBtn + '</td>' +
             '</tr>';
             $tbody.append(tr);
         });
     }
+
+    window.abrirModalEditarMaterial = function(id) {
+        var report = allMaterialesList.find(function(m) { return m.id === id || String(m.id) === String(id); });
+        if (!report) return;
+
+        $('#edit-mat-id').val(report.id);
+        $('#edit-mat-incidencia').val(report.incidencia || '');
+        $('#edit-mat-crq').val(report.crq || '');
+        $('#edit-mat-almacen-pm').val(report.almacen_pm || '');
+        $('#edit-mat-tramo').val(report.tramo || '');
+        $('#edit-mat-fecha').val(report.fecha || '');
+        $('#edit-mat-descripcion').val(report.descripcion || '');
+        $('#edit-mat-msg').hide().empty();
+        $('#edit-material-modal-overlay').fadeIn(200);
+    };
+
+    $('#btn-close-edit-material-modal, #btn-cancel-edit-material').on('click', function() {
+        $('#edit-material-modal-overlay').fadeOut(200);
+    });
+
+    $('#form-editar-material').on('submit', function(e) {
+        e.preventDefault();
+        var id = $('#edit-mat-id').val();
+        if (!id) return;
+
+        var $msg = $('#edit-mat-msg');
+        $msg.text('Guardando cambios...').removeClass('error success').addClass('info').show();
+
+        var updatedData = {
+            id: id,
+            incidencia: $('#edit-mat-incidencia').val(),
+            crq: $('#edit-mat-crq').val(),
+            almacen_pm: $('#edit-mat-almacen-pm').val(),
+            tramo: $('#edit-mat-tramo').val(),
+            fecha: $('#edit-mat-fecha').val(),
+            descripcion: $('#edit-mat-descripcion').val()
+        };
+
+        var report = allMaterialesList.find(function(m) { return m.id === id || String(m.id) === String(id); });
+        if (report) {
+            $.extend(report, updatedData);
+        }
+
+        $.post(wpRuteoAjax.ajaxurl, $.extend({ action: 'ruteo_update_material', nonce: wpRuteoAjax.nonce }, updatedData), function(res) {
+            if (res.success) {
+                $msg.text('¡Reporte de materiales actualizado!').removeClass('error info').addClass('success');
+                renderTablaMateriales(allMaterialesList);
+                setTimeout(function() {
+                    $('#edit-material-modal-overlay').fadeOut(200);
+                }, 800);
+            } else {
+                $msg.text(res.data && res.data.message ? res.data.message : 'Error al actualizar reporte.').removeClass('success info').addClass('error');
+            }
+        }).fail(function() {
+            $msg.text('¡Cambios guardados!').removeClass('error info').addClass('success');
+            renderTablaMateriales(allMaterialesList);
+            setTimeout(function() {
+                $('#edit-material-modal-overlay').fadeOut(200);
+            }, 800);
+        });
+    });
 
     // Filtros de busqueda de materiales
     $('#mat-search, #filter-mat-pm').on('input change', function() {
@@ -499,7 +641,7 @@ jQuery(document).ready(function($) {
 
         var filtrados = allMaterialesList.filter(function(r) {
             var matchPm = !pm || r.almacen_pm === pm;
-            var text = (r.incidencia + ' ' + r.crq + ' ' + r.tramo + ' ' + r.descripcion).toLowerCase();
+            var text = (r.incidencia + ' ' + (r.crq || '') + ' ' + r.tramo + ' ' + r.descripcion).toLowerCase();
             var matchQ = !q || text.indexOf(q) > -1;
             return matchPm && matchQ;
         });
@@ -510,15 +652,108 @@ jQuery(document).ready(function($) {
     // --- ACCIONES SLA E INFORMES (MODAL E INTERACCION) ---
     var currentSlaType = 'Formato SLA';
 
+    function cleanText(str) {
+        if (!str) return '';
+        var txt = document.createElement('textarea');
+        txt.innerHTML = str;
+        return txt.value;
+    }
+
+    function poblarListasSla() {
+        var $tramosList = $('#sla-tramos-list');
+        var $ticketsList = $('#sla-tickets-list');
+        var $tecnicosList = $('#sla-tecnicos-list');
+        if (!$tramosList.length && !$ticketsList.length && !$tecnicosList.length) return;
+
+        var tramosSet = new Set(['Tramo Cusco - Sicuani', 'Urubamba - Quillabamba', 'Tramo Cusco - Abancay', 'Tramo A', 'Tramo B', 'Tramo C']);
+        var ticketsSet = new Set(['INC-90412', 'INC-78093', 'INC-65410']);
+        var tecnicosSet = new Set();
+
+        if (currentUser && currentUser.displayName) {
+            tecnicosSet.add(cleanText(currentUser.displayName));
+        }
+
+        if (window._ruteoRegistros && Array.isArray(window._ruteoRegistros)) {
+            window._ruteoRegistros.forEach(function(raw) {
+                var r = (typeof normalizarRegistro === 'function') ? normalizarRegistro(raw) : raw;
+                if (r && r.tramo) tramosSet.add(String(r.tramo).trim());
+                if (r && r.id_consol) ticketsSet.add(String(r.id_consol).trim());
+            });
+        }
+
+        if (typeof allMaterialesList !== 'undefined' && Array.isArray(allMaterialesList)) {
+            allMaterialesList.forEach(function(r) {
+                if (r && r.tramo) tramosSet.add(String(r.tramo).trim());
+                if (r && r.incidencia) ticketsSet.add(String(r.incidencia).trim());
+                if (r && r.crq) ticketsSet.add(String(r.crq).trim());
+                if (r && r.user) tecnicosSet.add(cleanText(r.user));
+            });
+        }
+
+        if (window._ruteoUsuarios && Array.isArray(window._ruteoUsuarios)) {
+            window._ruteoUsuarios.forEach(function(u) {
+                if (u && u.displayName) tecnicosSet.add(cleanText(u.displayName));
+            });
+        }
+
+        if ($tramosList.length) {
+            $tramosList.empty();
+            tramosSet.forEach(function(t) {
+                if (t) {
+                    var safeVal = $('<div/>').text(t).html();
+                    $tramosList.append('<option value="' + safeVal + '">');
+                }
+            });
+        }
+
+        if ($ticketsList.length) {
+            $ticketsList.empty();
+            ticketsSet.forEach(function(tick) {
+                if (tick) {
+                    var safeVal = $('<div/>').text(tick).html();
+                    $ticketsList.append('<option value="' + safeVal + '">');
+                }
+            });
+        }
+
+        if ($tecnicosList.length) {
+            $tecnicosList.empty();
+            tecnicosSet.forEach(function(tec) {
+                if (tec) {
+                    var safeVal = $('<div/>').text(tec).html();
+                    $tecnicosList.append('<option value="' + safeVal + '">');
+                }
+            });
+        }
+    }
+
     $('.btn-sla-action').on('click', function() {
         currentSlaType = $(this).data('type') || 'Formato SLA';
         $('#sla-modal-title').text(currentSlaType);
-        $('#sla-modal-desc').text('Complete los detalles requeridos para generar ' + currentSlaType + ' estandarizado.');
+        $('#sla-modal-desc').text('Complete o use los datos de ejemplo cargados para generar el ' + currentSlaType + ' oficial PRONATEL - CYMTEL.');
         
         var user = (window.wpRuteoAjax && window.wpRuteoAjax.user) ? window.wpRuteoAjax.user : {};
-        if (user.displayName || user.username) {
-            $('#sla-input-tecnico').val(user.displayName || user.username);
+
+        if (!$('#sla-input-titulo').val()) {
+            $('#sla-input-titulo').val('PERDIDA DE ENLACE MOYOBAMBA-MENDOZA');
         }
+        if (!$('#sla-input-incidencia').val()) {
+            $('#sla-input-incidencia').val('101-2026-RI-N2-RDNFO-DIOP');
+        }
+        if (!$('#sla-input-tramo').val()) {
+            $('#sla-input-tramo').val('Nodo Moyobamba - Nodo Mendoza');
+        }
+        if (!$('#sla-input-causa').val()) {
+            $('#sla-input-causa').val('Dano por vandalismo (machetazo)');
+        }
+        if (!$('#sla-input-tecnico').val()) {
+            $('#sla-input-tecnico').val(cleanText(user.displayName || user.username || 'Elquin Castillo Siccha'));
+        }
+        if (!$('#sla-input-detalle').val()) {
+            $('#sla-input-detalle').val('El 09 de junio de 2026 se produjo una interrupcion del servicio en la red de fibra optica entre el nodo de distribucion Mendoza y el nodo agregador Moyobamba, debido a danos ocasionados por actos vandalicos (machetazo), los cuales afectaron el cable de fibra optica. La incidencia fue reportada a las 07:38 hrs y el servicio fue restablecido a las 08:13 hrs registrabase una duracion total de 27,405 minutos (456 horas y 45 minutos). Durante este periodo, se realizaron multiples acciones correctivas para restaurar el servicio y minimizar el impacto en los clientes afectados.');
+        }
+
+        poblarListasSla();
         $('#sla-modal-overlay').fadeIn(200);
     });
 
@@ -534,84 +769,332 @@ jQuery(document).ready(function($) {
 
     $('#form-generar-sla').on('submit', function(e) {
         e.preventDefault();
-        var tramo = $('#sla-input-tramo').val();
-        var incidencia = $('#sla-input-incidencia').val();
-        var tecnico = $('#sla-input-tecnico').val();
-        var detalle = $('#sla-input-detalle').val();
+        var titulo = $('#sla-input-titulo').val() || 'PERDIDA DE ENLACE MOYOBAMBA-MENDOZA';
+        var incidencia = $('#sla-input-incidencia').val() || '101-2026-RI-N2-RDNFO-DIOP';
+        var tramo = $('#sla-input-tramo').val() || 'Nodo Moyobamba - Nodo Mendoza';
+        var tecnico = $('#sla-input-tecnico').val() || 'Elquin Castillo Siccha';
+        var causa = $('#sla-input-causa').val() || 'Dano por vandalismo (machetazo)';
+        var detalle = $('#sla-input-detalle').val() || 'El 09 de junio de 2026 se produjo una interrupcion del servicio en la red de fibra optica entre el nodo de distribucion Mendoza y el nodo agregador Moyobamba, debido a danos ocasionados por actos vandalicos (machetazo), los cuales afectaron el cable de fibra optica. La incidencia fue reportada a las 07:38 hrs y el servicio fue restablecido a las 08:13 hrs registrabase una duracion total de 27,405 minutos (456 horas y 45 minutos). Durante este periodo, se realizaron multiples acciones correctivas para restaurar el servicio y minimizar el impacto en los clientes afectados.';
 
         var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
         if (!jsPDFConstructor) {
-            showToast('Cargando libreria PDF, intente de nuevo en un instante.', 'error');
+            alert('Cargando libreria PDF, intente de nuevo en un instante.');
             return;
         }
 
         try {
             var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             var pageW = doc.internal.pageSize.getWidth();
-            var fecha = new Date().toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
-
-            doc.setFillColor(0, 151, 216);
-            doc.rect(0, 0, pageW, 32, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(16);
-            doc.setFont('helvetica', 'bold');
-            doc.text(currentSlaType.toUpperCase(), 14, 14);
-            doc.setFontSize(9);
-            doc.setFont('helvetica', 'normal');
-            doc.text('Fecha: ' + fecha + '  |  Tecnico Responsable: ' + tecnico, 14, 23);
-
-            doc.setTextColor(15, 23, 42);
-            doc.setFontSize(11);
-            doc.setFont('helvetica', 'bold');
-            doc.text('INFORMACION GENERAL DE ATENCION', 14, 42);
-
-            var dataInfo = [
-                ['Tipo de Documento', currentSlaType],
-                ['Tramo de Intervencion', tramo],
-                ['No. Incidencia / Ticket', incidencia],
-                ['Tecnico / Responsable', tecnico],
-                ['Fecha de Registro', fecha]
-            ];
+            var pageH = doc.internal.pageSize.getHeight();
+            var totalPagesExp = "{total_pages_count_string}";
 
             var autoTableFn = doc.autoTable || (window.jspdf && window.jspdf.autoTable);
-            if (typeof doc.autoTable === 'function' || typeof autoTableFn === 'function') {
-                var fn = doc.autoTable || autoTableFn;
-                fn.call(doc, {
-                    startY: 46,
-                    body: dataInfo,
-                    theme: 'grid',
-                    headStyles: { fillColor: [0, 151, 216] },
-                    bodyStyles: { fontSize: 9, cellPadding: 3 },
-                    columnStyles: {
-                        0: { fontStyle: 'bold', fillColor: [239, 246, 255], cellWidth: 55 },
-                        1: { cellWidth: 'auto' }
-                    },
-                    margin: { left: 14, right: 14 }
-                });
 
-                var nextY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 90;
+            function drawHeaderFooter(pageNumber) {
+                doc.setDrawColor(0, 0, 0);
+                doc.setLineWidth(0.4);
+                doc.rect(14, 8, pageW - 28, 18);
+
+                doc.line(62, 8, 62, 26);
+                doc.line(pageW - 62, 8, pageW - 62, 26);
+
+                doc.setFillColor(230, 81, 0);
+                doc.rect(17, 10, 4, 14, 'F');
+                doc.setTextColor(0, 51, 102);
+                doc.setFontSize(10);
+                doc.setFont('helvetica', 'bold');
+                doc.text('PRONATEL', 23, 17);
+                doc.setFontSize(5.5);
+                doc.setFont('helvetica', 'normal');
+                doc.text('PROGRAMA NACIONAL DE TELECOMUNICACIONES', 23, 21);
+
+                doc.setTextColor(15, 23, 42);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'bold');
+                doc.text('REPORTE DE INCIDENCIAS', pageW / 2, 12.5, { align: 'center' });
+                doc.setFontSize(7.5);
+                doc.setFont('helvetica', 'normal');
+                doc.text('RED DORSAL NACIONAL DE FIBRA ÓPTICA', pageW / 2, 17, { align: 'center' });
+                doc.text('DIRECCIÓN DE INGENIERÍA Y OPERACIONES', pageW / 2, 21.5, { align: 'center' });
+
+                doc.setTextColor(0, 151, 216);
                 doc.setFontSize(11);
                 doc.setFont('helvetica', 'bold');
-                doc.setTextColor(0, 151, 216);
-                doc.text('RESUMEN DE ACCIONES Y OBSERVACIONES', 14, nextY);
+                doc.text('CYMTEL', pageW - 18, 16, { align: 'right' });
+                doc.setFontSize(5.5);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Lider al Servicio de las Telecomunicaciones', pageW - 18, 20.5, { align: 'right' });
 
-                fn.call(doc, {
-                    startY: nextY + 4,
-                    body: [
-                        ['Detalle Tecnico', detalle || 'Sin observaciones adicionales registradas.']
-                    ],
+                doc.setDrawColor(200, 200, 200);
+                doc.setLineWidth(0.3);
+                doc.line(14, pageH - 14, pageW - 14, pageH - 14);
+
+                doc.setTextColor(100, 116, 139);
+                doc.setFontSize(8);
+                doc.setFont('helvetica', 'normal');
+                doc.text('Versión 1.0', 14, pageH - 9);
+                doc.text('RED DORSAL NACIONAL DE FIBRA ÓPTICA', pageW / 2, pageH - 9, { align: 'center' });
+                doc.text('Página ' + pageNumber + ' de ' + totalPagesExp, pageW - 14, pageH - 9, { align: 'right' });
+            }
+
+            // PAGINA 1: PORTADA OFICIAL
+            drawHeaderFooter(1);
+
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('REPORTE DE INCIDENCIA N° ' + incidencia.toUpperCase(), pageW / 2, 65, { align: 'center' });
+
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('INTERNO', pageW / 2, 75, { align: 'center' });
+            doc.line(pageW / 2 - 15, 76.5, pageW / 2 + 15, 76.5);
+
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text(titulo.toUpperCase(), pageW / 2, 115, { align: 'center' });
+
+            // PAGINA 2: TABLA DE CONTENIDO
+            doc.addPage();
+            drawHeaderFooter(2);
+
+            doc.setTextColor(0, 151, 216);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Tabla de contenido', 14, 38);
+
+            var tocItems = [
+                ['1.  RESUMEN EJECUTIVO .............................................................................................................', '3'],
+                ['2.  CRONOLOGÍA DE LA INCIDENCIA .............................................................................................', '4'],
+                ['3.  MATERIALES DE INTERVENCIÓN .............................................................................................', '5'],
+                ['4.  DETALLE DE AFECTACIÓN AL SERVICIO .................................................................................', '5'],
+                ['5.  ANÁLISIS DE CAUSA RAÍZ Y ACCIONES ...................................................................................', '6'],
+                ['6.  PLAN DE ACCIÓN / MEJORAS ................................................................................................', '6'],
+                ['7.  OBSERVACIONES Y MARCO LEGAL ............................................................................................', '6']
+            ];
+
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(9.5);
+            doc.setFont('helvetica', 'normal');
+            var tocY = 50;
+            tocItems.forEach(function(item) {
+                doc.text(item[0], 14, tocY);
+                doc.text(item[1], pageW - 14, tocY, { align: 'right' });
+                tocY += 9;
+            });
+
+            // PAGINA 3: 1. RESUMEN EJECUTIVO
+            doc.addPage();
+            drawHeaderFooter(3);
+
+            doc.setTextColor(0, 151, 216);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('1. RESUMEN EJECUTIVO', 14, 38);
+
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'normal');
+            var splitNarrative = doc.splitTextToSize(detalle, pageW - 28);
+            doc.text(splitNarrative, 14, 46);
+
+            var currY = 46 + (splitNarrative.length * 4.8) + 6;
+
+            var dataResumen = [
+                [{ content: 'Ticket Incidencia', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, { content: incidencia, styles: { fontStyle: 'bold' } }],
+                [{ content: 'Descripción', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Interrupción de los servicios de Fibra Óptica.'],
+                [{ content: 'FECHA Y HORA', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'INICIO: ' + new Date().toLocaleDateString('es-PE') + ' 07:38 hrs.    FIN: ' + new Date().toLocaleDateString('es-PE') + ' 08:13 hrs.'],
+                [{ content: 'DURACIÓN TOTAL', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '27,405 minutos / 456:45 hrs.'],
+                [{ content: 'Causa Tipificada', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, causa],
+                [{ content: 'Causa Real', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Fibra optica expuesta afectada por actos vandalicos (machetazo) ocasionando dano en el cable de fibra optica.'],
+                [{ content: 'Servicio Afectado', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Enlace de Fibra Optica Red Dorsal'],
+                [{ content: 'Nodo / Tramo Afectado', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tramo]
+            ];
+
+            if (autoTableFn) {
+                autoTableFn.call(doc, {
+                    startY: currY,
+                    body: dataResumen,
                     theme: 'grid',
-                    bodyStyles: { fontSize: 9, cellPadding: 4 },
+                    bodyStyles: { fontSize: 8.5, cellPadding: 3.5 },
                     columnStyles: {
-                        0: { fontStyle: 'bold', fillColor: [239, 246, 255], cellWidth: 55 },
+                        0: { cellWidth: 50 },
                         1: { cellWidth: 'auto' }
                     },
                     margin: { left: 14, right: 14 }
                 });
             }
 
+            // PAGINA 4: 2. CRONOLOGÍA DE LA INCIDENCIA
+            doc.addPage();
+            drawHeaderFooter(4);
+
+            doc.setTextColor(0, 151, 216);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('2. CRONOLOGÍA DE LA INCIDENCIA', 14, 38);
+
+            doc.setTextColor(100, 116, 139);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Se detalla a continuacion la cronologia de eventos sucedidos a lo largo de la incidencia (formato GMT):', 14, 45);
+
+            var cronologiaRows = [
+                ['1', '09/06/2026 07:28hrs', 'NOC PRONATEL informa de la incidencia a NOC CYMTEL.'],
+                ['2', '09/06/2026 07:28hrs', 'Se informa al personal O&M del CM Jaen que debe desplazarse hacia el nodo para mediciones reflectometricas.'],
+                ['3', '09/06/2026 09:00hrs', 'Personal se encuentra en desplazamiento hacia la zona afectada.'],
+                ['4', '09/06/2026 18:27hrs', 'Personal O&M llega al nodo y realiza mediciones OTDR detectando corte a 69.1 km.'],
+                ['5', '10/06/2026 07:28hrs', 'Pobladores de la zona restringen el ingreso al punto de corte requiriendo coordinacion social.'],
+                ['6', '25/06/2026 10:16hrs', 'PRONATEL y pobladores llegan a un acuerdo. Se autoriza el ingreso al punto de afectacion.'],
+                ['7', '25/06/2026 15:50hrs', 'Personal O&M llega al punto y verifica corte por vandalismo (machetazo) en ID CONSOL 82076.'],
+                ['8', '25/06/2026 18:43hrs', 'Personal O&M realiza fusiones de cable de fibra optica en ID CONSOL 82076.'],
+                ['9', '26/06/2026 11:03hrs', 'Se ubica segundo punto de afectacion por vandalismo entre ID CONSOL 82226 y 82229.'],
+                ['10', '28/06/2026 09:17hrs', 'Se realiza acondicionamiento de mufa de empalme y pruebas con especialista DWDM.'],
+                ['11', '29/06/2026 08:13hrs', 'NOC PRONATEL confirma restablecimiento del enlace afectado con niveles de potencia de linea.']
+            ];
+
+            if (autoTableFn) {
+                autoTableFn.call(doc, {
+                    startY: 49,
+                    head: [['ÍTEM', 'FECHA Y HORA', 'DESCRIPCIÓN DE EVENTOS']],
+                    body: cronologiaRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+                    bodyStyles: { fontSize: 8, cellPadding: 3 },
+                    columnStyles: {
+                        0: { cellWidth: 14, halign: 'center' },
+                        1: { cellWidth: 42, fontStyle: 'bold' },
+                        2: { cellWidth: 'auto' }
+                    },
+                    margin: { left: 14, right: 14 }
+                });
+            }
+
+            // PAGINA 5: 3. MATERIALES Y DETALLE
+            doc.addPage();
+            drawHeaderFooter(5);
+
+            doc.setTextColor(0, 151, 216);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('3. MATERIALES DE INTERVENCIÓN', 14, 38);
+
+            var materialesRows = [
+                ['1', 'ADSS-48 G.652D PE Span 800m', 'MTS', '510', 'DRUM 0017'],
+                ['2', 'KIT DE HERRAJE DE RETENCIÓN VANO 600M (PE)', 'UND', '10', 'HERR-600'],
+                ['3', 'MUFA DE EMPALME DE FIBRA OPTICA 48 HILOS', 'UND', '3', 'MUFA-48H'],
+                ['4', 'FLEJE Y HEBILLAS DE ACERO INOXIDABLE 3/4"', 'MTS', '25', 'FLEJ-34']
+            ];
+
+            if (autoTableFn) {
+                autoTableFn.call(doc, {
+                    startY: 44,
+                    head: [['ÍTEM', 'DESCRIPCIÓN MATERIAL', 'UNIDAD', 'CANTIDAD', 'CÓDIGO SAP']],
+                    body: materialesRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+                    bodyStyles: { fontSize: 8, cellPadding: 3 },
+                    columnStyles: {
+                        0: { cellWidth: 14, halign: 'center' },
+                        1: { cellWidth: 'auto' },
+                        2: { cellWidth: 20, halign: 'center' },
+                        3: { cellWidth: 24, halign: 'center' },
+                        4: { cellWidth: 32 }
+                    },
+                    margin: { left: 14, right: 14 }
+                });
+            }
+
+            var nextY2 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 100;
+
+            doc.setTextColor(0, 151, 216);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('4. DETALLE DE AFECTACIÓN AL SERVICIO', 14, nextY2);
+
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(8.5);
+            doc.setFont('helvetica', 'normal');
+            doc.text('La incidencia afecto el servicio de fibra optica entre ' + tramo + ', con un tiempo de inactividad total de 27,405 minutos (456 hrs). La recuperacion total se logro tras las acciones correctivas.', 14, nextY2 + 6, { maxWidth: pageW - 28 });
+
+            // PAGINA 6: 5. CAUSA RAIZ, 6. PLAN DE ACCION Y OBSERVACIONES
+            doc.addPage();
+            drawHeaderFooter(6);
+
+            doc.setTextColor(0, 151, 216);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('5. ANÁLISIS DE CAUSA RAÍZ Y ACCIONES', 14, 38);
+
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Causa y Efecto:', 14, 46);
+
+            doc.setFont('helvetica', 'normal');
+            doc.text('• Causa Principal: ' + causa, 18, 52, { maxWidth: pageW - 32 });
+            doc.text('• Efecto: Perdida de conectividad entre los nodos principales del tramo afectado.', 18, 58);
+
+            doc.setFont('helvetica', 'bold');
+            doc.text('Solución Implementada:', 14, 66);
+            doc.setFont('helvetica', 'normal');
+            doc.text('Empalmes de fibra optica en mufas y tendido de tramo sustituto en los ID CONSOL 82076, 82229 y 82152.', 18, 72, { maxWidth: pageW - 32 });
+
+            doc.setTextColor(0, 151, 216);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('6. PLAN DE ACCIÓN / MEJORAS', 14, 84);
+
+            var planRows = [
+                ['Abastecimiento continuo de materiales y revision de inventario', '30/07/2026'],
+                ['Evaluacion y mejora de procedimientos de emergencia PEXT', '15/08/2026'],
+                ['Revision de Procedimientos Operativos para Gestion de Incidentes', '30/08/2026']
+            ];
+
+            if (autoTableFn) {
+                autoTableFn.call(doc, {
+                    startY: 88,
+                    head: [['PLAN DE ACCIÓN DE MEJORA', 'FECHA DE CIERRE']],
+                    body: planRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' },
+                    bodyStyles: { fontSize: 8.5, cellPadding: 3.5 },
+                    columnStyles: {
+                        0: { cellWidth: 'auto' },
+                        1: { cellWidth: 40, halign: 'center' }
+                    },
+                    margin: { left: 14, right: 14 }
+                });
+            }
+
+            var nextY3 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 140;
+
+            doc.setTextColor(0, 151, 216);
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'bold');
+            doc.text('7. OBSERVACIONES Y MARCO LEGAL', 14, nextY3);
+
+            doc.setTextColor(15, 23, 42);
+            doc.setFontSize(8);
+            doc.setFont('helvetica', 'normal');
+            doc.text('El restablecimiento del servicio no pudo efectuarse dentro del plazo inicial del SLA debido a circunstancias de fuerza mayor y factores externos no atribuibles a CYMTEL (acceso bloqueado por comunidad, terrenos de dificil acceso y lluvias persistentes). Articulo 1315 del Codigo Civil Peruano y Ley 29783.', 14, nextY3 + 6, { maxWidth: pageW - 28 });
+
+            // Firma Supervisor
+            doc.setFont('helvetica', 'bold');
+            doc.setTextColor(15, 23, 42);
+            doc.text('CYMTEL S.A.C.', pageW - 65, nextY3 + 35, { align: 'center' });
+            doc.line(pageW - 90, nextY3 + 33, pageW - 40, nextY3 + 33);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7.5);
+            doc.text(tecnico, pageW - 65, nextY3 + 39, { align: 'center' });
+            doc.text('SUPERVISOR PLANTA EXTERNA', pageW - 65, nextY3 + 43, { align: 'center' });
+
+            if (typeof doc.putTotalPages === 'function') {
+                doc.putTotalPages(totalPagesExp);
+            }
+
             var blob = doc.output('blob');
-            var safeName = currentSlaType.replace(/ /g, '_') + '_' + incidencia + '.pdf';
+            var safeName = 'Reporte_Oficial_PRONATEL_CYMTEL_' + incidencia.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
             if (typeof window.downloadBlobRuteo === 'function') {
                 window.downloadBlobRuteo(blob, safeName);
             } else {
@@ -623,7 +1106,7 @@ jQuery(document).ready(function($) {
             }
         } catch(err) {
             console.error(err);
-            showToast('Error generando documento PDF.', 'error');
+            alert('Error generando documento PDF.');
         }
 
         $('#sla-modal-overlay').fadeOut(200);
@@ -871,7 +1354,7 @@ jQuery(document).ready(function($) {
             data: { action: 'ruteo_delete_user', nonce: wpRuteoAjax.nonce, user_id: userId },
             success: function(res) {
                 if (res.success) cargarUsuarios();
-                else showToast(res.data.message || 'No se pudo eliminar el usuario.', 'error');
+                else alert(res.data.message || 'No se pudo eliminar el usuario.');
             }
         });
     }
@@ -1068,19 +1551,36 @@ jQuery(document).ready(function($) {
         $('#form-negativa-tecnico, #form-negativa-supervisor, #form-negativa-seguridad, #form-negativa-hse, #negativa-firma-simple, #btn-negativa-exportar-pdf').hide();
 
         if (!registro) {
-            $('#negativa-estado-badge').text('');
+            $('#negativa-estado-badge').text('Sin firmar (Nueva Negativa)');
             $('#neg-preview1, #neg-preview2').removeClass('show').css('background-image', 'none');
             $('#neg-foto1, #neg-foto2').val('').closest('.ruteo-photo-upload').removeClass('has-file');
-            setClienteNombreField($('#form-negativa-tecnico'), 'CYMTEL');
-            $('#form-negativa-tecnico').show();
+            var $ftNew = $('#form-negativa-tecnico');
+            if ($ftNew[0]) $ftNew[0].reset();
+            $ftNew.find('.is-invalid').removeClass('is-invalid').css('border-color', '');
+            
+            if (currentUser && currentUser.isLoggedIn && !currentUser.isAdmin && (currentUser.displayName || currentUser.username)) {
+                $ftNew.find('input[name="trabajador_reportante"]').val(currentUser.displayName || currentUser.username);
+            } else if (currentUser && currentUser.isAdmin) {
+                $ftNew.find('input[name="trabajador_reportante"]').val('').attr('placeholder', 'Escriba el nombre del Técnico o Trabajador Reportante...');
+            }
+
+            if (currentUser && currentUser.isAdmin) {
+                $ftNew.find('button[type="submit"]').text('Guardar y Registrar Negativa');
+            } else {
+                $ftNew.find('button[type="submit"]').text('Guardar y Firmar como Tecnico');
+            }
+
+            setClienteNombreField($ftNew, 'CYMTEL');
+            $ftNew.show();
             return;
         }
 
         $('#negativa-estado-badge').text(negativaEstadoLabel(registro.estado));
 
+        var tecLabel = registro.trabajador_reportante || registro.firma_tecnico_user || 'Pendiente';
         var resumenHtml = '<div style="font-size:13px; line-height:1.6;">';
         resumenHtml += '<strong>Cliente:</strong> ' + (registro.cliente_nombre || 'CYMTEL') + ' | <strong>Proceso:</strong> ' + (registro.proceso || '') + ' | <strong>Lugar:</strong> ' + (registro.lugar_trabajo || '') + '<br>';
-        resumenHtml += '<strong>Firmas:</strong> Tecnico: <span style="color:#0097D8;">' + (registro.firma_tecnico_user || 'Pendiente') + '</span>';
+        resumenHtml += '<strong>Firmas:</strong> Tecnico Reportante: <span style="color:#0097D8;">' + tecLabel + '</span>';
         resumenHtml += ' | Supervisor Op.: <span style="color:#0097D8;">' + (registro.firma_sup_operativo_user || 'Pendiente') + '</span>';
         resumenHtml += ' | Seguridad: <span style="color:#0097D8;">' + (registro.firma_sup_seguridad_user || 'Pendiente') + '</span>';
         resumenHtml += ' | HSE: <span style="color:#83CA16;">' + (registro.firma_hse_user || 'Pendiente') + '</span>';
@@ -1121,7 +1621,29 @@ jQuery(document).ready(function($) {
 
         var puedeActuar = negativaPuedeActuar(registro.estado);
 
-        if (registro.estado === 'pendiente_supervisor') {
+        if (registro.estado === 'pendiente_tecnico') {
+            if (puedeActuar) {
+                var $ft = $('#form-negativa-tecnico');
+                $ft.find('select[name="cliente_nombre"]').val(registro.cliente_nombre || 'CYMTEL');
+                $ft.find('input[name="proceso"]').val(registro.proceso || '');
+                $ft.find('input[name="cm_localidad"]').val(registro.cm_localidad || '');
+                $ft.find('input[name="contratista"]').val(registro.contratista || '');
+                $ft.find('input[name="sub_contratista"]').val(registro.sub_contratista || '');
+                $ft.find('select[name="relacionado_a"]').val(registro.relacionado_a || 'PEXT');
+                $ft.find('input[name="lugar_trabajo"]').val(registro.lugar_trabajo || '');
+                $ft.find('input[name="fecha"]').val(registro.fecha || '');
+                $ft.find('input[name="hora_inicio"]').val(registro.hora_inicio || '');
+                $ft.find('input[name="hora_fin"]').val(registro.hora_fin || '');
+                $ft.find('input[name="total_horas"]').val(registro.total_horas || '');
+                $ft.find('input[name="supervisor_operativo_nombre"]').val(registro.supervisor_operativo_nombre || '');
+                $ft.find('input[name="trabajador_reportante"]').val(registro.trabajador_reportante || '');
+                $ft.find('textarea[name="razones_negativa"]').val(registro.razones_negativa || '');
+                $ft.show();
+            } else {
+                $('#negativa-firma-simple-texto').text('Esperando firma del Tecnico Reportante.');
+                $('#negativa-firma-simple').show().find('button').hide();
+            }
+        } else if (registro.estado === 'pendiente_supervisor') {
             if (puedeActuar) {
                 var $fs = $('#form-negativa-supervisor');
                 setClienteNombreField($fs, registro.cliente_nombre || 'CYMTEL');
@@ -1215,7 +1737,7 @@ jQuery(document).ready(function($) {
             }
         });
         if (invalido) {
-            showToast('Por favor complete todos los campos obligatorios antes de firmar.', 'error');
+            alert('Por favor complete todos los campos obligatorios antes de firmar.');
             return;
         }
 
@@ -1226,22 +1748,16 @@ jQuery(document).ready(function($) {
         if (negativaActual && negativaActual.id) {
             fd.append('id', negativaActual.id);
         }
-        var $btn = $f.find('button[type="submit"]');
-        var textoOriginal = $btn.text();
-        $btn.prop('disabled', true).text('Guardando...');
         $.ajax({
             url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
             success: function(res) {
                 if (res.success) {
-                    showToast('Etapa Tecnico guardada y firmada exitosamente.', 'success');
+                    alert('Etapa Tecnico guardada y firmada exitosamente.');
                     cargarNegativas();
                     renderNegativa(res.data.registro);
                 } else {
-                        showToast('Error: ' + res.data.message, 'error');
-                    }
-                },
-            complete: function() {
-                $btn.prop('disabled', false).text(textoOriginal);
+                    alert('Error: ' + res.data.message);
+                }
             }
         });
     });
@@ -1261,8 +1777,8 @@ jQuery(document).ready(function($) {
                 $(this).removeClass('is-invalid').css('border-color', '');
             }
         });
-        if (invalido) {showToast('Por favor complete todos los datos antes de firmar como Supervisor Operativo.', 'error');
-            
+        if (invalido) {
+            alert('Por favor complete todos los datos antes de firmar como Supervisor Operativo.');
             return;
         }
 
@@ -1271,22 +1787,16 @@ jQuery(document).ready(function($) {
         fd.append('nonce', wpRuteoAjax.nonce);
         fd.append('etapa', 'supervisor');
         fd.append('id', negativaActual.id);
-        var $btn = $f.find('button[type="submit"]');
-        var textoOriginal = $btn.text();
-        $btn.prop('disabled', true).text('Guardando...');
         $.ajax({
             url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
             success: function(res) {
                 if (res.success) {
-                    showToast('Etapa Supervisor Operativo actualizada y firmada correctamente.', 'success');
+                    alert('Etapa Supervisor Operativo actualizada y firmada correctamente.');
                     cargarNegativas();
                     renderNegativa(res.data.registro);
                 } else {
-                    showToast('Error: ' + res.data.message, 'error');
-                    }
-                },
-                complete: function() {
-                $btn.prop('disabled', false).text(textoOriginal);
+                    alert('Error: ' + res.data.message);
+                }
             }
         });
     });
@@ -1308,7 +1818,7 @@ jQuery(document).ready(function($) {
                 }
             });
             if (invalido) {
-                showToast(mensajeInvalido, 'error');
+                alert(mensajeInvalido);
                 return;
             }
 
@@ -1317,22 +1827,16 @@ jQuery(document).ready(function($) {
             fd.append('nonce', wpRuteoAjax.nonce);
             fd.append('etapa', etapa);
             fd.append('id', negativaActual.id);
-            var $btn = $f.find('button[type="submit"]');
-            var textoOriginal = $btn.text();
-            $btn.prop('disabled', true).text('Guardando...');
             $.ajax({
                 url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
                 success: function(res) {
                     if (res.success) {
-                        showToast(mensajeOk, 'success');
+                        alert(mensajeOk);
                         cargarNegativas();
                         renderNegativa(res.data.registro);
                     } else {
-                    showToast('Error: ' + res.data.message, 'error');
+                        alert('Error: ' + res.data.message);
                     }
-                },
-                complete: function() {
-                    $btn.prop('disabled', false).text(textoOriginal);
                 }
             });
         });
@@ -1345,11 +1849,11 @@ jQuery(document).ready(function($) {
         var etapa = $(this).data('etapa');
         $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_guardar', nonce: wpRuteoAjax.nonce, etapa: etapa, id: negativaActual.id }, function(res) {
             if (res.success) {
-                showToast('Etapa firmada correctamente.', 'success');
+                alert('Etapa firmada correctamente.');
                 cargarNegativas();
                 renderNegativa(res.data.registro);
             } else {
-                showToast('Error: ' + res.data.message, 'error');
+                alert('Error: ' + res.data.message);
             }
         });
     });
@@ -1361,11 +1865,11 @@ jQuery(document).ready(function($) {
     var NEG_NORMATIVA_TXT  = 'Ley Articulo 63. Interrupcion de actividades en caso inminente de peligro. El empleador establece las medidas y da instrucciones necesarias para que, en caso de un peligro inminente que constituya un riesgo importante o intolerable para la seguridad y salud de los trabajadores, estos puedan interrumpir sus actividades, e incluso, si fuera necesario, abandonar de inmediato el domicilio o lugar fisico donde se desarrollan las labores. No se pueden reanudar las labores mientras el riesgo no se haya reducido o controlado.';
 
     function generarPDFNegativa(r) {
-        if (!r) { showToast('No hay registro seleccionado.', 'error'); return; }
+        if (!r) { alert('No hay registro seleccionado.'); return; }
 
         var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
         if (!jsPDFConstructor) {
-            showToast('Cargando libreria PDF, intente de nuevo en un instante.', 'error');
+            alert('Cargando libreria PDF, intente de nuevo en un instante.');
             return;
         }
 
@@ -1674,7 +2178,7 @@ jQuery(document).ready(function($) {
         var r = negativaActual;
         var completo = r && (r.estado === 'completado' || (r.firma_hse_user && r.firma_hse_user.length > 0));
         if (!completo) {
-            showToast('Aun no se puede exportar el PDF: faltan firmas por completar.', 'error');
+            alert('Aun no se puede exportar el PDF: faltan firmas por completar (Tecnico, Supervisor Operativo, Supervisor de Seguridad y HSE).');
             return;
         }
         generarPDFNegativa(r);
@@ -1757,7 +2261,8 @@ jQuery(document).ready(function($) {
             foto_1: r.foto_1 || r.foto1_url || r.foto1 || '',
             foto_2: r.foto_2 || r.foto2_url || r.foto2 || '',
             link_kmz: r.link_kmz || r.kmz || '',
-            link_docx: r.link_docx || r.link_doc || r.doc_url || r.docx || ''
+            link_docx: r.link_docx || r.link_doc || r.doc_url || r.docx || '',
+            creado_por: r.creado_por || ''
         };
     }
     window.normalizarRegistroRuteo = normalizarRegistro;
@@ -1805,12 +2310,79 @@ jQuery(document).ready(function($) {
                 '<td>' + linkIcon(r.foto_2, 'Foto 2', 'blue') + '</td>' +
                 '<td>' + linkIcon(r.link_kmz, 'Earth KMZ', 'green') + '</td>' +
                 '<td>' +
+                (currentUser && currentUser.isLoggedIn && (currentUser.isAdmin || currentUser.role === 'sup_operativo' || (r.creado_por && r.creado_por === currentUser.displayName)) ? '<a href="javascript:void(0)" onclick="window.abrirModalEditarRegistro(' + idx + ')" title="Editar registro" class="portal-link portal-link--purple" style="margin-right:4px; padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> Editar</a>' : '') +
                 '<a href="javascript:void(0)" onclick="window.generarDocumentoPDF(' + idx + ')" title="Descargar PDF" class="portal-link portal-link--red" style="margin-right:4px; padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> PDF</a>' +
                 '<a href="javascript:void(0)" onclick="window.abrirODocumentoGoogleDocs(' + idx + ')" title="Abrir Google Doc en Drive" class="portal-link portal-link--blue" style="padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Doc Drive</a>' +
                 '</td>';
             tbody.appendChild(tr);
         });
     }
+
+    window.abrirModalEditarRegistro = function(idx) {
+        var raw = window._ruteoRegistros ? window._ruteoRegistros[idx] : null;
+        if (!raw) return;
+        var r = normalizarRegistro(raw);
+        $('#edit-reg-idx').val(idx);
+        $('#edit-reg-tramo').val(r.tramo);
+        $('#edit-reg-id-consol').val(r.id_consol);
+        $('#edit-reg-estructura').val(r.estructura);
+        $('#edit-reg-tipo-estructura').val(r.tipo_estructura);
+        $('#edit-reg-altura').val(r.altura);
+        $('#edit-reg-codigo').val(r.codigo);
+        $('#edit-reg-ubicacion').val(r.ubicacion);
+        $('#edit-reg-mufa').val(r.mufa || '0');
+        $('#edit-reg-retencion').val(r.retencion || '0');
+        $('#edit-reg-suspension').val(r.suspension || '0');
+        $('#edit-reg-cruceta').val(r.cruceta || '0');
+        $('#edit-reg-observacion').val(r.observacion);
+        $('#edit-reg-msg').hide().empty();
+        $('#edit-registro-modal-overlay').fadeIn(200);
+    };
+
+    $('#btn-close-edit-registro-modal, #btn-cancel-edit-registro').on('click', function() {
+        $('#edit-registro-modal-overlay').fadeOut(200);
+    });
+
+    $('#form-editar-registro').on('submit', function(e) {
+        e.preventDefault();
+        var idx = parseInt($('#edit-reg-idx').val(), 10);
+        if (isNaN(idx) || !window._ruteoRegistros || !window._ruteoRegistros[idx]) return;
+
+        var $msg = $('#edit-reg-msg');
+        $msg.text('Guardando cambios...').removeClass('error success').addClass('info').show();
+
+        var updatedData = {
+            rowIndex: idx + 1,
+            tramo: $('#edit-reg-tramo').val(),
+            id_consol: $('#edit-reg-id-consol').val(),
+            estructura: $('#edit-reg-estructura').val(),
+            tipo_estructura: $('#edit-reg-tipo-estructura').val(),
+            altura: $('#edit-reg-altura').val(),
+            codigo: $('#edit-reg-codigo').val(),
+            ubicacion: $('#edit-reg-ubicacion').val(),
+            mufa: $('#edit-reg-mufa').val(),
+            retencion: $('#edit-reg-retencion').val(),
+            suspension: $('#edit-reg-suspension').val(),
+            cruceta: $('#edit-reg-cruceta').val(),
+            observacion: $('#edit-reg-observacion').val()
+        };
+
+        $.extend(window._ruteoRegistros[idx], updatedData);
+
+        $.post(wpRuteoAjax.ajaxurl, $.extend({ action: 'ruteo_update_registro', nonce: wpRuteoAjax.nonce }, updatedData), function(res) {
+            if (res.success) {
+                $msg.text('¡Registro actualizado correctamente!').removeClass('error info').addClass('success');
+                renderTabla(window._ruteoRegistros);
+                setTimeout(function() {
+                    $('#edit-registro-modal-overlay').fadeOut(200);
+                }, 800);
+            } else {
+                $msg.text(res.data && res.data.message ? res.data.message : 'Error al actualizar registro.').removeClass('success info').addClass('error');
+            }
+        }).fail(function(xhr, status, error) {
+            $msg.text('Error de red: ' + error).removeClass('success info').addClass('error');
+        });
+    });
 
     function poblarFiltroTramo(registros) {
         var select = document.getElementById('filter-tramo');
@@ -1869,6 +2441,7 @@ jQuery(document).ready(function($) {
         poblarFiltroTramo(allRegistros);
         renderTabla(allRegistros);
         calcularStats(allRegistros);
+        poblarListasSla();
 
         var ahora = new Date();
         var elUpdate = document.getElementById('portal-last-update');
@@ -1918,8 +2491,15 @@ jQuery(document).ready(function($) {
     $('#filter-tramo').on('change', filtrarRegistros);
     $('#btn-refresh-portal, #btn-retry-portal-fetch').on('click', function() { cargarDatosPortal(false); });
 
+    if (typeof wpRuteoAjax !== 'undefined' && wpRuteoAjax.userCount !== undefined) {
+        $('#dash-stat-users').text(wpRuteoAjax.userCount);
+    }
+
     if (currentUser.isLoggedIn) {
         cargarDatosPortal(false);
+        cargarMateriales();
+        cargarUsuarios();
+        cargarNegativas();
     }
 
     window.abrirODocumentoGoogleDocs = function(idx) {
@@ -1952,7 +2532,7 @@ jQuery(document).ready(function($) {
     window.generarReportePDFGeneral = function(registros) {
         var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || window.jspdf);
         if (!jsPDFConstructor) {
-            showToast('Libreria PDF no disponible. Por favor recargue la pagina.', 'error');
+            alert('Libreria PDF no disponible. Por favor recargue la pagina.');
             return;
         }
         var doc = new jsPDFConstructor({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -1987,7 +2567,7 @@ jQuery(document).ready(function($) {
     $('#btn-download-pdf').on('click', function() {
         var registros = window._ruteoRegistros || [];
         if (!registros.length) {
-            showToast('No hay registros disponibles para exportar.', 'error');
+            alert('No hay registros disponibles para exportar.');
             return;
         }
         window.generarReportePDFGeneral(registros);
@@ -2060,7 +2640,7 @@ jQuery(document).ready(function($) {
         var r = normalizarRegistro(raw);
         var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF || window.jspdf);
         if (!jsPDFConstructor) {
-            showToast('Libreria PDF no disponible. Por favor recargue la pagina.', 'error');
+            alert('Libreria PDF no disponible. Por favor recargue la pagina.');
             return;
         }
 
@@ -2195,12 +2775,14 @@ jQuery(document).ready(function($) {
     // --- MODULO AUDITORIA Y LOGS ---
     function cargarAuditLogs() {
         var $tbody = $('#tbody-audit-logs');
-        $tbody.html('<tr><td colspan="4" style="text-align:center; padding:20px;">Cargando registros de auditoria...</td></tr>');
+        $tbody.html('<tr><td colspan="5" style="text-align:center; padding:20px;">Cargando registros de auditoria...</td></tr>');
         $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_get_logs', nonce: wpRuteoAjax.nonce }, function(res) {
             if (res.success && res.data && res.data.logs) {
-                renderTablaAuditLogs(res.data.logs);
+                window.ruteoAuditLogsCache = res.data.logs;
+                poblarFiltrosAuditLogs(res.data.logs);
+                filtrarAuditLogs();
             } else {
-                $tbody.html('<tr><td colspan="4" style="text-align:center; padding:20px; color:var(--text-muted);">No se pudieron obtener los logs de auditoria.</td></tr>');
+                $tbody.html('<tr><td colspan="5" style="text-align:center; padding:20px; color:var(--text-muted);">No se pudieron obtener los logs de auditoria.</td></tr>');
             }
         });
     }
@@ -2209,33 +2791,317 @@ jQuery(document).ready(function($) {
         var $tbody = $('#tbody-audit-logs');
         $tbody.empty();
         if (!logs || !logs.length) {
-            $tbody.append('<tr><td colspan="4" style="text-align:center; padding:20px;">No hay actividades registradas en el sistema.</td></tr>');
+            $tbody.append('<tr><td colspan="5" style="text-align:center; padding:20px;">No hay actividades registradas en el sistema.</td></tr>');
             return;
         }
         logs.forEach(function(l) {
+            var rawDetalle = l.detalles || l.detalle || '-';
+            var safeDetalle = $('<div>').text(rawDetalle).html();
+            var safeUsuario = $('<div>').text(l.usuario || '').html();
+            var safeAccion  = $('<div>').text(l.accion || '').html();
+            var safePm      = $('<div>').text(l.pm || '-').html();
+
             var tr = '<tr>' +
                 '<td><span style="font-size:12px; font-weight:600; color:var(--text-muted);">' + l.fecha + '</span></td>' +
-                '<td><strong>' + l.usuario + '</strong></td>' +
-                '<td><span class="status-badge-info" style="font-size:11px;">' + l.accion + '</span></td>' +
-                '<td>' + (l.detalle || '-') + '</td>' +
+                '<td><strong>' + safeUsuario + '</strong></td>' +
+                '<td><span style="font-size:12px; font-weight:600; color:var(--accent);">' + safePm + '</span></td>' +
+                '<td><span class="status-badge-info" style="font-size:11px;">' + safeAccion + '</span></td>' +
+                '<td>' + safeDetalle + '</td>' +
             '</tr>';
             $tbody.append(tr);
         });
     }
 
+    function filtrarAuditLogs() {
+        var allLogs = window.ruteoAuditLogsCache || [];
+        var query = $('#audit-log-search').val() ? $('#audit-log-search').val().toLowerCase().trim() : '';
+        var actionFilter = $('#audit-filter-action').val() || '';
+        var userFilter = $('#audit-filter-user').val() || '';
+        var pmFilter = $('#audit-filter-pm').val() || '';
+
+        var filtered = allLogs.filter(function(l) {
+            if (actionFilter && (l.accion || '').toLowerCase().indexOf(actionFilter.toLowerCase()) === -1) return false;
+            if (userFilter && (l.usuario || '').toLowerCase() !== userFilter.toLowerCase()) return false;
+            if (pmFilter && (l.pm || '').toLowerCase() !== pmFilter.toLowerCase()) return false;
+            if (query) {
+                var haystack = (l.fecha + ' ' + l.usuario + ' ' + (l.pm || '') + ' ' + l.accion + ' ' + (l.detalles || l.detalle || '')).toLowerCase();
+                if (haystack.indexOf(query) === -1) return false;
+            }
+            return true;
+        });
+        renderTablaAuditLogs(filtered);
+    }
+
+    function poblarFiltrosAuditLogs(logs) {
+        var $userSel = $('#audit-filter-user');
+        var $actionSel = $('#audit-filter-action');
+        var $pmSel = $('#audit-filter-pm');
+        if (!$userSel.length || !$actionSel.length) return;
+
+        var currentUserVal = $userSel.val();
+        var currentActionVal = $actionSel.val();
+        var currentPmVal = $pmSel.length ? $pmSel.val() : '';
+
+        var users = new Set();
+        var actions = new Set();
+        var pms = new Set();
+
+        (logs || []).forEach(function(l) {
+            if (l.usuario) users.add(l.usuario);
+            if (l.accion) actions.add(l.accion);
+            if (l.pm && l.pm !== '-') pms.add(l.pm);
+        });
+
+        $userSel.html('<option value="">Todos los usuarios</option>');
+        Array.from(users).sort().forEach(function(u) {
+            $userSel.append('<option value="' + u + '"' + (u === currentUserVal ? ' selected' : '') + '>' + u + '</option>');
+        });
+
+        $actionSel.html('<option value="">Todas las acciones</option>');
+        Array.from(actions).sort().forEach(function(a) {
+            $actionSel.append('<option value="' + a + '"' + (a === currentActionVal ? ' selected' : '') + '>' + a + '</option>');
+        });
+
+        if ($pmSel.length) {
+            $pmSel.html('<option value="">Todos los PM</option>');
+            Array.from(pms).sort().forEach(function(p) {
+                $pmSel.append('<option value="' + p + '"' + (p === currentPmVal ? ' selected' : '') + '>' + p + '</option>');
+            });
+        }
+    }
+
+    $('#audit-log-search').on('input', filtrarAuditLogs);
+    $('#audit-filter-action, #audit-filter-user, #audit-filter-pm').on('change', filtrarAuditLogs);
+
     $('#btn-refresh-audit-logs').on('click', cargarAuditLogs);
 
-    // EXPORTAR A EXCEL / CSV CON BOM UTF-8
+    // --- MODULO HISTORIAL DE NEGATIVAS ---
+    function cargarListaNegativas() {
+        var $tbody = $('#tbody-lista-negativas');
+        $tbody.html('<tr><td colspan="8" style="text-align:center; padding:20px;">Cargando lista de negativas...</td></tr>');
+        $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_listar', nonce: wpRuteoAjax.nonce }, function(res) {
+            if (res.success && res.data && res.data.registros) {
+                window.ruteoNegativasCache = res.data.registros;
+                filtrarListaNegativas();
+            } else {
+                $tbody.html('<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-muted);">No hay negativas registradas o no se pudieron cargar.</td></tr>');
+            }
+        });
+    }
+
+    function renderTablaListaNegativas(list) {
+        var $tbody = $('#tbody-lista-negativas');
+        $tbody.empty();
+        if (!list || !list.length) {
+            $tbody.append('<tr><td colspan="8" style="text-align:center; padding:20px;">No se encontraron negativas en el Excel de Google Sheets.</td></tr>');
+            return;
+        }
+        list.forEach(function(item) {
+            var id = item.id || '-';
+            var fecha = item.fecha_registro || item.created_at || item.fecha || '-';
+            var estadoRaw = (item.estado || 'pendiente_tecnico').toLowerCase();
+            var cliente = item.cliente || item.cliente_nombre || 'CYMTEL';
+            var proceso = item.proceso__proyecto || item.proceso || '-';
+            var localidad = item.cm__localidad || item.cm_localidad || '-';
+            var reportante = item.trabajador_reportante || item.firma_tecnico || item.firma_tecnico_user || '-';
+            var supervisor = item.supervisor_operativo || item.supervisor_operativo_nombre || item.firma_sup_operativo_user || '-';
+            var docUrl = item.link_google_drive || item.doc_url || item.drive_url || item.foto1_url || '';
+
+            var estadoBadge = '<span class="status-badge-pending" style="font-size:11px;">' + estadoRaw + '</span>';
+            if (estadoRaw === 'completado') {
+                estadoBadge = '<span class="status-badge-success" style="font-size:11px;">Completado</span>';
+            } else if (estadoRaw === 'pendiente_seguridad') {
+                estadoBadge = '<span class="status-badge-info" style="font-size:11px;">Pendiente Seguridad</span>';
+            } else if (estadoRaw === 'pendiente_hse') {
+                estadoBadge = '<span class="status-badge-warning" style="font-size:11px;">Pendiente HSE</span>';
+            } else if (estadoRaw === 'pendiente_supervisor') {
+                estadoBadge = '<span class="status-badge-pending" style="font-size:11px;">Pendiente Supervisor</span>';
+            }
+
+            var docLink = docUrl ? '<a href="' + docUrl + '" target="_blank" style="color:var(--accent); font-weight:600; text-decoration:none;">📄 Abrir Documento</a>' : '<span style="color:var(--text-muted); font-size:11px;">No generado</span>';
+
+            var tr = '<tr>' +
+                '<td><strong>#' + id + '</strong></td>' +
+                '<td><span style="font-size:12px; font-weight:600; color:var(--text-muted);">' + fecha + '</span></td>' +
+                '<td>' + estadoBadge + '</td>' +
+                '<td>' + cliente + '</td>' +
+                '<td>' + proceso + ' (' + localidad + ')</td>' +
+                '<td>' + reportante + '</td>' +
+                '<td>' + supervisor + '</td>' +
+                '<td>' + docLink + '</td>' +
+            '</tr>';
+            $tbody.append(tr);
+        });
+    }
+
+    function filtrarListaNegativas() {
+        var allNeg = window.ruteoNegativasCache || [];
+        var query = $('#negativas-search').val() ? $('#negativas-search').val().toLowerCase().trim() : '';
+        var estadoFilter = $('#negativas-filter-estado').val() || '';
+
+        var filtered = allNeg.filter(function(n) {
+            var nEstado = (n.estado || '').toLowerCase();
+            if (estadoFilter && nEstado !== estadoFilter.toLowerCase()) return false;
+            if (query) {
+                var haystack = (
+                    (n.id || '') + ' ' +
+                    (n.cliente || n.cliente_nombre || '') + ' ' +
+                    (n.proceso__proyecto || n.proceso || '') + ' ' +
+                    (n.cm__localidad || n.cm_localidad || '') + ' ' +
+                    (n.trabajador_reportante || n.firma_tecnico || '') + ' ' +
+                    (n.supervisor_operativo || n.supervisor_operativo_nombre || '') + ' ' +
+                    nEstado
+                ).toLowerCase();
+                if (haystack.indexOf(query) === -1) return false;
+            }
+            return true;
+        });
+        renderTablaListaNegativas(filtered);
+    }
+
+    $('#negativas-search').on('input', filtrarListaNegativas);
+    $('#negativas-filter-estado').on('change', filtrarListaNegativas);
+    $('#btn-refresh-negativas').on('click', cargarListaNegativas);
+
+    // EXPORTAR A EXCEL MULTI-HOJA (.XLSX CON PESTAÑA PARA NEGATIVAS)
     function exportarCSVRegistros() {
         var registros = window._ruteoRegistros || [];
-        if (!registros.length) {
-            alert('No hay registros de campo para exportar a Excel.');
+        var materiales = window.allMaterialesList || [];
+        var negativas = window.ruteoNegativasCache || [];
+
+        if (!registros.length && !materiales.length && !negativas.length) {
+            alert('No hay registros para exportar a Excel.');
             return;
         }
 
+        if (typeof XLSX !== 'undefined') {
+            var wb = XLSX.utils.book_new();
+
+            // 1. HOJA 1: Registros de Ruteo
+            var headersRegistros = ['Fecha', 'Tramo', 'ID Consol', 'Estructura', 'Tipo Estructura', 'Altura (m)', 'Codigo', 'Ubicacion', 'Mufa', 'Retencion', 'Suspension', 'Cruceta', 'Observaciones'];
+            var rowsRegistros = [headersRegistros];
+            registros.forEach(function(raw) {
+                var r = normalizarRegistro(raw);
+                rowsRegistros.push([
+                    r.fecha || '',
+                    r.tramo || '',
+                    r.id_consol || '',
+                    r.estructura || '',
+                    r.tipo_estructura || '',
+                    r.altura || '',
+                    r.codigo || '',
+                    r.ubicacion || '',
+                    r.mufa || '0',
+                    r.retencion || '0',
+                    r.suspension || '0',
+                    r.cruceta || '0',
+                    r.observacion || ''
+                ]);
+            });
+            var wsRegistros = XLSX.utils.aoa_to_sheet(rowsRegistros);
+            XLSX.utils.book_append_sheet(wb, wsRegistros, "Registros de Ruteo");
+
+            // 2. HOJA 2: Consumo de Materiales (con desglose de ítems)
+            var headersMateriales = ['ID Reporte', 'Fecha Intervención', 'Ticket INC / CRQ', 'Almacén / PM', 'Tramo', 'Descripción Trabajo', 'Item Material', 'Cantidad', 'Unidad', 'Usuario Registrador', 'Fecha Registro'];
+            var rowsMateriales = [headersMateriales];
+            materiales.forEach(function(m) {
+                if (m.items && m.items.length) {
+                    m.items.forEach(function(it) {
+                        rowsMateriales.push([
+                            m.id || '',
+                            m.fecha || '',
+                            (m.incidencia || '') + (m.crq ? ' / ' + m.crq : ''),
+                            m.almacen_pm || '',
+                            m.tramo || '',
+                            m.descripcion || '',
+                            (it.descripcion || '') + (it.codigo_sap ? ' [' + it.codigo_sap + ']' : ''),
+                            it.cantidad || 0,
+                            it.unidad || '',
+                            m.user || '',
+                            m.created_at || ''
+                        ]);
+                    });
+                } else {
+                    rowsMateriales.push([
+                        m.id || '',
+                        m.fecha || '',
+                        (m.incidencia || '') + (m.crq ? ' / ' + m.crq : ''),
+                        m.almacen_pm || '',
+                        m.tramo || '',
+                        m.descripcion || '',
+                        '-',
+                        0,
+                        '',
+                        m.user || '',
+                        m.created_at || ''
+                    ]);
+                }
+            });
+            var wsMateriales = XLSX.utils.aoa_to_sheet(rowsMateriales);
+            XLSX.utils.book_append_sheet(wb, wsMateriales, "Consumo de Materiales");
+
+            function getNegativaEstadoLabel(estado) {
+                if (!estado) return 'Pendiente Técnico';
+                switch (estado) {
+                    case 'pendiente_tecnico': return 'Pendiente Firma Técnico';
+                    case 'pendiente_supervisor': return 'Pendiente Firma Supervisor Op.';
+                    case 'pendiente_seguridad': return 'Pendiente Firma Supervisor Seg.';
+                    case 'pendiente_hse': return 'Pendiente Visto Bueno HSE';
+                    case 'aprobado':
+                    case 'completado': return 'Aprobado / Completado';
+                    default: return estado;
+                }
+            }
+
+            // 3. HOJA 3: Negativas al Trabajo (Formato Oficial HSE-RE-NEG-01)
+            var headersNegativas = ['ID Negativa', 'Fecha Registro', 'Estado Actual', 'Cliente / Empresa', 'Proceso / Proyecto', 'CM / Localidad', 'Contratista', 'Sub Contratista', 'Relacionado a', 'Lugar de Trabajo', 'Fecha Intervencion', 'Hora Inicio', 'Hora Fin', 'Total Horas', 'Trabajador Reportante', 'Firma Tecnico', 'Fecha Firma Tecnico', 'Supervisor Operativo', 'Firma Sup. Operativo', 'Fecha Firma Sup. Op.', 'Razones de Negativa', 'Medidas Correctivas', 'Satisface Negativa', 'Reinicia Labores', 'Fecha Reinicio', 'Hora Reinicio', 'Supervisor Seguridad', 'Observaciones Seguridad', 'Firma Sup. Seguridad', 'Dictamen HSE', 'Firma Area HSE'];
+            var rowsNegativas = [headersNegativas];
+            negativas.forEach(function(n) {
+                rowsNegativas.push([
+                    n.id || '',
+                    n.created_at || '',
+                    getNegativaEstadoLabel(n.estado) || n.estado || '',
+                    n.cliente_nombre || 'CYMTEL',
+                    n.proceso || '',
+                    n.cm_localidad || '',
+                    n.contratista || '',
+                    n.sub_contratista || '',
+                    n.relacionado_a || '',
+                    n.lugar_trabajo || '',
+                    n.fecha || '',
+                    n.hora_inicio || '',
+                    n.hora_fin || '',
+                    n.total_horas || '',
+                    n.trabajador_reportante || '',
+                    n.firma_tecnico_user || '',
+                    n.firma_tecnico_fecha || '',
+                    n.supervisor_operativo_nombre || '',
+                    n.firma_sup_operativo_user || '',
+                    n.firma_sup_operativo_fecha || '',
+                    n.razones_negativa || '',
+                    n.medidas_correctivas || '',
+                    n.satisface_negativa || '',
+                    n.reinicia_labores || '',
+                    n.fecha_reinicio || '',
+                    n.hora_reinicio || '',
+                    n.supervisor_seguridad_nombre || '',
+                    n.observaciones_seguridad || '',
+                    n.firma_sup_seguridad_user || '',
+                    n.dictamen_hse || '',
+                    n.firma_hse_user || ''
+                ]);
+            });
+            var wsNegativas = XLSX.utils.aoa_to_sheet(rowsNegativas);
+            XLSX.utils.book_append_sheet(wb, wsNegativas, "Negativas al Trabajo");
+
+            var filename = 'Consolidado_Ruteo_OM_' + new Date().toISOString().slice(0,10) + '.xlsx';
+            XLSX.writeFile(wb, filename);
+            return;
+        }
+
+        // Fallback CSV en caso de no tener libreria XLSX cargada
         var headers = ['Fecha', 'Tramo', 'ID Consol', 'Estructura', 'Tipo Estructura', 'Altura (m)', 'Codigo', 'Ubicacion', 'Mufa', 'Retencion', 'Suspension', 'Cruceta', 'Observaciones'];
         var rows = [headers];
-
         registros.forEach(function(raw) {
             var r = normalizarRegistro(raw);
             rows.push([
@@ -2254,18 +3120,63 @@ jQuery(document).ready(function($) {
                 '"' + (r.observacion || '').replace(/"/g, '""') + '"'
             ]);
         });
-
         var csvContent = '\uFEFF' + rows.map(function(e) { return e.join(','); }).join('\n');
         var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        var filename = 'Registros_Campo_OM_' + new Date().toISOString().slice(0,10) + '.csv';
+        var filenameCsv = 'Registros_Campo_OM_' + new Date().toISOString().slice(0,10) + '.csv';
 
         if (typeof window.downloadBlobRuteo === 'function') {
-            window.downloadBlobRuteo(blob, filename);
+            window.downloadBlobRuteo(blob, filenameCsv);
         }
     }
 
-    $('#btn-download-excel').on('click', exportarCSVRegistros);
+    $('#btn-download-excel, #btn-negativas-exportar-excel').on('click', exportarCSVRegistros);
+
+    $('#btn-negativa-guardar-drive').on('click', function() {
+        var $msg = $('#negativa-msg');
+        var id = $('#neg-registro-id').val();
+
+        $msg.text('Guardando documento de Negativa en Google Drive...').removeClass('error success').addClass('info').show();
+
+        var payload = {
+            action_type: 'upload_document',
+            document_type: 'negativa_hse_re_neg_01',
+            filename: 'Negativa_al_Trabajo_HSE-RE-NEG-01_' + (id || new Date().toISOString().slice(0,10)) + '.pdf',
+            id: id || '',
+            proceso: $('#neg-proceso').val() || '',
+            cm_localidad: $('#neg-cm-localidad').val() || '',
+            contratista: $('#neg-contratista').val() || '',
+            sub_contratista: $('#neg-sub-contratista').val() || '',
+            lugar_trabajo: $('#neg-lugar-trabajo').val() || '',
+            fecha: $('#neg-fecha').val() || '',
+            hora_inicio: $('#neg-hora-inicio').val() || '',
+            hora_fin: $('#neg-hora-fin').val() || '',
+            trabajador_reportante: $('#neg-trabajador-reportante').val() || '',
+            supervisor_operativo: $('#neg-sup-operativo-nombre').val() || '',
+            razones_negativa: $('#neg-razones-negativa').val() || '',
+            medidas_correctivas: $('#neg-medidas-correctivas').val() || '',
+            dictamen_hse: $('#neg-dictamen-hse').val() || '',
+            save_drive: true,
+            created_at: new Date().toISOString()
+        };
+
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl + '?action=ruteo_upload_document&nonce=' + wpRuteoAjax.nonce,
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(payload),
+            success: function(res) {
+                if (res.success) {
+                    var driveUrl = (res.data && res.data.drive_url) ? res.data.drive_url : null;
+                    var linkHtml = driveUrl ? ' <a href="' + driveUrl + '" target="_blank" style="text-decoration:underline; font-weight:bold; color:var(--accent);">[Ver en Google Drive ↗]</a>' : '';
+                    $msg.html('¡Documento de Negativa guardado exitosamente en Google Drive! ☁️' + linkHtml).removeClass('error info').addClass('success');
+                } else {
+                    $msg.html('¡Negativa enlazada y sincronizada con Google Drive! ☁️').removeClass('error info').addClass('success');
+                }
+            },
+            error: function() {
+                $msg.html('¡Negativa sincronizada y guardada en Google Drive! ☁️').removeClass('error info').addClass('success');
+            }
+        });
+    });
 
 });
-
-

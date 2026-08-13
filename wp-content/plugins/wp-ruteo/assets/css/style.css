@@ -1678,6 +1678,30 @@ body.admin-bar .ruteo-app-layout {
     .sidebar-item span {
         font-size: 13px !important;
     }
+
+    .portal-toolbar-row {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px !important;
+    }
+
+    .portal-filters-row {
+        flex-direction: column !important;
+        width: 100% !important;
+    }
+
+    .filter-group, .portal-search-wrap {
+        width: 100% !important;
+    }
+
+    .portal-table-wrapper {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    #table-audit-logs, #clientes-table, #portal-table {
+        min-width: 600px !important;
+    }
 }
 
 
@@ -1974,49 +1998,34 @@ body.admin-bar .ruteo-app-layout {
 .ruteo-message.error   { color: #FF6B6B; }
 .ruteo-message.success { color: #83CA16; }
 
-.ruteo-toast-container {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    max-width: 360px;
+.demo-accounts-box p {
+    color: var(--text-secondary, #475569) !important;
 }
-.ruteo-toast {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 16px;
-    border-radius: var(--radius);
-    background: var(--bg-card);
-    box-shadow: var(--shadow-md);
-    border-left: 4px solid var(--secondary);
-    font-size: 14px;
-    color: var(--text-main);
-    animation: toastIn 0.25s ease-out;
-}
-.ruteo-toast.toast-success { border-left-color: var(--success); }
-.ruteo-toast.toast-error   { border-left-color: var(--error); }
-.ruteo-toast.toast-out     { animation: toastOut 0.25s ease-in forwards; }
-.ruteo-toast .toast-icon   { font-size: 18px; flex-shrink: 0; }
-@keyframes toastIn {
-    from { opacity: 0; transform: translateX(30px); }
-    to   { opacity: 1; transform: translateX(0); }
-}
-@keyframes toastOut {
-    from { opacity: 1; transform: translateX(0); }
-    to   { opacity: 0; transform: translateX(30px); }
+.ruteo-wrapper .demo-accounts-box p,
+.ruteo-glass-container .demo-accounts-box p {
+    color: rgba(255,255,255,0.7) !important;
 }
 
-.demo-accounts-box p { color: rgba(255,255,255,0.5) !important; }
 .btn-demo-login {
-    background: rgba(255,255,255,0.08) !important;
-    border: 1px solid rgba(255,255,255,0.15) !important;
-    color: rgba(255,255,255,0.8) !important;
+    background: var(--bg-subtle, #F1F5F9);
+    border: 1px solid var(--border, #CBD5E1);
+    color: var(--text-main, #0F172A) !important;
+    font-weight: 600;
 }
 .btn-demo-login:hover {
+    background: var(--gradient-brand) !important;
+    color: #FFFFFF !important;
+    border-color: transparent !important;
+    box-shadow: var(--shadow-accent);
+}
+.ruteo-wrapper .btn-demo-login,
+.ruteo-glass-container .btn-demo-login {
+    background: rgba(255,255,255,0.12) !important;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    color: #FFFFFF !important;
+}
+.ruteo-wrapper .btn-demo-login:hover,
+.ruteo-glass-container .btn-demo-login:hover {
     background: var(--gradient-brand) !important;
     color: #FFFFFF !important;
     border-color: transparent !important;
@@ -2146,4 +2155,41 @@ body.admin-bar .ruteo-app-layout {
 }
 .material-card:hover {
     box-shadow: var(--shadow-md);
+}
+
+/* --- Sistema de notificaciones Toast (agregado por Stiven) --- */
+.ruteo-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 360px;
+}
+.ruteo-toast {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    border-radius: var(--radius);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-md);
+    border-left: 4px solid var(--secondary);
+    font-size: 14px;
+    color: var(--text-main);
+    animation: toastIn 0.25s ease-out;
+}
+.ruteo-toast.toast-success { border-left-color: var(--success); }
+.ruteo-toast.toast-error   { border-left-color: var(--error); }
+.ruteo-toast.toast-out     { animation: toastOut 0.25s ease-in forwards; }
+.ruteo-toast .toast-icon   { font-size: 18px; flex-shrink: 0; }
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(30px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes toastOut {
+    from { opacity: 1; transform: translateX(0); }
+    to   { opacity: 0; transform: translateX(30px); }
 }
