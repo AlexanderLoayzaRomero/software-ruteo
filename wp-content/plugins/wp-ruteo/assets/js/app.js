@@ -375,12 +375,13 @@ jQuery(document).ready(function($) {
             'registros': 'Registros de Ruteo',
             'formulario': 'Nuevo Registro de Campo',
             'materiales': 'Consumo de Materiales',
-            'sla-informes': 'Informes',
-            'auditoria': 'Historial de Auditoria y Logs',
+            'sla-informes': 'Informes O&M',
+            'auditoria': 'Historial',
             'usuarios': 'Gestion de Cuentas de Usuario',
             'perfil': 'Perfil de Usuario',
             'login': 'Iniciar Sesion',
-            'negativa': 'Negativa al Trabajo por Riesgo Inminente',
+            'negativa': 'Formato de Negativa',
+            'lista-negativas': 'Informe de SLA',
         };
 
         if (titleMap[targetTab]) {

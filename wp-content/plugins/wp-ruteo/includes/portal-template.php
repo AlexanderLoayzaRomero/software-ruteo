@@ -111,35 +111,35 @@ body.admin-bar .ruteo-app-layout {
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                 </svg>
-                <span>Consumo Materiales</span>
+                <span>Consumo de Materiales</span>
             </button>
 
             <button class="sidebar-item" data-tab="sla-informes">
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                <span>Informes</span>
+                <span>Informes O&M</span>
             </button>
 
             <button class="sidebar-item" data-tab="negativa">
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
                 </svg>
-                <span>Negativa al Trabajo</span>
+                <span>Formato de Negativa</span>
             </button>
 
             <button class="sidebar-item" data-tab="lista-negativas" id="tab-btn-lista-negativas">
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                <span>Negativas</span>
+                <span>Informe de SLA</span>
             </button>
 
             <button class="sidebar-item" data-tab="auditoria" id="tab-btn-auditoria">
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                 </svg>
-                <span>Auditoria y Logs</span>
+                <span>Historial</span>
             </button>
 
             <button class="sidebar-item" data-tab="usuarios" id="tab-btn-usuarios" style="display:none;">
@@ -186,7 +186,7 @@ body.admin-bar .ruteo-app-layout {
                     <div class="header-subtitle-row">
                         <span class="header-date" id="current-date-str">--</span>
                         <span class="bullet-sep">•</span>
-                        <span class="header-subtext">Gestion O&M y Mantenimiento</span>
+                        <span class="header-subtext">Gestión de Operaciones y Mantenimiento</span>
                     </div>
                 </div>
             </div>
