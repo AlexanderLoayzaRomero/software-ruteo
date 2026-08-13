@@ -13,7 +13,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 class WPRuteoApp {
 
     // URL DEL WEBHOOK DE GOOGLE SHEETS
-    public $webhook_url = 'https://script.google.com/macros/s/AKfycbwOkeyflnS0fHr2mtmuo8HPKMfeSda6Yjmq7unarGIQ_sExZ0Mdl1BS2mDYZNAf4NcwOA/exec';
+    public $webhook_url = 'https://script.google.com/macros/s/AKfycbzwhHt13NqHOWEMbtoQhD6TjNs4X-S1SzNySiPzJJgCdqE1oxqWA7l8i3ZI-2QoivjB/exec';
     private $assets_enqueued = false;
 
     public function __construct() {
@@ -511,7 +511,6 @@ class WPRuteoApp {
 
         $data['foto1_base64'] = $photo_data[0];
         $data['foto2_base64'] = $photo_data[1];
-        $data['creado_por'] = wp_get_current_user()->display_name;
 
         if ( $this->webhook_url ) {
             wp_remote_post( $this->webhook_url, array(
@@ -534,16 +533,6 @@ class WPRuteoApp {
 
         if ( ! is_user_logged_in() ) {
             wp_send_json_error( array( 'message' => 'Acceso denegado. Debe iniciar sesion.' ) );
-            return;
-        }
-
-        $current_user = wp_get_current_user();
-        $is_admin = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
-        $is_sup_operativo = in_array( 'ruteo_sup_operativo', (array) $current_user->roles, true );
-        $creado_por = isset( $_POST['creado_por'] ) ? sanitize_text_field( wp_unslash( $_POST['creado_por'] ) ) : '';
-
-        if ( ! $is_admin && ! $is_sup_operativo && $creado_por !== $current_user->display_name ) {
-            wp_send_json_error( array( 'message' => 'No tienes permiso para editar este registro.' ) );
             return;
         }
 
@@ -591,11 +580,16 @@ class WPRuteoApp {
             
             $gas_body = '';
             if ( is_wp_error( $response ) ) {
-                wp_send_json_error( array( 'message' => 'Error de conexión con Google Sheets: ' . $response->get_error_message() ) );
+                wp_send_json_error( array( 'message' => 'Error de conexion con Google Sheets: ' . $response->get_error_message() ) );
                 return;
             } else {
+                $code = wp_remote_retrieve_response_code( $response );
                 $gas_body = wp_remote_retrieve_body( $response );
                 $gas_json = json_decode( $gas_body, true );
+                if ( $code !== 200 ) {
+                    wp_send_json_error( array( 'message' => 'Google Sheets respondio con codigo HTTP ' . $code ) );
+                    return;
+                }
                 if ( $gas_json && isset( $gas_json['status'] ) && $gas_json['status'] === 'error' ) {
                     wp_send_json_error( array( 'message' => 'Error de Google Sheets: ' . $gas_json['message'] ) );
                     return;
@@ -1361,15 +1355,27 @@ class WPRuteoApp {
                 'estado'                      => 'pendiente_supervisor',
                 'creado_por'                  => $current_user->display_name,
             );
-
-            foreach ( array( 'foto1', 'foto2' ) as $i => $file_key ) {
+            foreach ( array( 'foto1' => 'foto1_url', 'foto2' => 'foto2_url', 'neg-foto1' => 'foto1_url', 'neg-foto2' => 'foto2_url' ) as $file_key => $target_col ) {
                 if ( ! empty( $_FILES[ $file_key ]['tmp_name'] ) ) {
                     $tmp     = $_FILES[ $file_key ]['tmp_name'];
                     $type    = mime_content_type( $tmp );
+                    if ( ! $type || $type === 'application/octet-stream' ) {
+                        $ext  = strtolower( pathinfo( $_FILES[ $file_key ]['name'] ?? '', PATHINFO_EXTENSION ) );
+                        $type = ( $ext === 'png' ) ? 'image/png' : ( ( $ext === 'webp' ) ? 'image/webp' : 'image/jpeg' );
+                    }
                     $content = file_get_contents( $tmp );
-                    $campos[ 'foto' . ( $i + 1 ) . '_url' ] = 'data:' . $type . ';base64,' . base64_encode( $content );
+                    if ( ! empty( $content ) ) {
+                        $campos[ $target_col ] = 'data:' . $type . ';base64,' . base64_encode( $content );
+                    }
                     @unlink( $tmp );
                 }
+            }
+
+            if ( empty( $campos['foto1_url'] ) && ! empty( $_POST['foto1_base64'] ) ) {
+                $campos['foto1_url'] = $_POST['foto1_base64'];
+            }
+            if ( empty( $campos['foto2_url'] ) && ! empty( $_POST['foto2_base64'] ) ) {
+                $campos['foto2_url'] = $_POST['foto2_base64'];
             }
 
             if ( $id > 0 ) {
@@ -1418,7 +1424,7 @@ class WPRuteoApp {
                 return;
             }
 
-            $update_ok = $wpdb->update( $table, array(
+            $update_fields = array(
                 'proceso'                     => sanitize_text_field( wp_unslash( $_POST['proceso'] ?? '' ) ),
                 'cm_localidad'                => sanitize_text_field( wp_unslash( $_POST['cm_localidad'] ?? '' ) ),
                 'contratista'                 => sanitize_text_field( wp_unslash( $_POST['contratista'] ?? '' ) ),
@@ -1443,7 +1449,16 @@ class WPRuteoApp {
                 'firma_sup_operativo_fecha'   => $now,
                 'firma_sup_operativo_img'     => $firma_img_firmante,
                 'estado'                      => 'pendiente_seguridad',
-            ), array( 'id' => $id ) );
+            );
+
+            if ( ! empty( $_POST['foto1_base64'] ) ) {
+                $update_fields['foto1_url'] = $_POST['foto1_base64'];
+            }
+            if ( ! empty( $_POST['foto2_base64'] ) ) {
+                $update_fields['foto2_url'] = $_POST['foto2_base64'];
+            }
+
+            $update_ok = $wpdb->update( $table, $update_fields, array( 'id' => $id ) );
             if ( false === $update_ok ) {
                 wp_send_json_error( array( 'message' => 'Error al guardar en base de datos: ' . $wpdb->last_error ) );
                 return;
@@ -1584,7 +1599,21 @@ class WPRuteoApp {
         header( 'Pragma: no-cache' );
         header( 'Expires: 0' );
 
-        // Leer 100% directamente desde Google Sheets (pestaña Negativas) como en Ruteo
+        global $wpdb;
+        $table = $wpdb->prefix . 'ruteo_negativas';
+        $db_registros = $wpdb->get_results( "SELECT * FROM $table ORDER BY id DESC", ARRAY_A );
+        if ( ! is_array( $db_registros ) ) {
+            $db_registros = array();
+        }
+
+        $db_map = array();
+        foreach ( $db_registros as $row ) {
+            if ( ! empty( $row['id'] ) ) {
+                $db_map[ intval( $row['id'] ) ] = $row;
+            }
+        }
+
+        $sheets_registros = array();
         if ( $this->webhook_url ) {
             $target_url = add_query_arg( array(
                 'action' => 'get_negativas',
@@ -1603,18 +1632,44 @@ class WPRuteoApp {
                 $body = wp_remote_retrieve_body( $response );
                 if ( $code === 200 && ! empty( $body ) ) {
                     $json = json_decode( $body, true );
-                    if ( isset( $json['status'] ) && $json['status'] === 'success' && isset( $json['negativas'] ) ) {
-                        update_option( 'ruteo_cache_negativas', $json['negativas'], false );
-                        wp_send_json_success( array( 'registros' => $json['negativas'] ) );
-                        return;
+                    if ( isset( $json['status'] ) && $json['status'] === 'success' && isset( $json['negativas'] ) && is_array( $json['negativas'] ) ) {
+                        $sheets_registros = $json['negativas'];
                     }
                 }
             }
         }
 
-        // Fallback a registros cacheados si falla la conexión con Google Sheets
-        $cached = get_option( 'ruteo_cache_negativas', array() );
-        wp_send_json_success( array( 'registros' => is_array( $cached ) ? $cached : array() ) );
+        $final_registros = array();
+        if ( ! empty( $sheets_registros ) ) {
+            foreach ( $sheets_registros as $s_row ) {
+                $sid = isset( $s_row['id'] ) ? intval( $s_row['id'] ) : 0;
+                if ( $sid > 0 && isset( $db_map[ $sid ] ) ) {
+                    $db_row = $db_map[ $sid ];
+                    $merged = array_merge( $s_row, array_filter( $db_row, function( $v ) {
+                        return $v !== null && $v !== '';
+                    } ) );
+
+                    $img_keys = array( 'foto1_url', 'foto2_url', 'firma_tecnico_img', 'firma_sup_operativo_img', 'firma_sup_seguridad_img', 'firma_hse_img', 'cliente_logo' );
+                    foreach ( $img_keys as $k ) {
+                        if ( ! empty( $db_row[ $k ] ) ) {
+                            $merged[ $k ] = $db_row[ $k ];
+                        }
+                    }
+                    $final_registros[] = $merged;
+                    unset( $db_map[ $sid ] );
+                } else {
+                    $final_registros[] = $s_row;
+                }
+            }
+            foreach ( $db_map as $db_row ) {
+                $final_registros[] = $db_row;
+            }
+        } else {
+            $final_registros = $db_registros;
+        }
+
+        update_option( 'ruteo_cache_negativas', $final_registros, false );
+        wp_send_json_success( array( 'registros' => $final_registros ) );
     }
 
     public function handle_ajax_sync_negativas_sheets() {

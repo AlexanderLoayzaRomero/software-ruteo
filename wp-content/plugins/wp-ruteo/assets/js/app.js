@@ -375,13 +375,12 @@ jQuery(document).ready(function($) {
             'registros': 'Registros de Ruteo',
             'formulario': 'Nuevo Registro de Campo',
             'materiales': 'Consumo de Materiales',
-            'sla-informes': 'Informes O&M',
-            'auditoria': 'Historial',
+            'sla-informes': 'Informes',
+            'auditoria': 'Historial de Auditoria y Logs',
             'usuarios': 'Gestion de Cuentas de Usuario',
             'perfil': 'Perfil de Usuario',
             'login': 'Iniciar Sesion',
-            'negativa': 'Formato de Negativa',
-            'lista-negativas': 'Informe de SLA',
+            'negativa': 'Negativa al Trabajo por Riesgo Inminente',
         };
 
         if (titleMap[targetTab]) {
@@ -1748,6 +1747,10 @@ jQuery(document).ready(function($) {
         if (negativaActual && negativaActual.id) {
             fd.append('id', negativaActual.id);
         }
+        var p1 = $('#neg-preview1 img.preview-img').attr('src');
+        var p2 = $('#neg-preview2 img.preview-img').attr('src');
+        if (p1 && p1.indexOf('data:image') === 0) fd.append('foto1_base64', p1);
+        if (p2 && p2.indexOf('data:image') === 0) fd.append('foto2_base64', p2);
         $.ajax({
             url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
             success: function(res) {
@@ -1864,6 +1867,16 @@ jQuery(document).ready(function($) {
     var NEG_VERSION_DOC    = '1.0';
     var NEG_NORMATIVA_TXT  = 'Ley Articulo 63. Interrupcion de actividades en caso inminente de peligro. El empleador establece las medidas y da instrucciones necesarias para que, en caso de un peligro inminente que constituya un riesgo importante o intolerable para la seguridad y salud de los trabajadores, estos puedan interrumpir sus actividades, e incluso, si fuera necesario, abandonar de inmediato el domicilio o lugar fisico donde se desarrollan las labores. No se pueden reanudar las labores mientras el riesgo no se haya reducido o controlado.';
 
+    function getJsPdfImageFormat(str) {
+        if (!str || typeof str !== 'string') return 'PNG';
+        var lower = str.toLowerCase();
+        if (lower.indexOf('data:image/webp') === 0 || lower.indexOf('.webp') !== -1) return 'WEBP';
+        if (lower.indexOf('data:image/png') === 0 || lower.indexOf('.png') !== -1) return 'PNG';
+        if (lower.indexOf('data:image/jpeg') === 0 || lower.indexOf('data:image/jpg') === 0 || lower.indexOf('.jpg') !== -1 || lower.indexOf('.jpeg') !== -1) return 'JPEG';
+        if (lower.indexOf('data:image/svg') === 0 || lower.indexOf('.svg') !== -1) return 'SVG';
+        return 'PNG';
+    }
+
     function generarPDFNegativa(r) {
         if (!r) { alert('No hay registro seleccionado.'); return; }
 
@@ -1873,8 +1886,22 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        var clienteNombre = r.cliente_nombre || 'CYMTEL';
-        var siteLogo = (window.wpRuteoAjax && wpRuteoAjax.siteLogo) ? wpRuteoAjax.siteLogo : '';
+        var clienteNombre = r.cliente_nombre || r.cliente || 'CYMTEL';
+        var clientLogo = r._resolvedLogo || '';
+
+        if (!clientLogo) {
+            if (window.wpRuteoAjax && window.wpRuteoAjax.clientes && window.wpRuteoAjax.clientes.length) {
+                var foundCli = window.wpRuteoAjax.clientes.find(function(c) {
+                    return c.nombre && (c.nombre.trim().toLowerCase() === String(clienteNombre).trim().toLowerCase());
+                });
+                if (foundCli && foundCli.logo) {
+                    clientLogo = foundCli.logo;
+                }
+            }
+            if (!clientLogo && window.wpRuteoAjax && window.wpRuteoAjax.siteLogo) {
+                clientLogo = window.wpRuteoAjax.siteLogo;
+            }
+        }
 
         var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         var pageW = doc.internal.pageSize.getWidth();
@@ -1898,11 +1925,22 @@ jQuery(document).ready(function($) {
         doc.line(M + logoW, y, M + logoW, y + headerH);
         doc.line(M + logoW + titleW, y, M + logoW + titleW, y + headerH);
 
-        // --- Logo propio (empresa que opera el software) ---
-        if (siteLogo && siteLogo.indexOf('data:image') === 0) {
+        // --- Logo del cliente configurado o logo general ---
+        if (clientLogo && (clientLogo.indexOf('data:image') === 0 || clientLogo.indexOf('http') === 0 || clientLogo.indexOf('/') === 0)) {
             try {
-                var mimeSite = siteLogo.indexOf('image/png') !== -1 ? 'PNG' : (siteLogo.indexOf('image/svg') !== -1 ? 'SVG' : 'JPEG');
-                doc.addImage(siteLogo, mimeSite, M + 3, y + 3.5, logoW - 6, headerH - 7, undefined, 'FAST');
+                var mimeSite = getJsPdfImageFormat(clientLogo);
+                var imgProps = (typeof doc.getImageProperties === 'function') ? doc.getImageProperties(clientLogo) : null;
+                if (imgProps && imgProps.width && imgProps.height) {
+                    var maxW = logoW - 4, maxH = headerH - 4;
+                    var ratio = Math.min(maxW / imgProps.width, maxH / imgProps.height);
+                    var drawW = imgProps.width * ratio;
+                    var drawH = imgProps.height * ratio;
+                    var offX = M + (logoW - drawW) / 2;
+                    var offY = y + (headerH - drawH) / 2;
+                    doc.addImage(clientLogo, mimeSite, offX, offY, drawW, drawH, undefined, 'FAST');
+                } else {
+                    doc.addImage(clientLogo, mimeSite, M + 2, y + 2, logoW - 4, headerH - 4, undefined, 'FAST');
+                }
             } catch (e) {
                 dibujarLogoGenerico(doc, M, y, logoW, headerH);
             }
@@ -2071,13 +2109,24 @@ jQuery(document).ready(function($) {
         doc.text('4. Evidencias fotograficas:', M + 2, y + 4.4);
         y += 6;
         var fotoBoxW = (CW - 4) / 2, fotoBoxH = 42;
-        [r.foto1_url, r.foto2_url].forEach(function(f, i) {
+        [r.foto1_url || r.foto1 || r.foto_1, r.foto2_url || r.foto2 || r.foto_2].forEach(function(f, i) {
             var fx = M + i * (fotoBoxW + 4);
             doc.rect(fx, y, fotoBoxW, fotoBoxH, 'S');
-            if (f) {
+            if (f && typeof f === 'string' && f.length > 10) {
                 try {
-                    var mimeFoto = f.indexOf('image/png') !== -1 ? 'PNG' : 'JPEG';
-                    doc.addImage(f, mimeFoto, fx + 1, y + 1, fotoBoxW - 2, fotoBoxH - 2, undefined, 'FAST');
+                    var mimeFoto = getJsPdfImageFormat(f);
+                    var imgProps = (typeof doc.getImageProperties === 'function') ? doc.getImageProperties(f) : null;
+                    if (imgProps && imgProps.width && imgProps.height) {
+                        var maxW = fotoBoxW - 2, maxH = fotoBoxH - 2;
+                        var ratio = Math.min(maxW / imgProps.width, maxH / imgProps.height);
+                        var drawW = imgProps.width * ratio;
+                        var drawH = imgProps.height * ratio;
+                        var offX = fx + (fotoBoxW - drawW) / 2;
+                        var offY = y + (fotoBoxH - drawH) / 2;
+                        doc.addImage(f, mimeFoto, offX, offY, drawW, drawH, undefined, 'FAST');
+                    } else {
+                        doc.addImage(f, mimeFoto, fx + 1, y + 1, fotoBoxW - 2, fotoBoxH - 2, undefined, 'FAST');
+                    }
                 } catch (e) {
                     doc.setFontSize(7); doc.setTextColor(150, 150, 150);
                     doc.text('Imagen no disponible', fx + fotoBoxW / 2, y + fotoBoxH / 2, { align: 'center' });
@@ -2132,10 +2181,10 @@ jQuery(document).ready(function($) {
         y += 2;
 
         var firmas = [
-            { titulo: 'FIRMA DEL TRABAJADOR REPORTANTE', user: r.firma_tecnico_user || r.trabajador_reportante, img: r.firma_tecnico_img },
-            { titulo: 'FIRMA DEL SUPERVISOR OPERATIVO', user: r.firma_sup_operativo_user || r.supervisor_operativo_nombre, img: r.firma_sup_operativo_img },
-            { titulo: 'FIRMA DEL SUPERVISOR DE SEGURIDAD', user: r.firma_sup_seguridad_user, img: r.firma_sup_seguridad_img },
-            { titulo: 'VoBo HSE', user: r.firma_hse_user, img: r.firma_hse_img }
+            { titulo: 'FIRMA DEL TRABAJADOR REPORTANTE', user: r.firma_tecnico_user || r.trabajador_reportante, img: r.firma_tecnico_img || r.firma_tecnico },
+            { titulo: 'FIRMA DEL SUPERVISOR OPERATIVO', user: r.firma_sup_operativo_user || r.supervisor_operativo_nombre, img: r.firma_sup_operativo_img || r.firma_sup_operativo },
+            { titulo: 'FIRMA DEL SUPERVISOR DE SEGURIDAD', user: r.firma_sup_seguridad_user, img: r.firma_sup_seguridad_img || r.firma_sup_seguridad },
+            { titulo: 'VoBo HSE', user: r.firma_hse_user, img: r.firma_hse_img || r.firma_hse }
         ];
 
         var fCellW = CW / 2, fCellH = 32;
@@ -2146,10 +2195,21 @@ jQuery(document).ready(function($) {
             doc.rect(fx, fy, fCellW, fCellH, 'S');
 
             var imgOk = false;
-            if (f.img) {
+            if (f.img && typeof f.img === 'string' && f.img.length > 10) {
                 try {
-                    var mimeFirma = f.img.indexOf('image/png') !== -1 ? 'PNG' : 'JPEG';
-                    doc.addImage(f.img, mimeFirma, fx + fCellW / 2 - 16, fy + 3, 32, 12, undefined, 'FAST');
+                    var mimeFirma = getJsPdfImageFormat(f.img);
+                    var imgProps = (typeof doc.getImageProperties === 'function') ? doc.getImageProperties(f.img) : null;
+                    if (imgProps && imgProps.width && imgProps.height) {
+                        var maxW = 34, maxH = 14;
+                        var ratio = Math.min(maxW / imgProps.width, maxH / imgProps.height);
+                        var drawW = imgProps.width * ratio;
+                        var drawH = imgProps.height * ratio;
+                        var offX = fx + (fCellW - drawW) / 2;
+                        var offY = fy + 2 + (14 - drawH) / 2;
+                        doc.addImage(f.img, mimeFirma, offX, offY, drawW, drawH, undefined, 'FAST');
+                    } else {
+                        doc.addImage(f.img, mimeFirma, fx + fCellW / 2 - 16, fy + 3, 32, 12, undefined, 'FAST');
+                    }
                     imgOk = true;
                 } catch (e) { imgOk = false; }
             }
@@ -2171,8 +2231,101 @@ jQuery(document).ready(function($) {
         doc.text('Cliente: ' + clienteNombre, M, pageH - 4);
         doc.text('Pagina 1 de 1', pageW - M, pageH - 4, { align: 'right' });
 
-        doc.save('Negativa_' + (r.id || 'HSE') + '_' + (r.proceso || 'Trabajo').replace(/ /g, '_') + '.pdf');
+        // Abrir vista previa del PDF en nueva pestaña (visualizador de navegador)
+        try {
+            var blobUrl = doc.output('bloburl');
+            window.open(blobUrl, '_blank');
+        } catch(errBlob) {}
+
+        doc.save('Negativa_' + (r.id || 'HSE') + '_' + String(r.proceso || 'Trabajo').replace(/ /g, '_') + '.pdf');
     }
+
+    function loadImagesAndGeneratePDF(r, callback) {
+        if (!r) { callback(r); return; }
+        var copy = $.extend({}, r);
+
+        var clienteNombre = copy.cliente_nombre || copy.cliente || 'CYMTEL';
+        var clientLogo = '';
+        if (window.wpRuteoAjax && window.wpRuteoAjax.clientes && window.wpRuteoAjax.clientes.length) {
+            var foundCli = window.wpRuteoAjax.clientes.find(function(c) {
+                return c.nombre && (c.nombre.trim().toLowerCase() === String(clienteNombre).trim().toLowerCase());
+            });
+            if (foundCli && foundCli.logo) {
+                clientLogo = foundCli.logo;
+            }
+        }
+        if (!clientLogo && window.wpRuteoAjax && window.wpRuteoAjax.siteLogo) {
+            clientLogo = window.wpRuteoAjax.siteLogo;
+        }
+        copy._resolvedLogo = clientLogo;
+
+        var itemsToProcess = [
+            { key: 'foto1_url', val: copy.foto1_url || copy.foto1 || copy.foto_1 },
+            { key: 'foto2_url', val: copy.foto2_url || copy.foto2 || copy.foto_2 },
+            { key: 'firma_tecnico_img', val: copy.firma_tecnico_img || copy.firma_tecnico },
+            { key: 'firma_sup_operativo_img', val: copy.firma_sup_operativo_img || copy.firma_sup_operativo },
+            { key: 'firma_sup_seguridad_img', val: copy.firma_sup_seguridad_img || copy.firma_sup_seguridad },
+            { key: 'firma_hse_img', val: copy.firma_hse_img || copy.firma_hse },
+            { key: '_resolvedLogo', val: copy._resolvedLogo }
+        ];
+
+        var pending = 0;
+        itemsToProcess.forEach(function(item) {
+            if (item.val && typeof item.val === 'string' && item.val.length > 5) {
+                pending++;
+            }
+        });
+
+        if (pending === 0) {
+            callback(copy);
+            return;
+        }
+
+        itemsToProcess.forEach(function(item) {
+            var src = item.val;
+            if (!src || typeof src !== 'string' || src.length <= 5) {
+                return;
+            }
+
+            var img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = function() {
+                try {
+                    var canvas = document.createElement('canvas');
+                    canvas.width = img.naturalWidth || img.width || 300;
+                    canvas.height = img.naturalHeight || img.height || 150;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    copy[item.key] = canvas.toDataURL('image/png');
+                } catch(e) {
+                    copy[item.key] = src;
+                }
+                pending--;
+                if (pending <= 0) callback(copy);
+            };
+            img.onerror = function() {
+                copy[item.key] = (src.indexOf('data:image') === 0) ? src : '';
+                pending--;
+                if (pending <= 0) callback(copy);
+            };
+            img.src = src;
+        });
+    }
+
+    window.abrirPDFNegativaIndex = function(idx) {
+        var list = window.ruteoNegativasFilteredCache || window.ruteoNegativasCache || [];
+        var r = list[idx];
+        if (!r) { alert('No se encontro el registro de negativa.'); return; }
+        loadImagesAndGeneratePDF(r, function(rPrepared) {
+            generarPDFNegativa(rPrepared);
+        });
+    };
+
+    window.generarPDFNegativa = function(r) {
+        loadImagesAndGeneratePDF(r, function(rPrepared) {
+            generarPDFNegativa(rPrepared);
+        });
+    };
 
     $('#btn-negativa-exportar-pdf').on('click', function() {
         var r = negativaActual;
@@ -2261,8 +2414,7 @@ jQuery(document).ready(function($) {
             foto_1: r.foto_1 || r.foto1_url || r.foto1 || '',
             foto_2: r.foto_2 || r.foto2_url || r.foto2 || '',
             link_kmz: r.link_kmz || r.kmz || '',
-            link_docx: r.link_docx || r.link_doc || r.doc_url || r.docx || '',
-            creado_por: r.creado_por || ''
+            link_docx: r.link_docx || r.link_doc || r.doc_url || r.docx || ''
         };
     }
     window.normalizarRegistroRuteo = normalizarRegistro;
@@ -2310,7 +2462,7 @@ jQuery(document).ready(function($) {
                 '<td>' + linkIcon(r.foto_2, 'Foto 2', 'blue') + '</td>' +
                 '<td>' + linkIcon(r.link_kmz, 'Earth KMZ', 'green') + '</td>' +
                 '<td>' +
-                (currentUser && currentUser.isLoggedIn && (currentUser.isAdmin || currentUser.role === 'sup_operativo' || (r.creado_por && r.creado_por === currentUser.displayName)) ? '<a href="javascript:void(0)" onclick="window.abrirModalEditarRegistro(' + idx + ')" title="Editar registro" class="portal-link portal-link--purple" style="margin-right:4px; padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> Editar</a>' : '') +
+                (currentUser && currentUser.isLoggedIn ? '<a href="javascript:void(0)" onclick="window.abrirModalEditarRegistro(' + idx + ')" title="Editar registro" class="portal-link portal-link--purple" style="margin-right:4px; padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg> Editar</a>' : '') +
                 '<a href="javascript:void(0)" onclick="window.generarDocumentoPDF(' + idx + ')" title="Descargar PDF" class="portal-link portal-link--red" style="margin-right:4px; padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg> PDF</a>' +
                 '<a href="javascript:void(0)" onclick="window.abrirODocumentoGoogleDocs(' + idx + ')" title="Abrir Google Doc en Drive" class="portal-link portal-link--blue" style="padding:4px 8px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> Doc Drive</a>' +
                 '</td>';
@@ -2890,13 +3042,14 @@ jQuery(document).ready(function($) {
     }
 
     function renderTablaListaNegativas(list) {
+        window.ruteoNegativasFilteredCache = list;
         var $tbody = $('#tbody-lista-negativas');
         $tbody.empty();
         if (!list || !list.length) {
             $tbody.append('<tr><td colspan="8" style="text-align:center; padding:20px;">No se encontraron negativas en el Excel de Google Sheets.</td></tr>');
             return;
         }
-        list.forEach(function(item) {
+        list.forEach(function(item, idx) {
             var id = item.id || '-';
             var fecha = item.fecha_registro || item.created_at || item.fecha || '-';
             var estadoRaw = (item.estado || 'pendiente_tecnico').toLowerCase();
@@ -2918,7 +3071,7 @@ jQuery(document).ready(function($) {
                 estadoBadge = '<span class="status-badge-pending" style="font-size:11px;">Pendiente Supervisor</span>';
             }
 
-            var docLink = docUrl ? '<a href="' + docUrl + '" target="_blank" style="color:var(--accent); font-weight:600; text-decoration:none;">📄 Abrir Documento</a>' : '<span style="color:var(--text-muted); font-size:11px;">No generado</span>';
+            var docLink = '<a href="javascript:void(0)" onclick="window.abrirPDFNegativaIndex(' + idx + ')" title="Abrir Documento PDF con Logo de Cliente" class="portal-link portal-link--red" style="padding:4px 8px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>📄 Abrir Documento</a>';
 
             var tr = '<tr>' +
                 '<td><strong>#' + id + '</strong></td>' +
