@@ -75,7 +75,7 @@ body.admin-bar .ruteo-app-layout {
                 </div>
                 <div class="brand-text">
                     <span class="brand-title">Software O&M</span>
-                    <span class="brand-subtitle">Gestion Operaciones y Mantenimiento</span>
+                    <span class="brand-subtitle">Gestion de Operaciones y Mantenimiento</span>
                 </div>
             </div>
             <button class="sidebar-collapse-btn" id="btn-sidebar-collapse" title="Contraer panel">
@@ -186,7 +186,7 @@ body.admin-bar .ruteo-app-layout {
                     <div class="header-subtitle-row">
                         <span class="header-date" id="current-date-str">--</span>
                         <span class="bullet-sep">•</span>
-                        <span class="header-subtext">Gestion O&M y Mantenimiento</span>
+                        <span class="header-subtext">Gestion de Operaciones y Mantenimiento</span>
                     </div>
                 </div>
             </div>
