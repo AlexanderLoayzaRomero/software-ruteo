@@ -1527,6 +1527,15 @@ jQuery(document).ready(function($) {
         return currentUser.negativaRol === mapa[estado];
     }
 
+    function esNegativaCompleta(r) {
+        if (!r) return false;
+        var est = String(r.estado || '').toLowerCase();
+        if (est === 'completado') return true;
+        if (r.firma_hse_user && String(r.firma_hse_user).trim().length > 0) return true;
+        if (r.firma_hse_img && String(r.firma_hse_img).trim().length > 0) return true;
+        return false;
+    }
+
     function renderNegativa(registro) {
         negativaActual = registro;
         $('#negativa-resumen').hide().empty();
@@ -1675,7 +1684,7 @@ jQuery(document).ready(function($) {
                 $('#negativa-firma-simple-texto').text('Esperando visto bueno del Area HSE.');
                 $('#negativa-firma-simple').show().find('button').hide();
             }
-        } else if (registro.estado === 'completado' || (registro.firma_hse_user && registro.firma_hse_user.length > 0)) {
+        } else if (esNegativaCompleta(registro)) {
             // SOLO cuando se tengan todas las firmas completas (Firma HSE) se habilita exportar PDF
             $('#btn-negativa-exportar-pdf').show();
             $('#negativa-pdf-notice').hide();
@@ -1862,6 +1871,10 @@ jQuery(document).ready(function($) {
 
     function generarPDFNegativa(r) {
         if (!r) { alert('No hay registro seleccionado.'); return; }
+        if (!esNegativaCompleta(r)) {
+            alert('Aun no se puede exportar el PDF: faltan firmas por completar (Tecnico, Supervisor Operativo, Supervisor de Seguridad y HSE).');
+            return;
+        }
 
         var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
         if (!jsPDFConstructor) {
@@ -2299,12 +2312,21 @@ jQuery(document).ready(function($) {
         var list = window.ruteoNegativasFilteredCache || window.ruteoNegativasCache || [];
         var r = list[idx];
         if (!r) { alert('No se encontro el registro de negativa.'); return; }
+        if (!esNegativaCompleta(r)) {
+            alert('Aun no se puede exportar el PDF: faltan firmas por completar (Tecnico, Supervisor Operativo, Supervisor de Seguridad y HSE).');
+            return;
+        }
         loadImagesAndGeneratePDF(r, function(rPrepared) {
             generarPDFNegativa(rPrepared);
         });
     };
 
     window.generarPDFNegativa = function(r) {
+        if (!r) { alert('No hay registro de negativa.'); return; }
+        if (!esNegativaCompleta(r)) {
+            alert('Aun no se puede exportar el PDF: faltan firmas por completar (Tecnico, Supervisor Operativo, Supervisor de Seguridad y HSE).');
+            return;
+        }
         loadImagesAndGeneratePDF(r, function(rPrepared) {
             generarPDFNegativa(rPrepared);
         });
@@ -2312,8 +2334,7 @@ jQuery(document).ready(function($) {
 
     $('#btn-negativa-exportar-pdf').on('click', function() {
         var r = negativaActual;
-        var completo = r && (r.estado === 'completado' || (r.firma_hse_user && r.firma_hse_user.length > 0));
-        if (!completo) {
+        if (!esNegativaCompleta(r)) {
             alert('Aun no se puede exportar el PDF: faltan firmas por completar (Tecnico, Supervisor Operativo, Supervisor de Seguridad y HSE).');
             return;
         }
@@ -3054,7 +3075,13 @@ jQuery(document).ready(function($) {
                 estadoBadge = '<span class="status-badge-pending" style="font-size:11px;">Pendiente Supervisor</span>';
             }
 
-            var docLink = '<a href="javascript:void(0)" onclick="window.abrirPDFNegativaIndex(' + idx + ')" title="Abrir Documento PDF con Logo de Cliente" class="portal-link portal-link--red" style="padding:4px 8px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>📄 Abrir Documento</a>';
+            var esComp = esNegativaCompleta(item);
+            var docLink = '';
+            if (esComp) {
+                docLink = '<a href="javascript:void(0)" onclick="window.abrirPDFNegativaIndex(' + idx + ')" title="Abrir Documento PDF con Logo de Cliente" class="portal-link portal-link--red" style="padding:4px 8px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>📄 Abrir Documento</a>';
+            } else {
+                docLink = '<button type="button" onclick="alert(\'Aun no se puede exportar el PDF: faltan firmas por completar (Tecnico, Supervisor Operativo, Supervisor de Seguridad y HSE).\')" title="Faltan firmas por completar" class="portal-link" style="padding:4px 8px; font-weight:600; background:var(--bg-subtle, #f1f5f9); color:var(--text-muted, #94a3b8); border:1px dashed #cbd5e1; cursor:not-allowed; display:inline-flex; align-items:center; gap:4px; border-radius:6px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>🔒 Incompleto (Faltan firmas)</button>';
+            }
 
             var tr = '<tr>' +
                 '<td><strong>#' + id + '</strong></td>' +
