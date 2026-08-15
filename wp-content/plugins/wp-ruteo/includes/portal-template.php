@@ -104,7 +104,7 @@ body.admin-bar .ruteo-app-layout {
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
                 </svg>
-                <span>Nuevo Registro</span>
+                <span>Nuevo Registro de Ruteo</span>
             </button>
 
             <button class="sidebar-item" data-tab="materiales">
@@ -132,15 +132,27 @@ body.admin-bar .ruteo-app-layout {
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
-                <span>Informe de SLA</span>
+                <span>Historial de Negativa</span>
             </button>
 
             <button class="sidebar-item" data-tab="auditoria" id="tab-btn-auditoria">
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"/>
                 </svg>
-                <span>Historial</span>
+                <span>Registro de Actividades</span>
             </button>
+
+
+            <button class="sidebar-item" data-tab="empresas" id="tab-btn-empresas" style="display:none;">
+                <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2M5 21h14M9 7h1m4 0h1m-6 4h1m4 0h1m-6 4h1m4 0h1"/>
+                </svg>
+                <span>Empresas</span>
+            </button>
+
+
+
+
 
             <button class="sidebar-item" data-tab="usuarios" id="tab-btn-usuarios" style="display:none;">
                 <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1075,6 +1087,93 @@ body.admin-bar .ruteo-app-layout {
             </div>
         </section>
 
+
+        <section class="ruteo-tab-content" id="tab-empresas">
+            <div class="ruteo-tab-protected-content">
+                <div class="users-container">
+                    <div class="user-create-card" id="empresas-card" style="margin-bottom:20px;">
+                        <h4>Gestion de Empresas (Multiempresa)</h4>
+                        <p class="users-sub" style="margin-bottom:14px;">Crea una empresa y su Administrador. Cada empresa vera unicamente sus propios datos.</p>
+                        <form id="form-empresa" enctype="multipart/form-data" style="margin-bottom:20px;">
+                            <div class="user-form-grid">
+                                <div class="form-group">
+                                    <label>Nombre de la Empresa</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="emp-nombre-input" placeholder="Ej: ALICORP" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>RUC</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="emp-ruc-input" placeholder="Ej: 20202020202">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Direccion / Sede</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="emp-direccion-input" placeholder="Ej: Av. San Andres">
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Contacto / Telefono</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="emp-contacto-input" placeholder="Ej: 978554321">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-top:14px;">
+                                <label>Logo de la Empresa (PNG, JPG, WEBP - max 2MB)</label>
+                                <input type="file" id="emp-logo-file" accept="image/*">
+                            </div>
+
+                            <hr style="margin:20px 0; border-color:var(--border);">
+                            <h5 style="margin-bottom:10px;">Administrador de la Empresa</h5>
+                            <div class="user-form-grid">
+                                <div class="form-group">
+                                    <label>Nombre Completo</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="emp-admin-nombre-input" placeholder="Ej: Juan Perez" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Usuario</label>
+                                    <div class="input-wrapper">
+                                        <input type="text" id="emp-admin-username-input" placeholder="Ej: admin.alicorp" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Correo</label>
+                                    <div class="input-wrapper">
+                                        <input type="email" id="emp-admin-email-input" placeholder="admin@alicorp.com" required>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Clave</label>
+                                    <div class="input-wrapper">
+                                        <input type="password" id="emp-admin-password-input" placeholder="--------" required>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style="display:flex; justify-content:flex-end; margin-top:16px;">
+                                <button type="submit" class="ruteo-submit-btn" id="btn-guardar-empresa" style="max-width:280px;">
+                                    <span class="btn-text">Crear Empresa</span>
+                                    <div class="spinner"></div>
+                                </button>
+                            </div>
+                            <div class="ruteo-message" id="emp-msg"></div>
+                        </form>
+
+                        <div class="empresas-header-row">
+                            <h5 style="margin-bottom:0;">Empresas Registradas</h5>
+                            <span class="empresas-count-badge" id="empresas-count-badge">0</span>
+                        </div>
+                        <div class="empresas-grid" id="empresas-grid"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- SECCION 6: GESTION DE USUARIOS Y CONFIGURACION (SOLO ADMIN) -->
         <section class="ruteo-tab-content" id="tab-usuarios">
             <div class="ruteo-tab-protected-notice" style="display:none;">
@@ -1123,67 +1222,9 @@ body.admin-bar .ruteo-app-layout {
             <div class="ruteo-tab-protected-content">
                 <div class="users-container">
 
-                    <!-- GESTION DE CLIENTES Y LOGOS -->
-                    <div class="user-create-card" id="clientes-card" style="margin-bottom:20px;">
-                        <h4>Empresas Clientes y Logos para Reportes (Ej: CYMTEL)</h4>
-                        <p class="users-sub" style="margin-bottom:14px;">Registra los clientes del software, sus logos y datos de contacto para los formatos oficiales.</p>
-                        <form id="form-cliente" enctype="multipart/form-data" style="margin-bottom:20px;">
-                            <div class="user-form-grid">
-                                <div class="form-group">
-                                    <label>Nombre del Cliente</label>
-                                    <div class="input-wrapper">
-                                        <input type="text" id="cli-nombre-input" placeholder="Ej: CYMTEL" required>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>RUC / Identificacion</label>
-                                    <div class="input-wrapper">
-                                        <input type="text" id="cli-ruc-input" placeholder="Ej: 20512345678">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Direccion / Sede</label>
-                                    <div class="input-wrapper">
-                                        <input type="text" id="cli-direccion-input" placeholder="Ej: Av. Central 123 - Lima">
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Contacto / Telefono</label>
-                                    <div class="input-wrapper">
-                                        <input type="text" id="cli-contacto-input" placeholder="Ej: Ing. Juan Lopez - 987654321">
-                                    </div>
-                                </div>
-                                <div class="form-group full-width">
-                                    <label>Logo del Cliente (PNG, JPG, WEBP - max 2MB)</label>
-                                    <input type="file" id="cli-logo-file" accept="image/*">
-                                </div>
-                            </div>
-                            <div style="margin-top:12px; display:flex; gap:10px; justify-content:flex-end;">
-                                <button type="submit" class="ruteo-submit-btn" style="min-width:140px;">
-                                    <span>Guardar Cliente</span>
-                                </button>
-                            </div>
-                            <div id="cli-msg" class="ruteo-message"></div>
-                        </form>
+                    
 
-                        <h5 style="margin-bottom:10px;">Clientes Registrados</h5>
-                        <div style="overflow-x:auto;">
-                            <table class="portal-table" style="width:100%;">
-                                <thead>
-                                    <tr>
-                                        <th>Logo</th>
-                                        <th>Nombre Cliente</th>
-                                        <th>RUC</th>
-                                        <th>Direccion / Sede</th>
-                                        <th>Contacto</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="clientes-tbody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
+                    <?php if ( $is_super_admin ) : ?>
                     <!-- LOGO DEL SISTEMA -->
                     <div class="user-create-card" id="site-logo-card" style="margin-bottom:20px;">
                         <h4>Logo del Sistema (Software O&M)</h4>
@@ -1206,6 +1247,7 @@ body.admin-bar .ruteo-app-layout {
                             <div id="site-logo-msg" class="ruteo-message"></div>
                         </form>
                     </div>
+                    <?php endif; ?>
 
                     <div class="users-header-row">
                         <div>
@@ -1392,9 +1434,10 @@ body.admin-bar .ruteo-app-layout {
                 <div class="profile-container">
                     <div class="profile-card">
                         <div class="profile-header-banner">
-                            <div class="profile-avatar-large" id="profile-avatar-img-box">
+                            <label for="prof-avatar-file" class="profile-avatar-large" id="profile-avatar-img-box" style="cursor:pointer;" title="Click para cambiar tu foto">
                                 <span id="profile-avatar-large-text">?</span>
-                            </div>
+                                <input type="file" id="prof-avatar-file" accept="image/png,image/jpeg,image/webp" style="display:none;">
+                            </label>
                             <div class="profile-header-info">
                                 <h2 id="profile-name-heading">Nombre de Usuario</h2>
                                 <p id="profile-role-heading">Cargando perfil...</p>
@@ -1411,7 +1454,7 @@ body.admin-bar .ruteo-app-layout {
                                 </div>
 
                                 <div class="form-group">
-                                    <label>Correo Electronico (Solo Lectura)</label>
+                                    <label>Correo Electronico</label>
                                     <div class="input-wrapper">
                                         <input type="email" id="prof-email" disabled readonly>
                                     </div>
@@ -1487,12 +1530,17 @@ body.admin-bar .ruteo-app-layout {
 
             <div class="ruteo-tab-protected-content">
                 <div class="portal-card">
-                    <div class="portal-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div class="portal-card-header" style="display:flex; flex-direction:column; gap:14px;">
                         <div>
                             <h3 style="margin:0; font-size:18px; font-weight:700;">Historial y Registro de Negativas al Trabajo</h3>
                             <p style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);">Formato HSE-RE-NEG-01 - Lista de registros y firmas de etapas</p>
                         </div>
-                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; width:100%; padding-top:12px; border-top:1px solid var(--border);">
+                            <div class="filter-group" style="margin:0;">
+                                <select id="negativas-filter-empresa" style="padding:6px 12px; font-size:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
+                                    <option value="">Todas las empresas</option>
+                                </select>
+                            </div>
                             <div class="filter-group" style="margin:0;">
                                 <select id="negativas-filter-estado" style="padding:6px 12px; font-size:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
                                     <option value="">Todos los estados</option>
@@ -1559,12 +1607,17 @@ body.admin-bar .ruteo-app-layout {
 
             <div class="ruteo-tab-protected-content">
                 <div class="portal-card">
-                    <div class="portal-card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                    <div class="portal-card-header" style="display:flex; flex-direction:column; gap:14px;">
                         <div>
                             <h3 style="margin:0; font-size:18px; font-weight:700;">Historial de Auditoria y Registro de Actividades</h3>
                             <p style="margin:4px 0 0 0; font-size:13px; color:var(--text-muted);">Trazabilidad en tiempo real de inicios de sesion, firmas y cambios en el sistema</p>
                         </div>
-                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; width:100%; padding-top:12px; border-top:1px solid var(--border);">
+                            <div class="filter-group" style="margin:0;">
+                                <select id="audit-filter-empresa" style="padding:6px 12px; font-size:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
+                                    <option value="">Todas las empresas</option>
+                                </select>
+                            </div>
                             <div class="filter-group" style="margin:0;">
                                 <select id="audit-filter-action" style="padding:6px 12px; font-size:12px; border-radius:8px; border:1px solid var(--border); background:var(--bg-card); color:var(--text-main);">
                                     <option value="">Todas las acciones</option>

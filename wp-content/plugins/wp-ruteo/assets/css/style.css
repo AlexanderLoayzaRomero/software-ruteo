@@ -2192,4 +2192,128 @@ body.admin-bar .ruteo-app-layout {
 @keyframes toastOut {
     from { opacity: 1; transform: translateX(0); }
     to   { opacity: 0; transform: translateX(30px); }
-    }
+}
+
+
+/* --- EMPRESAS: TARJETAS --- */
+.empresas-header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.empresas-count-badge {
+    background: rgba(0, 151, 216, 0.12);
+    color: var(--secondary);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 20px;
+}
+
+.empresas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.empresa-card {
+    display: flex;
+    gap: 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.empresa-card:hover {
+    border-color: var(--border-hover);
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+}
+
+.empresa-card-logo {
+    width: 56px;
+    height: 56px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: var(--bg-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.empresa-card-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.empresa-logo-placeholder {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--secondary);
+}
+
+.empresa-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.empresa-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.empresa-card-top h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.empresa-card-ruc {
+    margin: 4px 0 12px 0;
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.empresa-card-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.empresa-card-actions .btn-del-empresa {
+    background: none;
+    border: 1px solid var(--error);
+    color: var(--error);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.empresa-card-actions .btn-del-empresa:hover {
+    background: var(--error);
+    color: #fff;
+}
+
+/* --- PORTAL CARD (Historial de Negativa, Registro de Actividades) --- */
+.portal-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: var(--shadow-md);
+}

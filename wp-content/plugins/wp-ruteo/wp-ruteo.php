@@ -48,6 +48,8 @@ class WPRuteoApp {
         add_action( 'wp_ajax_ruteo_negativa_guardar', array( $this, 'handle_ajax_negativa_guardar' ) );
         add_action( 'wp_ajax_nopriv_ruteo_negativa_guardar', array( $this, 'handle_ajax_negativa_guardar' ) );
         add_action( 'wp_ajax_ruteo_negativa_listar', array( $this, 'handle_ajax_negativa_listar' ) );
+        add_action( 'wp_ajax_ruteo_negativa_editar', array( $this, 'handle_ajax_negativa_editar' ) );
+        add_action( 'wp_ajax_ruteo_negativa_eliminar', array( $this, 'handle_ajax_negativa_eliminar' ) );
         add_action( 'wp_ajax_nopriv_ruteo_negativa_listar', array( $this, 'handle_ajax_negativa_listar' ) );
         add_action( 'wp_ajax_ruteo_sync_negativas_sheets', array( $this, 'handle_ajax_sync_negativas_sheets' ) );
         add_action( 'wp_ajax_nopriv_ruteo_sync_negativas_sheets', array( $this, 'handle_ajax_sync_negativas_sheets' ) );
@@ -71,6 +73,11 @@ class WPRuteoApp {
         add_action( 'wp_ajax_ruteo_save_cliente', array( $this, 'handle_ajax_save_cliente' ) );
         add_action( 'wp_ajax_ruteo_delete_cliente', array( $this, 'handle_ajax_delete_cliente' ) );
 
+        // Empresas AJAX Endpoints (multiempresa)
+        add_action( 'wp_ajax_ruteo_get_empresas', array( $this, 'handle_ajax_get_empresas' ) );
+        add_action( 'wp_ajax_ruteo_save_empresa', array( $this, 'handle_ajax_save_empresa' ) );
+        add_action( 'wp_ajax_ruteo_delete_empresa', array( $this, 'handle_ajax_delete_empresa' ) );
+
         // Audit Logs AJAX Endpoints
         add_action( 'wp_ajax_ruteo_get_logs', array( $this, 'handle_ajax_get_logs' ) );
         add_action( 'wp_ajax_nopriv_ruteo_get_logs', array( $this, 'handle_ajax_get_logs' ) );
@@ -82,7 +89,133 @@ class WPRuteoApp {
         
     }
 
+    /**
+     * Devuelve el empresa_id del usuario actual, o 0 si es Administrador General
+     * (que no esta atado a ninguna empresa especifica).
+     */
+    public static function get_empresa_id_usuario( $user_id = 0 ) {
+        if ( ! $user_id ) {
+            $user_id = get_current_user_id();
+        }
+        return (int) get_user_meta( $user_id, 'ruteo_empresa_id', true );
+    }
+
+    /**
+     * Devuelve el nombre de una empresa a partir de su ID.
+     * Se usa para mostrar el nombre de la empresa junto al rol del usuario
+     * (ej: "Administrador (Alicorp)") sin tener que escribirlo a mano.
+     */
+    public static function get_empresa_nombre( $empresa_id ) {
+        $empresa_id = absint( $empresa_id );
+        if ( ! $empresa_id ) {
+            return '';
+        }
+
+        global $wpdb;
+        $table  = $wpdb->prefix . 'ruteo_empresas';
+        $nombre = $wpdb->get_var( $wpdb->prepare( "SELECT nombre FROM $table WHERE id = %d", $empresa_id ) );
+
+        return $nombre ? $nombre : '';
+    }
+
+    /**
+     * Devuelve el logo (base64) de una empresa a partir de su ID.
+     * Se usa para que el PDF de Negativa muestre el logo de la empresa
+     * del usuario logueado (BCP, Alicorp, etc.) en vez del logo de un
+     * "cliente" generico, ya que ahora el campo Cliente/Empresa Principal
+     * del formulario de Negativa se autocompleta con la empresa del usuario.
+     */
+    public static function get_empresa_logo( $empresa_id ) {
+        $empresa_id = absint( $empresa_id );
+        if ( ! $empresa_id ) {
+            return '';
+        }
+
+        global $wpdb;
+        $table = $wpdb->prefix . 'ruteo_empresas';
+        $logo  = $wpdb->get_var( $wpdb->prepare( "SELECT logo FROM $table WHERE id = %d", $empresa_id ) );
+
+        return $logo ? $logo : '';
+    }
+
+    /**
+     * Verifica si el usuario actual es Administrador General (ve todas las empresas).
+     */
+    public static function es_super_admin( $user = null ) {
+        if ( ! $user ) {
+            $user = wp_get_current_user();
+        }
+        return in_array( 'administrator', (array) $user->roles, true )
+            || in_array( 'ruteo_super_admin', (array) $user->roles, true );
+    }
+
+    /**
+ * Obtiene el ID de empresa del usuario actual.
+ *
+ * El Administrador General no pertenece a una empresa concreta.
+ * Los demás usuarios deben tener ruteo_empresa_id.
+ */
+public static function get_user_empresa_id( $user_id = 0 ) {
+
+    $user_id = $user_id ? absint( $user_id ) : get_current_user_id();
+
+    if ( ! $user_id ) {
+        return 0;
+    }
+
+    $user = get_userdata( $user_id );
+
+    if ( ! $user ) {
+        return 0;
+    }
+
+    // El Administrador General tiene acceso global.
+    if ( self::es_super_admin( $user ) ) {
+        return 0;
+    }
+
+    return absint( get_user_meta( $user_id, 'ruteo_empresa_id', true ) );
+}
+
+    
+    /**
+ * Comprueba si un usuario puede acceder a una empresa.
+ *
+ * El Administrador General puede acceder globalmente.
+ * Los demás usuarios únicamente a su propia empresa.
+ */
+public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
+
+    $empresa_id = absint( $empresa_id );
+    $user_id    = $user_id ? absint( $user_id ) : get_current_user_id();
+
+    if ( ! $empresa_id || ! $user_id ) {
+        return false;
+    }
+
+    $user = get_userdata( $user_id );
+
+    if ( ! $user ) {
+        return false;
+    }
+
+    // Administrador General: acceso global.
+    if ( self::es_super_admin( $user ) ) {
+        return true;
+    }
+
+    $user_empresa_id = self::get_user_empresa_id( $user_id );
+
+    return $user_empresa_id === $empresa_id;
+}
+
     public function register_roles() {
+        add_role( 'ruteo_super_admin', 'Administrador General', array(
+            'read'                  => true,
+            'ruteo_super_admin_access' => true,
+            'ruteo_admin_access'    => true,
+            'ruteo_worker_access'   => true,
+        ) );
         add_role( 'ruteo_admin', 'Administrador O&M', array(
             'read'                  => true,
             'ruteo_admin_access'    => true,
@@ -131,7 +264,7 @@ class WPRuteoApp {
                 'pass'         => defined( 'RUTEO_PASS_ADMIN' ) ? RUTEO_PASS_ADMIN : wp_generate_password( 16 ),
                 'name'         => 'Administrador General O&M',
                 'email'        => 'admin@software-om.org.pe',
-                'role'         => 'ruteo_admin',
+                'role'         => 'ruteo_super_admin',
                 'negativa_rol' => 'admin_general',
                 'position'     => 'Administrador General O&M',
                 'signer_caps'  => array( 'firmante_ejecutor', 'firmante_operativo', 'firmante_hse' ),
@@ -206,94 +339,119 @@ class WPRuteoApp {
     }
 
     public function enqueue_assets() {
-        if ( $this->assets_enqueued ) {
-            return;
-        }
-        $this->assets_enqueued = true;
-        $css_ver = filemtime( plugin_dir_path( __FILE__ ) . 'assets/css/style.css' );
-        $js_ver  = filemtime( plugin_dir_path( __FILE__ ) . 'assets/js/app.js' );
-        wp_enqueue_style( 'wp-ruteo-style', plugin_dir_url( __FILE__ ) . 'assets/css/style.css', array(), $css_ver );
-        wp_enqueue_script( 'jspdf-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', array(), '2.5.1', true );
-        wp_enqueue_script( 'jspdf-autotable-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js', array( 'jspdf-cdn' ), '3.5.28', true );
-        wp_enqueue_script( 'xlsx-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', array(), '0.18.5', true );
-        wp_enqueue_script( 'wp-ruteo-app', plugin_dir_url( __FILE__ ) . 'assets/js/app.js', array( 'jquery', 'jspdf-cdn', 'jspdf-autotable-cdn', 'xlsx-cdn' ), $js_ver, true );
-
-        $current_user = wp_get_current_user();
-        $is_logged_in = is_user_logged_in();
-        $user_role    = 'guest';
-        $is_admin     = false;
-
-        $phone        = '';
-        $pm_assigned   = '';
-        $avatar       = '';
-        $firma_img    = '';
-        $position     = '';
-        $signer_caps  = array();
-        $negativa_rol = '';
-
-        if ( $is_logged_in ) {
-            $phone        = get_user_meta( $current_user->ID, 'ruteo_phone', true );
-            $pm_assigned  = get_user_meta( $current_user->ID, 'ruteo_pm_assigned', true );
-            $avatar       = get_user_meta( $current_user->ID, 'ruteo_avatar', true );
-            $firma_img    = get_user_meta( $current_user->ID, 'ruteo_firma_img', true );
-            $position     = get_user_meta( $current_user->ID, 'ruteo_position', true );
-            $negativa_rol = get_user_meta( $current_user->ID, 'ruteo_negativa_rol', true );
-            $signer_caps  = get_user_meta( $current_user->ID, 'ruteo_signer_caps', true );
-            if ( ! is_array( $signer_caps ) ) {
-                $signer_caps = array();
-            }
-
-            if ( in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true ) ) {
-                $user_role = 'admin';
-                $is_admin  = true;
-            } elseif ( in_array( 'ruteo_sup_operativo', (array) $current_user->roles, true ) ) {
-                $user_role = 'sup_operativo';
-            } elseif ( in_array( 'ruteo_sup_hse', (array) $current_user->roles, true ) ) {
-                $user_role = 'sup_hse';
-            } elseif ( in_array( 'ruteo_worker', (array) $current_user->roles, true ) ) {
-                $user_role = 'worker';
-            } else {
-                $user_role = 'user';
-            }
-        }
-
-        $clientes_list = get_option( 'ruteo_clientes_list', array() );
-        if ( empty( $clientes_list ) || ! is_array( $clientes_list ) ) {
-            $clientes_list = array(
-                array(
-                    'id'     => 'CLI-CYMTEL',
-                    'nombre' => 'CYMTEL',
-                    'ruc'    => '20512345678',
-                    'logo'   => '',
-                )
-            );
-            update_option( 'ruteo_clientes_list', $clientes_list, false );
-        }
-
-        wp_localize_script( 'wp-ruteo-app', 'wpRuteoAjax', array(
-            'ajaxurl'   => admin_url( 'admin-ajax.php' ),
-            'nonce'     => wp_create_nonce( 'ruteo_submit_nonce' ),
-            'siteLogo'  => get_option( 'ruteo_site_logo', '' ),
-            'clientes'  => $clientes_list,
-            'userCount' => count( get_users( array( 'fields' => 'ID' ) ) ),
-            'user'    => array(
-                'id'          => $is_logged_in ? $current_user->ID : 0,
-                'isLoggedIn'  => $is_logged_in,
-                'username'    => $is_logged_in ? $current_user->user_login : '',
-                'isAdmin'     => $is_admin,
-                'negativaRol' => $negativa_rol ?: '',
-                'displayName' => $is_logged_in ? html_entity_decode( $current_user->display_name, ENT_QUOTES, 'UTF-8' ) : 'Invitado',
-                'email'       => $is_logged_in ? $current_user->user_email : '',
-                'phone'       => $phone,
-                'pmAssigned'  => $pm_assigned,
-                'avatar'      => $avatar,
-                'firma'       => $firma_img,
-                'role'        => $user_role,
-                'position'    => $position ?: '',
-                'signerCaps'  => $signer_caps,
-            ),
-        ) );
+    if ( $this->assets_enqueued ) {
+        return;
     }
+    $this->assets_enqueued = true;
+    $css_ver = filemtime( plugin_dir_path( __FILE__ ) . 'assets/css/style.css' );
+    $js_ver  = filemtime( plugin_dir_path( __FILE__ ) . 'assets/js/app.js' );
+    wp_enqueue_style( 'wp-ruteo-style', plugin_dir_url( __FILE__ ) . 'assets/css/style.css', array(), $css_ver );
+    wp_enqueue_script( 'jspdf-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', array(), '2.5.1', true );
+    wp_enqueue_script( 'jspdf-autotable-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js', array( 'jspdf-cdn' ), '3.5.28', true );
+    wp_enqueue_script( 'xlsx-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js', array(), '0.18.5', true );
+    wp_enqueue_script( 'exceljs-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js', array(), '4.4.0', true );
+    wp_enqueue_script( 'wp-ruteo-app', plugin_dir_url( __FILE__ ) . 'assets/js/app.js', array( 'jquery', 'jspdf-cdn', 'jspdf-autotable-cdn', 'xlsx-cdn', 'exceljs-cdn' ), $js_ver, true );
+
+    $current_user = wp_get_current_user();
+    $is_logged_in = is_user_logged_in();
+    $user_role    = 'guest';
+    $is_admin     = false;
+    $is_super_admin  = false;
+
+    $phone        = '';
+    $pm_assigned   = '';
+    $avatar       = '';
+    $firma_img    = '';
+    $position     = '';
+    $signer_caps  = array();
+    $negativa_rol = '';
+
+    if ( $is_logged_in ) {
+        $phone        = get_user_meta( $current_user->ID, 'ruteo_phone', true );
+        $pm_assigned  = get_user_meta( $current_user->ID, 'ruteo_pm_assigned', true );
+        $avatar       = get_user_meta( $current_user->ID, 'ruteo_avatar', true );
+        $firma_img    = get_user_meta( $current_user->ID, 'ruteo_firma_img', true );
+        $position     = get_user_meta( $current_user->ID, 'ruteo_position', true );
+        $negativa_rol = get_user_meta( $current_user->ID, 'ruteo_negativa_rol', true );
+        $signer_caps  = get_user_meta( $current_user->ID, 'ruteo_signer_caps', true );
+        if ( ! is_array( $signer_caps ) ) {
+            $signer_caps = array();
+        }
+
+        if ( in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true ) ) {
+            $user_role = 'admin';
+            $is_admin  = true;  
+        } elseif ( in_array( 'ruteo_sup_operativo', (array) $current_user->roles, true ) ) {
+            $user_role = 'sup_operativo';
+        } elseif ( in_array( 'ruteo_sup_hse', (array) $current_user->roles, true ) ) {
+            $user_role = 'sup_hse';
+        } elseif ( in_array( 'ruteo_worker', (array) $current_user->roles, true ) ) {
+            $user_role = 'worker';
+        } else {
+            $user_role = 'user';
+        }
+
+        $is_super_admin = self::es_super_admin( $current_user );
+    }
+
+    $clientes_list = get_option( 'ruteo_clientes_list', array() );
+    if ( empty( $clientes_list ) || ! is_array( $clientes_list ) ) {
+        $clientes_list = array(
+            array(
+                'id'         => 'CLI-CYMTEL',
+                'nombre'     => 'CYMTEL',
+                'ruc'        => '20512345678',
+                'logo'       => '',
+                'empresa_id' => 0,
+            )
+        );
+        update_option( 'ruteo_clientes_list', $clientes_list, false );
+    }
+
+    $dash_empresa_id = $is_logged_in ? self::get_user_empresa_id( $current_user->ID ) : 0;
+
+    if ( $is_logged_in && ! $is_super_admin ) {
+        $clientes_list = array_values( array_filter( $clientes_list, function( $c ) use ( $dash_empresa_id ) {
+            $c_empresa = isset( $c['empresa_id'] ) ? (int) $c['empresa_id'] : 0;
+            return $c_empresa === 0 || $c_empresa === $dash_empresa_id;
+        } ) );
+
+        $user_count = count( get_users( array(
+            'fields'     => 'ID',
+            'meta_key'   => 'ruteo_empresa_id',
+            'meta_value' => $dash_empresa_id,
+        ) ) );
+    } else {
+        $user_count = count( get_users( array( 'fields' => 'ID' ) ) );
+    }
+
+    wp_localize_script( 'wp-ruteo-app', 'wpRuteoAjax', array(
+        'ajaxurl'   => admin_url( 'admin-ajax.php' ),
+        'nonce'     => wp_create_nonce( 'ruteo_submit_nonce' ),
+        'siteLogo'  => get_option( 'ruteo_site_logo', '' ),
+        'clientes'  => $clientes_list,
+        'userCount' => $user_count,
+        'user'    => array(
+            'id'          => $is_logged_in ? $current_user->ID : 0,
+            'isLoggedIn'  => $is_logged_in,
+            'username'    => $is_logged_in ? $current_user->user_login : '',
+            'isAdmin'      => $is_admin,
+            'isSuperAdmin' => $is_super_admin,
+            'empresaNombre' => ( $is_logged_in && ! $is_super_admin ) ? self::get_empresa_nombre( $dash_empresa_id ) : '',
+            'empresaLogo'   => ( $is_logged_in && ! $is_super_admin ) ? self::get_empresa_logo( $dash_empresa_id ) : '',
+            'negativaRol' => $negativa_rol ?: '',
+            'displayName' => $is_logged_in ? html_entity_decode( $current_user->display_name, ENT_QUOTES, 'UTF-8' ) : 'Invitado',
+            'email'       => $is_logged_in ? $current_user->user_email : '',
+            'phone'       => $phone,
+            'pmAssigned'  => $pm_assigned,
+            'avatar'      => $avatar,
+            'firma'       => $firma_img,
+            'role'        => $user_role,
+            'position'    => $position ?: '',
+            'signerCaps'  => $signer_caps,
+        ),
+    ) );
+}
 
     public function maybe_enqueue_assets() {
         if ( ! is_singular() ) {
@@ -656,8 +814,9 @@ class WPRuteoApp {
         wp_set_current_user( $user->ID );
         wp_set_auth_cookie( $user->ID, $remember );
 
-        $is_admin = in_array( 'administrator', (array) $user->roles, true ) || in_array( 'ruteo_admin', (array) $user->roles, true );
-        $role     = $is_admin ? 'admin' : ( in_array( 'ruteo_worker', (array) $user->roles, true ) ? 'worker' : 'user' );
+       $is_admin       = in_array( 'administrator', (array) $user->roles, true ) || in_array( 'ruteo_admin', (array) $user->roles, true );
+        $is_super_admin = self::es_super_admin( $user );
+        $role           = $is_admin ? 'admin' : ( in_array( 'ruteo_worker', (array) $user->roles, true ) ? 'worker' : 'user' );
 
         $phone        = get_user_meta( $user->ID, 'ruteo_phone', true );
         $pm_assigned  = get_user_meta( $user->ID, 'ruteo_pm_assigned', true );
@@ -670,6 +829,8 @@ class WPRuteoApp {
             $signer_caps = array();
         }
 
+        $login_empresa_id = self::get_user_empresa_id( $user->ID );
+        $empresa_nombre    = ( ! $is_super_admin ) ? self::get_empresa_nombre( $login_empresa_id ) : '';
         self::registrar_log( 'Inicio de Sesion', 'El usuario ' . $user->display_name . ' (' . $user->user_login . ') inicio sesion en el aplicativo.' );
 
         wp_send_json_success( array(
@@ -683,8 +844,10 @@ class WPRuteoApp {
                 'pmAssigned'  => $pm_assigned,
                 'avatar'      => $avatar,
                 'firma'       => $firma_img,
-                'role'        => $role,
-                'isAdmin'     => $is_admin,
+                'role'         => $role,
+                'isAdmin'      => $is_admin,
+                'isSuperAdmin' => $is_super_admin,
+                'empresaNombre' => $empresa_nombre,
                 'negativaRol' => $negativa_rol ?: '',
                 'position'    => $position ?: '',
                 'signerCaps'  => $signer_caps,
@@ -699,221 +862,490 @@ class WPRuteoApp {
     }
 
     public function handle_ajax_get_users() {
-        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+    check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
 
-        $current_user = wp_get_current_user();
-        $is_admin     = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+    $current_user = wp_get_current_user();
 
-        if ( ! $is_admin ) {
-            wp_send_json_error( array( 'message' => 'Acceso denegado. Se requieren permisos de Administrador.' ) );
-            return;
-        }
+    $is_super_admin   = self::es_super_admin( $current_user );
+    $is_company_admin = in_array( 'ruteo_admin', (array) $current_user->roles, true );
 
-        $wp_users = get_users( array(
-            'role__in' => array( 'ruteo_admin', 'ruteo_sup_operativo', 'ruteo_sup_hse', 'ruteo_worker', 'administrator' ),
-            'orderby'  => 'registered',
-            'order'    => 'DESC',
-        ) );
-
-        $user_list = array();
-        foreach ( $wp_users as $u ) {
-            $roles      = (array) $u->roles;
-            $role_label = 'Operario';
-            $role_key   = 'ruteo_worker';
-
-            if ( in_array( 'administrator', $roles, true ) || in_array( 'ruteo_admin', $roles, true ) ) {
-                $role_label = 'Admin General';
-                $role_key   = 'ruteo_admin';
-            } elseif ( in_array( 'ruteo_sup_operativo', $roles, true ) ) {
-                $role_label = 'Supervisor Operativo';
-                $role_key   = 'ruteo_sup_operativo';
-            } elseif ( in_array( 'ruteo_sup_hse', $roles, true ) ) {
-                $role_label = 'Supervisor HSE';
-                $role_key   = 'ruteo_sup_hse';
-            }
-
-            $signer_caps = get_user_meta( $u->ID, 'ruteo_signer_caps', true );
-            if ( ! is_array( $signer_caps ) ) {
-                $signer_caps = array();
-            }
-
-            $user_list[] = array(
-                'id'          => $u->ID,
-                'username'    => $u->user_login,
-                'displayName' => html_entity_decode( $u->display_name, ENT_QUOTES, 'UTF-8' ),
-                'email'       => $u->user_email,
-                'phone'       => get_user_meta( $u->ID, 'ruteo_phone', true ),
-                'pmAssigned'  => get_user_meta( $u->ID, 'ruteo_pm_assigned', true ),
-                'avatar'      => get_user_meta( $u->ID, 'ruteo_avatar', true ),
-                'role'        => $role_label,
-                'roleKey'     => $role_key,
-                'signerCaps'  => $signer_caps,
-                'negativaRol' => get_user_meta( $u->ID, 'ruteo_negativa_rol', true ) ?: '',
-                'position'    => get_user_meta( $u->ID, 'ruteo_position', true ) ?: '',
-                'registered'  => $u->user_registered,
-            );
-        }
-
-        wp_send_json_success( array( 'users' => $user_list ) );
+    if ( ! $is_super_admin && ! $is_company_admin ) {
+        wp_send_json_error(
+            array(
+                'message' => 'Acceso denegado. Se requieren permisos de Administrador.'
+            )
+        );
+        return;
     }
 
-    public function handle_ajax_create_user() {
-        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+    $empresa_id = $is_super_admin
+        ? 0
+        : self::get_user_empresa_id( $current_user->ID );
 
-        $current_user = wp_get_current_user();
-        $is_admin     = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+    if ( ! $is_super_admin && ! $empresa_id ) {
+        wp_send_json_error(
+            array(
+                'message' => 'Tu usuario no tiene una empresa asociada.'
+            )
+        );
+        return;
+    }
 
-        if ( ! $is_admin ) {
-            wp_send_json_error( array( 'message' => 'Acceso denegado. Permiso requerido.' ) );
-            return;
+    $user_query_args = array(
+    'role__in' => array(
+        'ruteo_super_admin',
+        'ruteo_admin',
+        'ruteo_sup_operativo',
+        'ruteo_sup_hse',
+        'ruteo_worker',
+        'administrator',
+    ),
+    'orderby' => 'registered',
+    'order'   => 'DESC',
+);
+
+    if ( ! $is_super_admin ) {
+        $user_query_args['meta_key']   = 'ruteo_empresa_id';
+        $user_query_args['meta_value'] = $empresa_id;
+    }
+
+    $wp_users = get_users( $user_query_args );
+
+    $user_list = array();
+    foreach ( $wp_users as $u ) {
+        $roles      = (array) $u->roles;
+        $role_label = 'Operario';
+        $role_key   = 'ruteo_worker';
+
+        if ( in_array( 'administrator', $roles, true ) || in_array( 'ruteo_super_admin', $roles, true ) ) {
+           $role_label = 'Administrador General';
+           $role_key   = 'ruteo_super_admin';
+
+        } elseif ( in_array( 'ruteo_admin', $roles, true ) ) {
+
+           $role_label = 'Administrador de Empresa';
+           $role_key   = 'ruteo_admin';
+
+        } elseif ( in_array( 'ruteo_sup_operativo', $roles, true ) ) {
+
+           $role_label = 'Supervisor Operativo';
+           $role_key   = 'ruteo_sup_operativo';
+
+        } elseif ( in_array( 'ruteo_sup_hse', $roles, true ) ) {
+
+           $role_label = 'Supervisor HSE';
+           $role_key   = 'ruteo_sup_hse';
+
+        } elseif ( in_array( 'ruteo_worker', $roles, true ) ) {
+
+          $role_label = 'Operario';
+          $role_key   = 'ruteo_worker';
         }
 
-        $edit_id      = isset( $_POST['user_id'] ) ? intval( $_POST['user_id'] ) : 0;
-        $username     = isset( $_POST['username'] ) ? sanitize_user( wp_unslash( $_POST['username'] ) ) : '';
-        $email        = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
-        $password     = isset( $_POST['password'] ) ? $_POST['password'] : '';
-        $display_name = isset( $_POST['display_name'] ) ? sanitize_text_field( wp_unslash( $_POST['display_name'] ) ) : '';
-        $role         = isset( $_POST['role'] ) ? sanitize_text_field( wp_unslash( $_POST['role'] ) ) : 'ruteo_worker';
-        $phone        = isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '';
-        $pm_assigned  = isset( $_POST['pm_assigned'] ) ? sanitize_text_field( wp_unslash( $_POST['pm_assigned'] ) ) : '';
-        $negativa_rol = isset( $_POST['negativa_rol'] ) ? sanitize_text_field( wp_unslash( $_POST['negativa_rol'] ) ) : '';
-        $position     = isset( $_POST['position'] ) ? sanitize_text_field( wp_unslash( $_POST['position'] ) ) : '';
-
-        $raw_caps = isset( $_POST['signer_caps'] ) ? $_POST['signer_caps'] : array();
-        if ( is_string( $raw_caps ) ) {
-            $signer_caps = array_filter( array_map( 'trim', explode( ',', $raw_caps ) ) );
-        } elseif ( is_array( $raw_caps ) ) {
-            $signer_caps = array_map( 'sanitize_text_field', $raw_caps );
-        } else {
+        $signer_caps = get_user_meta( $u->ID, 'ruteo_signer_caps', true );
+        if ( ! is_array( $signer_caps ) ) {
             $signer_caps = array();
         }
 
-        $wp_role = 'ruteo_worker';
-        if ( $role === 'admin' || $role === 'ruteo_admin' ) {
-            $wp_role = 'ruteo_admin';
-        } elseif ( $role === 'sup_operativo' || $role === 'ruteo_sup_operativo' ) {
-            $wp_role = 'ruteo_sup_operativo';
-        } elseif ( $role === 'sup_hse' || $role === 'ruteo_sup_hse' ) {
-            $wp_role = 'ruteo_sup_hse';
-        }
+        $user_list[] = array(
+            'id'          => $u->ID,
+            'username'    => $u->user_login,
+            'displayName' => html_entity_decode( $u->display_name, ENT_QUOTES, 'UTF-8' ),
+            'email'       => $u->user_email,
+            'phone'       => get_user_meta( $u->ID, 'ruteo_phone', true ),
+            'pmAssigned'  => get_user_meta( $u->ID, 'ruteo_pm_assigned', true ),
+            'avatar'      => get_user_meta( $u->ID, 'ruteo_avatar', true ),
+            'role'        => $role_label,
+            'roleKey'     => $role_key,
+            'signerCaps'  => $signer_caps,
+            'negativaRol' => get_user_meta( $u->ID, 'ruteo_negativa_rol', true ) ?: '',
+            'position'    => get_user_meta( $u->ID, 'ruteo_position', true ) ?: '',
+            'registered'  => $u->user_registered,
+        );
+    }
 
-        if ( $edit_id > 0 ) {
-            $user_data = array(
-                'ID'           => $edit_id,
-                'display_name' => ! empty( $display_name ) ? $display_name : $username,
-            );
-            if ( ! empty( $email ) ) {
-                $user_data['user_email'] = $email;
+    wp_send_json_success( array( 'users' => $user_list ) );
+}
+
+    public function handle_ajax_create_user() {
+
+    check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
+    $current_user = wp_get_current_user();
+
+    $is_super_admin   = self::es_super_admin( $current_user );
+    $is_company_admin = in_array( 'ruteo_admin', (array) $current_user->roles, true );
+
+    if ( ! $is_super_admin && ! $is_company_admin ) {
+        wp_send_json_error( array( 'message' => 'Acceso denegado. Permiso requerido.' ) );
+        return;
+    }
+
+    $input = self::extract_user_input();
+
+    $signer_caps = self::parse_signer_caps( $input['raw_caps'] );
+    $wp_role     = self::map_frontend_role_to_wp_role( $input['role'] );
+
+    $empresa_id = $is_super_admin
+        ? $input['requested_empresa_id']
+        : self::get_user_empresa_id( $current_user->ID );
+
+    if ( ! $empresa_id ) {
+        wp_send_json_error( array( 'message' => 'No se pudo determinar la empresa asociada al usuario.' ), 400 );
+        return;
+    }
+
+    if ( ! self::empresa_existe( $empresa_id ) ) {
+        wp_send_json_error( array( 'message' => 'La empresa seleccionada no existe.' ), 400 );
+        return;
+    }
+
+    if ( ! $is_super_admin && $wp_role === 'ruteo_admin' ) {
+        wp_send_json_error( array( 'message' => 'No tienes permisos para crear otro Administrador de Empresa.' ), 403 );
+        return;
+    }
+
+    if ( $input['edit_id'] > 0 ) {
+        self::procesar_edicion_usuario( $input, $wp_role, $empresa_id, $signer_caps, $is_super_admin );
+        return;
+    }
+
+    self::procesar_creacion_usuario( $input, $wp_role, $empresa_id, $signer_caps );
+}
+
+
+/**
+ * Extrae y sanitiza todos los campos recibidos por $_POST.
+ */
+private static function extract_user_input() {
+
+    return array(
+        'edit_id'               => isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0,
+        'username'              => isset( $_POST['username'] ) ? sanitize_user( wp_unslash( $_POST['username'] ) ) : '',
+        'email'                 => isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '',
+        'password'              => isset( $_POST['password'] ) ? $_POST['password'] : '',
+        'display_name'          => isset( $_POST['display_name'] ) ? sanitize_text_field( wp_unslash( $_POST['display_name'] ) ) : '',
+        'role'                  => isset( $_POST['role'] ) ? sanitize_text_field( wp_unslash( $_POST['role'] ) ) : 'ruteo_worker',
+        'phone'                 => isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '',
+        'pm_assigned'           => isset( $_POST['pm_assigned'] ) ? sanitize_text_field( wp_unslash( $_POST['pm_assigned'] ) ) : '',
+        'negativa_rol'          => isset( $_POST['negativa_rol'] ) ? sanitize_text_field( wp_unslash( $_POST['negativa_rol'] ) ) : '',
+        'position'              => isset( $_POST['position'] ) ? sanitize_text_field( wp_unslash( $_POST['position'] ) ) : '',
+        'requested_empresa_id'  => isset( $_POST['empresa_id'] ) ? absint( $_POST['empresa_id'] ) : 0,
+        'raw_caps'              => isset( $_POST['signer_caps'] ) ? $_POST['signer_caps'] : array(),
+    );
+}
+
+
+/**
+ * Normaliza signer_caps venga como string separado por comas o como array.
+ */
+private static function parse_signer_caps( $raw_caps ) {
+
+    if ( is_string( $raw_caps ) ) {
+        return array_filter( array_map( 'trim', explode( ',', $raw_caps ) ) );
+    }
+
+    if ( is_array( $raw_caps ) ) {
+        return array_map( 'sanitize_text_field', $raw_caps );
+    }
+
+    return array();
+}
+
+
+/**
+ * Convierte el rol enviado por el frontend al slug real de rol de WordPress.
+ */
+private static function map_frontend_role_to_wp_role( $role ) {
+
+    if ( $role === 'admin' || $role === 'ruteo_admin' ) {
+        return 'ruteo_admin';
+    }
+
+    if ( $role === 'sup_operativo' || $role === 'ruteo_sup_operativo' ) {
+        return 'ruteo_sup_operativo';
+    }
+
+    if ( $role === 'sup_hse' || $role === 'ruteo_sup_hse' ) {
+        return 'ruteo_sup_hse';
+    }
+
+    return 'ruteo_worker';
+}
+
+
+/**
+ * Verifica que la empresa exista en la tabla ruteo_empresas.
+ */
+private static function empresa_existe( $empresa_id ) {
+
+    global $wpdb;
+
+    $tabla_empresas = $wpdb->prefix . 'ruteo_empresas';
+
+    $existe = $wpdb->get_var(
+        $wpdb->prepare(
+            "SELECT id FROM {$tabla_empresas} WHERE id = %d LIMIT 1",
+            $empresa_id
+        )
+    );
+
+    return (bool) $existe;
+}
+
+
+/**
+ * Guarda los meta campos adicionales que se repiten en creación y edición.
+ */
+private static function guardar_meta_adicional( $user_id, $input, $signer_caps ) {
+
+    update_user_meta( $user_id, 'ruteo_phone', $input['phone'] );
+    update_user_meta( $user_id, 'ruteo_pm_assigned', $input['pm_assigned'] );
+    update_user_meta( $user_id, 'ruteo_negativa_rol', $input['negativa_rol'] );
+    update_user_meta( $user_id, 'ruteo_position', $input['position'] );
+    update_user_meta( $user_id, 'ruteo_signer_caps', $signer_caps );
+}
+
+
+/**
+ * Procesa el avatar subido (si existe) y lo guarda como base64 en user_meta.
+ * Antes estaba duplicado en la rama de edición y en la de creación.
+ */
+private static function procesar_avatar( $user_id, $empresa_id = 0 ) {
+
+    if ( ! empty( $_FILES['avatar']['tmp_name'] ) ) {
+        $tmp_file = $_FILES['avatar']['tmp_name'];
+        $type     = mime_content_type( $tmp_file );
+        $content  = file_get_contents( $tmp_file );
+
+        $base64 = 'data:' . $type . ';base64,' . base64_encode( $content );
+
+        update_user_meta( $user_id, 'ruteo_avatar', $base64 );
+
+        @unlink( $tmp_file );
+        return;
+    }
+
+    // Si no subieron foto a mano, usamos el logo de la empresa como avatar
+    // por defecto (solo si el usuario todavia no tiene avatar propio).
+    if ( $empresa_id ) {
+        $avatar_actual = get_user_meta( $user_id, 'ruteo_avatar', true );
+        if ( empty( $avatar_actual ) ) {
+            $logo_empresa = self::get_empresa_logo( $empresa_id );
+            if ( $logo_empresa ) {
+                update_user_meta( $user_id, 'ruteo_avatar', $logo_empresa );
             }
-            if ( ! empty( $password ) ) {
-                $user_data['user_pass'] = $password;
-            }
-            wp_update_user( $user_data );
-
-            $u = new WP_User( $edit_id );
-            $u->set_role( $wp_role );
-
-            update_user_meta( $edit_id, 'ruteo_phone', $phone );
-            update_user_meta( $edit_id, 'ruteo_pm_assigned', $pm_assigned );
-            update_user_meta( $edit_id, 'ruteo_negativa_rol', $negativa_rol );
-            update_user_meta( $edit_id, 'ruteo_position', $position );
-            update_user_meta( $edit_id, 'ruteo_signer_caps', $signer_caps );
-
-            if ( ! empty( $_FILES['avatar']['tmp_name'] ) ) {
-                $tmp_file = $_FILES['avatar']['tmp_name'];
-                $type     = mime_content_type( $tmp_file );
-                $content  = file_get_contents( $tmp_file );
-                $base64   = 'data:' . $type . ';base64,' . base64_encode( $content );
-                update_user_meta( $edit_id, 'ruteo_avatar', $base64 );
-                @unlink( $tmp_file );
-            }
-
-            self::registrar_log( 'Usuario Actualizado', 'Se actualizaron rol (' . $wp_role . '), cargo y permisos de firma del usuario ID #' . $edit_id );
-
-            wp_send_json_success( array(
-                'message' => 'Usuario actualizado correctamente.',
-                'user_id' => $edit_id,
-            ) );
-            return;
         }
+    }
+}
 
-        if ( empty( $username ) || empty( $password ) || empty( $email ) ) {
-            wp_send_json_error( array( 'message' => 'Usuario, correo y clave son obligatorios.' ) );
-            return;
-        }
 
-        if ( username_exists( $username ) ) {
-            wp_send_json_error( array( 'message' => 'El nombre de usuario ya existe.' ) );
-            return;
-        }
+/**
+ * Rama de edición de usuario.
+ */
+private static function procesar_edicion_usuario( $input, $wp_role, $empresa_id, $signer_caps, $is_super_admin ) {
 
-        if ( email_exists( $email ) ) {
-            wp_send_json_error( array( 'message' => 'El correo electronico ya esta registrado.' ) );
-            return;
-        }
+    $edit_id     = $input['edit_id'];
+    $target_user = get_userdata( $edit_id );
 
-        $user_id = wp_insert_user( array(
-            'user_login'   => $username,
-            'user_pass'    => $password,
-            'user_email'   => $email,
-            'display_name' => ! empty( $display_name ) ? $display_name : $username,
+    if ( ! $target_user ) {
+        wp_send_json_error( array( 'message' => 'El usuario que intentas editar no existe.' ), 404 );
+        return;
+    }
+
+    $target_empresa_id = self::get_user_empresa_id( $edit_id );
+
+    if ( ! $is_super_admin && $target_empresa_id !== $empresa_id ) {
+        wp_send_json_error( array( 'message' => 'No tienes permisos para modificar usuarios de otra empresa.' ), 403 );
+        return;
+    }
+
+    if ( ! $is_super_admin && in_array( 'ruteo_admin', (array) $target_user->roles, true ) ) {
+        wp_send_json_error( array( 'message' => 'No tienes permisos para modificar al Administrador de la empresa.' ), 403 );
+        return;
+    }
+
+    if ( $wp_role === 'ruteo_super_admin' ) {
+        wp_send_json_error( array( 'message' => 'No se puede asignar el rol Administrador General desde esta sección.' ), 403 );
+        return;
+    }
+
+    $user_data = array(
+        'ID'           => $edit_id,
+        'display_name' => ! empty( $input['display_name'] ) ? $input['display_name'] : $input['username'],
+    );
+
+    if ( ! empty( $input['email'] ) ) {
+        $user_data['user_email'] = $input['email'];
+    }
+
+    if ( ! empty( $input['password'] ) ) {
+        $user_data['user_pass'] = $input['password'];
+    }
+
+    $updated_user = wp_update_user( $user_data );
+
+    if ( is_wp_error( $updated_user ) ) {
+        wp_send_json_error( array( 'message' => $updated_user->get_error_message() ) );
+        return;
+    }
+
+    $u = new WP_User( $edit_id );
+    $u->set_role( $wp_role );
+
+    update_user_meta( $edit_id, 'ruteo_empresa_id', $target_empresa_id );
+
+    self::guardar_meta_adicional( $edit_id, $input, $signer_caps );
+    self::procesar_avatar( $edit_id );
+
+    self::registrar_log(
+        'Usuario Actualizado',
+        'Se actualizaron rol (' . $wp_role . '), cargo, permisos y empresa del usuario ID #' . $edit_id . '. Empresa ID: ' . $target_empresa_id
+    );
+
+    wp_send_json_success(
+        array(
+            'message'    => 'Usuario actualizado correctamente.',
+            'user_id'    => $edit_id,
+            'empresa_id' => $target_empresa_id,
+        )
+    );
+}
+
+
+/**
+ * Rama de creación de usuario.
+ */
+private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id, $signer_caps ) {
+
+    if ( empty( $input['username'] ) || empty( $input['password'] ) || empty( $input['email'] ) ) {
+        wp_send_json_error( array( 'message' => 'Usuario, correo y clave son obligatorios.' ) );
+        return;
+    }
+
+    if ( username_exists( $input['username'] ) ) {
+        wp_send_json_error( array( 'message' => 'El nombre de usuario ya existe.' ) );
+        return;
+    }
+
+    if ( email_exists( $input['email'] ) ) {
+        wp_send_json_error( array( 'message' => 'El correo electronico ya esta registrado.' ) );
+        return;
+    }
+
+    $user_id = wp_insert_user(
+        array(
+            'user_login'   => $input['username'],
+            'user_pass'    => $input['password'],
+            'user_email'   => $input['email'],
+            'display_name' => ! empty( $input['display_name'] ) ? $input['display_name'] : $input['username'],
             'role'         => $wp_role,
-        ) );
+        )
+    );
 
-        if ( is_wp_error( $user_id ) ) {
-            wp_send_json_error( array( 'message' => $user_id->get_error_message() ) );
-            return;
-        }
-
-        update_user_meta( $user_id, 'ruteo_phone', $phone );
-        update_user_meta( $user_id, 'ruteo_pm_assigned', $pm_assigned );
-        update_user_meta( $user_id, 'ruteo_negativa_rol', $negativa_rol );
-        update_user_meta( $user_id, 'ruteo_position', $position );
-        update_user_meta( $user_id, 'ruteo_signer_caps', $signer_caps );
-
-        if ( ! empty( $_FILES['avatar']['tmp_name'] ) ) {
-            $tmp_file = $_FILES['avatar']['tmp_name'];
-            $type     = mime_content_type( $tmp_file );
-            $content  = file_get_contents( $tmp_file );
-            $base64   = 'data:' . $type . ';base64,' . base64_encode( $content );
-            update_user_meta( $user_id, 'ruteo_avatar', $base64 );
-            @unlink( $tmp_file );
-        }
-
-        self::registrar_log( 'Usuario Creado', 'Se creo la cuenta de usuario ' . $username . ' con rol ' . $wp_role . ' y permisos de firmante' );
-
-        wp_send_json_success( array(
-            'message' => 'Usuario creado exitosamente con perfil ampliado.',
-            'user_id' => $user_id,
-        ) );
+    if ( is_wp_error( $user_id ) ) {
+        wp_send_json_error( array( 'message' => $user_id->get_error_message() ) );
+        return;
     }
 
-    public function handle_ajax_delete_user() {
-        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+    update_user_meta( $user_id, 'ruteo_empresa_id', $empresa_id );
 
-        $current_user = wp_get_current_user();
-        $is_admin     = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+    self::guardar_meta_adicional( $user_id, $input, $signer_caps );
+    self::procesar_avatar( $user_id, $empresa_id );
 
-        if ( ! $is_admin ) {
-            wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+    self::registrar_log(
+        'Usuario Creado',
+        'Se creo la cuenta de usuario ' . $input['username'] . ' con rol ' . $wp_role . ', empresa ID #' . $empresa_id . ' y permisos de firmante'
+    );
+
+    wp_send_json_success(
+        array(
+            'message'    => 'Usuario creado exitosamente con perfil ampliado.',
+            'user_id'    => $user_id,
+            'empresa_id' => $empresa_id,
+        )
+    );
+}
+
+   public function handle_ajax_delete_user() {
+    check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
+    $current_user = wp_get_current_user();
+
+    $is_super_admin   = self::es_super_admin( $current_user );
+    $is_company_admin = in_array( 'ruteo_admin', (array) $current_user->roles, true );
+
+    if ( ! $is_super_admin && ! $is_company_admin ) {
+        wp_send_json_error( array( 'message' => 'Acceso denegado.' ), 403 );
+        return;
+    }
+
+    $user_id = isset( $_POST['user_id'] ) ? absint( $_POST['user_id'] ) : 0;
+
+    if ( ! $user_id || $user_id === $current_user->ID ) {
+        wp_send_json_error( array( 'message' => 'Acción no permitida.' ), 400 );
+        return;
+    }
+
+    $target_user = get_userdata( $user_id );
+
+    if ( ! $target_user ) {
+        wp_send_json_error( array( 'message' => 'El usuario no existe.' ), 404 );
+        return;
+    }
+
+    // PROTECCIÓN DEL ADMINISTRADOR GENERAL
+    // Nadie puede eliminar a un Administrador General desde aquí,
+    // ni siquiera otro Administrador General.
+    if ( self::es_super_admin( $target_user ) ) {
+        wp_send_json_error(
+            array( 'message' => 'No se puede eliminar un Administrador General desde esta sección.' ),
+            403
+        );
+        return;
+    }
+
+    if ( ! $is_super_admin ) {
+
+        $empresa_id        = self::get_user_empresa_id( $current_user->ID );
+        $target_empresa_id = self::get_user_empresa_id( $user_id );
+
+        if ( ! $empresa_id ) {
+            wp_send_json_error( array( 'message' => 'Tu usuario no tiene una empresa asociada.' ), 403 );
             return;
         }
 
-        $user_id = isset( $_POST['user_id'] ) ? intval( $_POST['user_id'] ) : 0;
-        if ( $user_id === 0 || $user_id === $current_user->ID ) {
-            wp_send_json_error( array( 'message' => 'Accion no permitida.' ) );
+        if ( $target_empresa_id !== $empresa_id ) {
+            wp_send_json_error( array( 'message' => 'No puedes eliminar usuarios de otra empresa.' ), 403 );
             return;
         }
 
-        require_once ABSPATH . 'wp-admin/includes/user.php';
-        $deleted = wp_delete_user( $user_id );
-
-        if ( $deleted ) {
-            wp_send_json_success( array( 'message' => 'Usuario eliminado correctamente.' ) );
-        } else {
-            wp_send_json_error( array( 'message' => 'No se pudo eliminar el usuario.' ) );
+        if ( in_array( 'ruteo_admin', (array) $target_user->roles, true ) ) {
+            wp_send_json_error( array( 'message' => 'No tienes permisos para eliminar al Administrador de la empresa.' ), 403 );
+            return;
         }
     }
+
+    // Guardamos estos datos ANTES de borrar, para poder loguearlos después.
+    $target_username = $target_user->user_login;
+    $target_empresa   = self::get_user_empresa_id( $user_id );
+
+    require_once ABSPATH . 'wp-admin/includes/user.php';
+
+    $deleted = wp_delete_user( $user_id );
+
+    if ( ! $deleted ) {
+        wp_send_json_error( array( 'message' => 'No se pudo eliminar el usuario.' ), 500 );
+        return;
+    }
+
+    self::registrar_log(
+        'Usuario Eliminado',
+        'Se eliminó al usuario ' . $target_username . ' (ID #' . $user_id . '), empresa ID: ' . $target_empresa
+    );
+
+    wp_send_json_success( array( 'message' => 'Usuario eliminado correctamente.' ) );
+}
 
     public function handle_ajax_update_profile() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
@@ -964,11 +1396,11 @@ class WPRuteoApp {
     public function handle_ajax_update_site_logo() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
 
-        $current_user = wp_get_current_user();
-        $is_admin     = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+        $current_user   = wp_get_current_user();
+        $is_super_admin = self::es_super_admin( $current_user );
 
-        if ( ! $is_admin ) {
-            wp_send_json_error( array( 'message' => 'Solo un Administrador puede actualizar el logo del sistema.' ) );
+        if ( ! $is_super_admin ) {
+            wp_send_json_error( array( 'message' => 'Solo el Administrador General puede actualizar el logo del sistema.' ) );
             return;
         }
 
@@ -1031,17 +1463,18 @@ class WPRuteoApp {
         }
 
         $new_report = array(
-            'id'          => 'MAT-' . time(),
-            'incidencia'  => $incidencia,
-            'crq'         => $crq,
-            'descripcion' => $descripcion,
-            'tramo'       => $tramo,
-            'fecha'       => $fecha,
-            'almacen_pm'  => $almacen_pm,
-            'items'       => $items,
-            'user'        => wp_get_current_user()->display_name,
-            'created_at'  => current_time( 'mysql' ),
-        );
+    'id'          => 'MAT-' . time(),
+    'incidencia'  => $incidencia,
+    'crq'         => $crq,
+    'descripcion' => $descripcion,
+    'tramo'       => $tramo,
+    'fecha'       => $fecha,
+    'almacen_pm'  => $almacen_pm,
+    'items'       => $items,
+    'user'        => wp_get_current_user()->display_name,
+    'empresa_id'  => self::get_user_empresa_id( get_current_user_id() ),
+    'created_at'  => current_time( 'mysql' ),
+);
 
         $materiales = get_option( 'wp_ruteo_materiales_store', array() );
         if ( ! is_array( $materiales ) ) {
@@ -1073,23 +1506,35 @@ class WPRuteoApp {
     }
 
     public function handle_ajax_get_materiales() {
-        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+    check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
 
-        if ( ! is_user_logged_in() ) {
-            wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
-            return;
-        }
-
-        $materiales = get_option( 'wp_ruteo_materiales_store', array() );
-        if ( ! is_array( $materiales ) ) {
-            $materiales = array();
-        }
-
-        wp_send_json_success( array(
-            'materiales' => $materiales,
-            'total'      => count($materiales)
-        ) );
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+        return;
     }
+
+    $current_user = wp_get_current_user();
+    $empresa_id   = self::get_user_empresa_id( $current_user->ID );
+    $is_super     = self::es_super_admin( $current_user );
+
+    $materiales = get_option( 'wp_ruteo_materiales_store', array() );
+    if ( ! is_array( $materiales ) ) {
+        $materiales = array();
+    }
+
+    if ( ! $is_super ) {
+        $materiales = array_values( array_filter( $materiales, function( $m ) use ( $empresa_id ) {
+            $m_empresa = isset( $m['empresa_id'] ) ? (int) $m['empresa_id'] : 0;
+            // Reportes antiguos sin empresa_id se muestran igual, para no perder historial previo.
+            return $m_empresa === $empresa_id;
+        } ) );
+    }
+
+    wp_send_json_success( array(
+        'materiales' => $materiales,
+        'total'      => count( $materiales )
+    ) );
+}
 
     public function handle_ajax_update_material() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
@@ -1141,45 +1586,225 @@ class WPRuteoApp {
     }
 
     public function handle_ajax_get_clientes() {
-        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
-        if ( ! is_user_logged_in() ) {
-            wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
-            return;
-        }
-        $clientes = get_option( 'ruteo_clientes_list', array() );
-        if ( empty( $clientes ) || ! is_array( $clientes ) ) {
-            $clientes = array(
-                array(
-                    'id'     => 'CLI-CYMTEL',
-                    'nombre' => 'CYMTEL',
-                    'ruc'    => '20512345678',
-                    'logo'   => '',
-                )
-            );
-            update_option( 'ruteo_clientes_list', $clientes, false );
-        }
-        wp_send_json_success( array( 'clientes' => $clientes ) );
+    check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+        return;
     }
 
-    public function handle_ajax_save_cliente() {
-        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
-        $current_user = wp_get_current_user();
-        $is_admin     = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+    $current_user = wp_get_current_user();
+    $empresa_id   = self::get_user_empresa_id( $current_user->ID );
+    $is_super     = self::es_super_admin( $current_user );
 
-        if ( ! $is_admin ) {
-            wp_send_json_error( array( 'message' => 'Solo administradores pueden gestionar clientes.' ) );
+    $clientes = get_option( 'ruteo_clientes_list', array() );
+    if ( empty( $clientes ) || ! is_array( $clientes ) ) {
+        $clientes = array(
+            array(
+                'id'         => 'CLI-CYMTEL',
+                'nombre'     => 'CYMTEL',
+                'ruc'        => '20512345678',
+                'logo'       => '',
+                'empresa_id' => 0,
+            )
+        );
+        update_option( 'ruteo_clientes_list', $clientes, false );
+    }
+
+    // El Administrador General ve todos. Cada empresa solo ve los suyos
+    // (o los antiguos sin empresa_id, para no perder datos ya existentes).
+    if ( ! $is_super ) {
+        $clientes = array_values( array_filter( $clientes, function( $c ) use ( $empresa_id ) {
+            $c_empresa = isset( $c['empresa_id'] ) ? (int) $c['empresa_id'] : 0;
+            return $c_empresa === 0 || $c_empresa === $empresa_id;
+        } ) );
+    }
+
+    wp_send_json_success( array( 'clientes' => $clientes ) );
+}
+
+    public function handle_ajax_save_cliente() {
+    check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+    $current_user = wp_get_current_user();
+    $is_admin     = self::es_super_admin( $current_user )
+        || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+
+    if ( ! $is_admin ) {
+        wp_send_json_error( array( 'message' => 'Solo administradores pueden gestionar clientes.' ) );
+        return;
+    }
+
+    $empresa_id = self::get_user_empresa_id( $current_user->ID );
+
+    $id        = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
+    $nombre    = isset( $_POST['nombre'] ) ? sanitize_text_field( wp_unslash( $_POST['nombre'] ) ) : '';
+    $ruc       = isset( $_POST['ruc'] ) ? sanitize_text_field( wp_unslash( $_POST['ruc'] ) ) : '';
+    $direccion = isset( $_POST['direccion'] ) ? sanitize_text_field( wp_unslash( $_POST['direccion'] ) ) : '';
+    $contacto  = isset( $_POST['contacto'] ) ? sanitize_text_field( wp_unslash( $_POST['contacto'] ) ) : '';
+    $logo      = isset( $_POST['logo_base64'] ) ? $_POST['logo_base64'] : '';
+
+    if ( empty( $nombre ) ) {
+        wp_send_json_error( array( 'message' => 'El nombre del cliente es obligatorio.' ) );
+        return;
+    }
+
+    if ( ! empty( $_FILES['logo']['tmp_name'] ) ) {
+        $tmp     = $_FILES['logo']['tmp_name'];
+        $type    = mime_content_type( $tmp );
+        $content = file_get_contents( $tmp );
+        $logo    = 'data:' . $type . ';base64,' . base64_encode( $content );
+        @unlink( $tmp );
+    }
+
+    $clientes = get_option( 'ruteo_clientes_list', array() );
+    if ( ! is_array( $clientes ) ) {
+        $clientes = array();
+    }
+
+    if ( ! empty( $id ) ) {
+
+        foreach ( $clientes as &$c ) {
+            if ( isset( $c['id'] ) && $c['id'] === $id ) {
+
+                // Un admin de empresa no puede editar clientes de otra empresa.
+                $c_empresa = isset( $c['empresa_id'] ) ? (int) $c['empresa_id'] : 0;
+                if ( ! self::es_super_admin( $current_user ) && $c_empresa !== 0 && $c_empresa !== $empresa_id ) {
+                    wp_send_json_error( array( 'message' => 'No puedes editar clientes de otra empresa.' ) );
+                    return;
+                }
+
+                $c['nombre']    = $nombre;
+                $c['ruc']       = $ruc;
+                $c['direccion'] = $direccion;
+                $c['contacto']  = $contacto;
+                if ( ! empty( $logo ) ) {
+                    $c['logo'] = $logo;
+                }
+                break;
+            }
+        }
+        unset( $c );
+
+    } else {
+
+        $new_id = 'CLI-' . time();
+        $clientes[] = array(
+            'id'         => $new_id,
+            'nombre'     => $nombre,
+            'ruc'        => $ruc,
+            'direccion'  => $direccion,
+            'contacto'   => $contacto,
+            'logo'       => $logo,
+            'empresa_id' => $empresa_id,
+        );
+    }
+
+    update_option( 'ruteo_clientes_list', $clientes, false );
+    wp_send_json_success( array(
+        'message'  => 'Cliente guardado con exito.',
+        'clientes' => $clientes
+    ) );
+}
+
+    public function handle_ajax_delete_cliente() {
+    check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+    $current_user = wp_get_current_user();
+    $is_admin     = self::es_super_admin( $current_user )
+        || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+
+    if ( ! $is_admin ) {
+        wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+        return;
+    }
+
+    $empresa_id = self::get_user_empresa_id( $current_user->ID );
+
+    $id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
+    if ( empty( $id ) ) {
+        wp_send_json_error( array( 'message' => 'ID invalido.' ) );
+        return;
+    }
+
+    $clientes = get_option( 'ruteo_clientes_list', array() );
+    if ( is_array( $clientes ) ) {
+
+        // No permitir borrar clientes de otra empresa.
+        foreach ( $clientes as $c ) {
+            if ( isset( $c['id'] ) && $c['id'] === $id ) {
+                $c_empresa = isset( $c['empresa_id'] ) ? (int) $c['empresa_id'] : 0;
+                if ( ! self::es_super_admin( $current_user ) && $c_empresa !== 0 && $c_empresa !== $empresa_id ) {
+                    wp_send_json_error( array( 'message' => 'No puedes eliminar clientes de otra empresa.' ) );
+                    return;
+                }
+                break;
+            }
+        }
+
+        $clientes = array_values( array_filter( $clientes, function( $c ) use ( $id ) {
+            return isset( $c['id'] ) && $c['id'] !== $id;
+        } ) );
+        update_option( 'ruteo_clientes_list', $clientes );
+    }
+
+    wp_send_json_success( array(
+        'message'  => 'Cliente eliminado correctamente.',
+        'clientes' => $clientes
+    ) );
+}
+
+
+    /**
+     * Lista todas las empresas. Solo el Administrador General puede verlas todas.
+     */
+    public function handle_ajax_get_empresas() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
+        if ( ! self::es_super_admin() ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado. Solo el Administrador General puede ver las empresas.' ) );
             return;
         }
 
-        $id        = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
+        global $wpdb;
+        $table = $wpdb->prefix . 'ruteo_empresas';
+        $empresas = $wpdb->get_results( "SELECT * FROM $table ORDER BY fecha_creacion DESC", ARRAY_A );
+
+        wp_send_json_success( array( 'empresas' => $empresas ) );
+    }
+
+    /**
+     * Crea una Empresa + su Administrador en un solo paso.
+     * Solo el Administrador General puede hacerlo.
+     */
+    public function handle_ajax_save_empresa() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
+        if ( ! self::es_super_admin() ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado. Solo el Administrador General puede crear empresas.' ) );
+            return;
+        }
+
         $nombre    = isset( $_POST['nombre'] ) ? sanitize_text_field( wp_unslash( $_POST['nombre'] ) ) : '';
         $ruc       = isset( $_POST['ruc'] ) ? sanitize_text_field( wp_unslash( $_POST['ruc'] ) ) : '';
         $direccion = isset( $_POST['direccion'] ) ? sanitize_text_field( wp_unslash( $_POST['direccion'] ) ) : '';
         $contacto  = isset( $_POST['contacto'] ) ? sanitize_text_field( wp_unslash( $_POST['contacto'] ) ) : '';
-        $logo      = isset( $_POST['logo_base64'] ) ? $_POST['logo_base64'] : '';
+        $logo      = '';
 
-        if ( empty( $nombre ) ) {
-            wp_send_json_error( array( 'message' => 'El nombre del cliente es obligatorio.' ) );
+        $admin_username = isset( $_POST['admin_username'] ) ? sanitize_user( wp_unslash( $_POST['admin_username'] ) ) : '';
+        $admin_email    = isset( $_POST['admin_email'] ) ? sanitize_email( wp_unslash( $_POST['admin_email'] ) ) : '';
+        $admin_password = isset( $_POST['admin_password'] ) ? $_POST['admin_password'] : '';
+        $admin_nombre   = isset( $_POST['admin_nombre'] ) ? sanitize_text_field( wp_unslash( $_POST['admin_nombre'] ) ) : '';
+
+        if ( empty( $nombre ) || empty( $admin_username ) || empty( $admin_email ) || empty( $admin_password ) ) {
+            wp_send_json_error( array( 'message' => 'Nombre de empresa, usuario, correo y clave del administrador son obligatorios.' ) );
+            return;
+        }
+
+        if ( username_exists( $admin_username ) ) {
+            wp_send_json_error( array( 'message' => 'El nombre de usuario del administrador ya existe.' ) );
+            return;
+        }
+
+        if ( email_exists( $admin_email ) ) {
+            wp_send_json_error( array( 'message' => 'El correo del administrador ya esta registrado.' ) );
             return;
         }
 
@@ -1191,71 +1816,97 @@ class WPRuteoApp {
             @unlink( $tmp );
         }
 
-        $clientes = get_option( 'ruteo_clientes_list', array() );
-        if ( ! is_array( $clientes ) ) {
-            $clientes = array();
+        global $wpdb;
+        $table = $wpdb->prefix . 'ruteo_empresas';
+
+        $wpdb->insert( $table, array(
+            'nombre'    => $nombre,
+            'ruc'       => $ruc,
+            'direccion' => $direccion,
+            'contacto'  => $contacto,
+            'logo'      => $logo,
+            'estado'    => 'activa',
+        ) );
+
+        $empresa_id = $wpdb->insert_id;
+
+        if ( ! $empresa_id ) {
+            wp_send_json_error( array( 'message' => 'No se pudo crear la empresa en la base de datos.' ) );
+            return;
         }
 
-        if ( ! empty( $id ) ) {
-            foreach ( $clientes as &$c ) {
-                if ( isset( $c['id'] ) && $c['id'] === $id ) {
-                    $c['nombre']    = $nombre;
-                    $c['ruc']       = $ruc;
-                    $c['direccion'] = $direccion;
-                    $c['contacto']  = $contacto;
-                    if ( ! empty( $logo ) ) {
-                        $c['logo'] = $logo;
-                    }
-                    break;
-                }
-            }
-        } else {
-            $new_id = 'CLI-' . time();
-            $clientes[] = array(
-                'id'        => $new_id,
-                'nombre'    => $nombre,
-                'ruc'       => $ruc,
-                'direccion' => $direccion,
-                'contacto'  => $contacto,
-                'logo'      => $logo,
-            );
+        $admin_user_id = wp_insert_user( array(
+            'user_login'   => $admin_username,
+            'user_pass'    => $admin_password,
+            'user_email'   => $admin_email,
+            'display_name' => ! empty( $admin_nombre ) ? $admin_nombre : $admin_username,
+            'role'         => 'ruteo_admin',
+        ) );
+
+        if ( is_wp_error( $admin_user_id ) ) {
+            $wpdb->delete( $table, array( 'id' => $empresa_id ) );
+            wp_send_json_error( array( 'message' => 'Empresa no creada: ' . $admin_user_id->get_error_message() ) );
+            return;
         }
 
-        update_option( 'ruteo_clientes_list', $clientes, false );
+        update_user_meta( $admin_user_id, 'ruteo_empresa_id', $empresa_id );
+        $wpdb->update( $table, array( 'admin_user_id' => $admin_user_id ), array( 'id' => $empresa_id ) );
+
+        if ( $logo ) {
+            update_user_meta( $admin_user_id, 'ruteo_avatar', $logo );
+        }
+
+        self::registrar_log( 'Empresa Creada', 'Se creo la empresa "' . $nombre . '" (ID ' . $empresa_id . ') con administrador ' . $admin_username );
+
         wp_send_json_success( array(
-            'message'  => 'Cliente guardado con exito.',
-            'clientes' => $clientes
+            'message'    => 'Empresa y administrador creados correctamente.',
+            'empresa_id' => $empresa_id,
         ) );
     }
 
-    public function handle_ajax_delete_cliente() {
+    /**
+     * Elimina una empresa. Solo el Administrador General.
+     * No elimina al usuario administrador por seguridad (se hace aparte).
+     */
+    public function handle_ajax_delete_empresa() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
-        $current_user = wp_get_current_user();
-        $is_admin     = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
 
-        if ( ! $is_admin ) {
+        if ( ! self::es_super_admin() ) {
             wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
             return;
         }
 
-        $id = isset( $_POST['id'] ) ? sanitize_text_field( wp_unslash( $_POST['id'] ) ) : '';
-        if ( empty( $id ) ) {
-            wp_send_json_error( array( 'message' => 'ID invalido.' ) );
+        $empresa_id = isset( $_POST['empresa_id'] ) ? intval( $_POST['empresa_id'] ) : 0;
+        if ( ! $empresa_id ) {
+            wp_send_json_error( array( 'message' => 'ID de empresa invalido.' ) );
             return;
         }
 
-        $clientes = get_option( 'ruteo_clientes_list', array() );
-        if ( is_array( $clientes ) ) {
-            $clientes = array_values( array_filter( $clientes, function( $c ) use ( $id ) {
-                return isset( $c['id'] ) && $c['id'] !== $id;
-            } ) );
-            update_option( 'ruteo_clientes_list', $clientes );
-        }
+        global $wpdb;
+        $usuarios_asociados = get_users(
+    array(
+        'meta_key'   => 'ruteo_empresa_id',
+        'meta_value' => $empresa_id,
+        'fields'     => 'ID',
+        'number'     => 1,
+    )
+);
 
-        wp_send_json_success( array(
-            'message'  => 'Cliente eliminado correctamente.',
-            'clientes' => $clientes
-        ) );
+if ( ! empty( $usuarios_asociados ) ) {
+    wp_send_json_error(
+        array(
+            'message' => 'No puedes eliminar esta empresa porque todavía tiene usuarios asociados.'
+        ),
+        409
+    );
+    return;
+}
+        $table = $wpdb->prefix . 'ruteo_empresas';
+        $wpdb->delete( $table, array( 'id' => $empresa_id ) );
+
+        self::registrar_log( 'Empresa Eliminada', 'Se elimino la empresa ID ' . $empresa_id );
+
+        wp_send_json_success( array( 'message' => 'Empresa eliminada correctamente.' ) );
     }
 
     public function handle_ajax_negativa_guardar() {
@@ -1271,11 +1922,13 @@ class WPRuteoApp {
         $table = $wpdb->prefix . 'ruteo_negativas';
         $current_user = wp_get_current_user();
         $now = current_time( 'mysql' );
+        $empresa_id_creador = self::get_user_empresa_id( $current_user->ID );
 
         $id    = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
         $etapa = isset( $_POST['etapa'] ) ? sanitize_text_field( wp_unslash( $_POST['etapa'] ) ) : '';
 
-        $is_admin = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+        $is_admin = self::es_super_admin( $current_user )
+            || in_array( 'ruteo_admin', (array) $current_user->roles, true );
         $negativa_rol = get_user_meta( $current_user->ID, 'ruteo_negativa_rol', true );
 
         $rol_requerido = array(
@@ -1586,91 +2239,219 @@ class WPRuteoApp {
         ) );
     }
 
-    public function handle_ajax_negativa_listar() {
+    public function handle_ajax_negativa_editar() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
         if ( ! is_user_logged_in() ) {
-            wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+            wp_send_json_error( array( 'message' => 'Acceso denegado. Debes iniciar sesion.' ) );
             return;
         }
 
-        set_time_limit( 30 );
-        nocache_headers();
-        header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
-        header( 'Pragma: no-cache' );
-        header( 'Expires: 0' );
-
         global $wpdb;
         $table = $wpdb->prefix . 'ruteo_negativas';
-        $db_registros = $wpdb->get_results( "SELECT * FROM $table ORDER BY id DESC", ARRAY_A );
-        if ( ! is_array( $db_registros ) ) {
-            $db_registros = array();
+        $current_user = wp_get_current_user();
+        $id = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
+
+        if ( $id <= 0 ) {
+            wp_send_json_error( array( 'message' => 'Registro invalido.' ) );
+            return;
         }
 
-        $db_map = array();
-        foreach ( $db_registros as $row ) {
-            if ( ! empty( $row['id'] ) ) {
-                $db_map[ intval( $row['id'] ) ] = $row;
-            }
+        $registro = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ), ARRAY_A );
+        if ( ! $registro ) {
+            wp_send_json_error( array( 'message' => 'El registro no existe.' ) );
+            return;
         }
 
-        $sheets_registros = array();
-        if ( $this->webhook_url ) {
-            $target_url = add_query_arg( array(
-                'action' => 'get_negativas',
-                '_ts'    => microtime( true )
-            ), $this->webhook_url );
+        $is_admin        = in_array( 'administrator', (array) $current_user->roles, true ) || in_array( 'ruteo_admin', (array) $current_user->roles, true );
+        $is_sup_operativo = in_array( 'ruteo_sup_operativo', (array) $current_user->roles, true );
+        $es_creador       = ( $registro['creado_por'] === $current_user->display_name );
 
-            $response = wp_remote_get( $target_url, array(
-                'timeout'     => 25,
-                'redirection' => 5,
-                'sslverify'   => false,
-                'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            ) );
-
-            if ( ! is_wp_error( $response ) ) {
-                $code = wp_remote_retrieve_response_code( $response );
-                $body = wp_remote_retrieve_body( $response );
-                if ( $code === 200 && ! empty( $body ) ) {
-                    $json = json_decode( $body, true );
-                    if ( isset( $json['status'] ) && $json['status'] === 'success' && isset( $json['negativas'] ) && is_array( $json['negativas'] ) ) {
-                        $sheets_registros = $json['negativas'];
-                    }
-                }
-            }
+        if ( ! $is_admin && ! $is_sup_operativo && ! $es_creador ) {
+            wp_send_json_error( array( 'message' => 'No tienes permiso para editar este registro. Solo puede editarlo quien lo creo, el Supervisor Operativo o un Administrador.' ) );
+            return;
         }
 
-        $final_registros = array();
-        if ( ! empty( $sheets_registros ) ) {
-            foreach ( $sheets_registros as $s_row ) {
-                $sid = isset( $s_row['id'] ) ? intval( $s_row['id'] ) : 0;
-                if ( $sid > 0 && isset( $db_map[ $sid ] ) ) {
-                    $db_row = $db_map[ $sid ];
-                    $merged = array_merge( $s_row, array_filter( $db_row, function( $v ) {
-                        return $v !== null && $v !== '';
-                    } ) );
+        $campos = array(
+            'proceso'                     => sanitize_text_field( wp_unslash( $_POST['proceso'] ?? $registro['proceso'] ) ),
+            'cm_localidad'                => sanitize_text_field( wp_unslash( $_POST['cm_localidad'] ?? $registro['cm_localidad'] ) ),
+            'contratista'                 => sanitize_text_field( wp_unslash( $_POST['contratista'] ?? $registro['contratista'] ) ),
+            'sub_contratista'             => sanitize_text_field( wp_unslash( $_POST['sub_contratista'] ?? $registro['sub_contratista'] ) ),
+            'relacionado_a'               => sanitize_text_field( wp_unslash( $_POST['relacionado_a'] ?? $registro['relacionado_a'] ) ),
+            'lugar_trabajo'               => sanitize_text_field( wp_unslash( $_POST['lugar_trabajo'] ?? $registro['lugar_trabajo'] ) ),
+            'fecha'                       => sanitize_text_field( wp_unslash( $_POST['fecha'] ?? $registro['fecha'] ) ),
+            'hora_inicio'                 => sanitize_text_field( wp_unslash( $_POST['hora_inicio'] ?? $registro['hora_inicio'] ) ),
+            'hora_fin'                    => sanitize_text_field( wp_unslash( $_POST['hora_fin'] ?? $registro['hora_fin'] ) ),
+            'total_horas'                 => sanitize_text_field( wp_unslash( $_POST['total_horas'] ?? $registro['total_horas'] ) ),
+            'supervisor_operativo_nombre' => sanitize_text_field( wp_unslash( $_POST['supervisor_operativo_nombre'] ?? $registro['supervisor_operativo_nombre'] ) ),
+            'trabajador_reportante'       => sanitize_text_field( wp_unslash( $_POST['trabajador_reportante'] ?? $registro['trabajador_reportante'] ) ),
+            'razones_negativa'            => sanitize_textarea_field( wp_unslash( $_POST['razones_negativa'] ?? $registro['razones_negativa'] ) ),
+        );
 
-                    $img_keys = array( 'foto1_url', 'foto2_url', 'firma_tecnico_img', 'firma_sup_operativo_img', 'firma_sup_seguridad_img', 'firma_hse_img', 'cliente_logo' );
-                    foreach ( $img_keys as $k ) {
-                        if ( ! empty( $db_row[ $k ] ) ) {
-                            $merged[ $k ] = $db_row[ $k ];
-                        }
-                    }
-                    $final_registros[] = $merged;
-                    unset( $db_map[ $sid ] );
-                } else {
-                    $final_registros[] = $s_row;
-                }
-            }
-            foreach ( $db_map as $db_row ) {
-                $final_registros[] = $db_row;
-            }
-        } else {
-            $final_registros = $db_registros;
-        }
+        $wpdb->update( $table, $campos, array( 'id' => $id ) );
 
-        update_option( 'ruteo_cache_negativas', $final_registros, false );
-        wp_send_json_success( array( 'registros' => $final_registros ) );
+        self::registrar_log( 'Negativa Editada', 'El usuario ' . $current_user->display_name . ' edito el registro #' . $id . ' de Negativa al Trabajo.' );
+
+        wp_send_json_success( array( 'message' => 'Registro actualizado correctamente.' ) );
     }
+
+    /**
+     * Elimina un registro de Negativa al Trabajo. Solo Administradores
+     * (General o de Empresa) pueden hacerlo, y solo de su propia empresa.
+     */
+    public function handle_ajax_negativa_eliminar() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
+        if ( ! is_user_logged_in() ) {
+            wp_send_json_error( array( 'message' => 'Acceso denegado. Debes iniciar sesion.' ) );
+            return;
+        }
+
+        global $wpdb;
+        $table         = $wpdb->prefix . 'ruteo_negativas';
+        $current_user  = wp_get_current_user();
+        $id            = isset( $_POST['id'] ) ? intval( $_POST['id'] ) : 0;
+
+        if ( $id <= 0 ) {
+            wp_send_json_error( array( 'message' => 'Registro invalido.' ) );
+            return;
+        }
+
+        $registro = $wpdb->get_row( $wpdb->prepare( "SELECT * FROM $table WHERE id = %d", $id ), ARRAY_A );
+        if ( ! $registro ) {
+            wp_send_json_error( array( 'message' => 'El registro no existe.' ) );
+            return;
+        }
+
+        $is_super_admin   = self::es_super_admin( $current_user );
+        $is_company_admin = in_array( 'ruteo_admin', (array) $current_user->roles, true );
+
+        if ( ! $is_super_admin && ! $is_company_admin ) {
+            wp_send_json_error( array( 'message' => 'Solo un Administrador puede eliminar un registro de Negativa al Trabajo.' ) );
+            return;
+        }
+
+        if ( ! $is_super_admin ) {
+            $empresa_id           = self::get_user_empresa_id( $current_user->ID );
+            $registro_empresa_id  = isset( $registro['empresa_id'] ) ? (int) $registro['empresa_id'] : 0;
+            if ( $registro_empresa_id !== $empresa_id ) {
+                wp_send_json_error( array( 'message' => 'No puedes eliminar registros de otra empresa.' ) );
+                return;
+            }
+        }
+
+        $wpdb->delete( $table, array( 'id' => $id ) );
+
+        self::registrar_log( 'Negativa Eliminada', 'El usuario ' . $current_user->display_name . ' elimino el registro #' . $id . ' de Negativa al Trabajo.' );
+
+        wp_send_json_success( array( 'message' => 'Registro eliminado correctamente.' ) );
+    }
+
+    public function handle_ajax_negativa_listar() {
+    check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+    if ( ! is_user_logged_in() ) {
+        wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
+        return;
+    }
+
+    set_time_limit( 30 );
+    nocache_headers();
+    header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
+    header( 'Pragma: no-cache' );
+    header( 'Expires: 0' );
+
+    global $wpdb;
+    $table = $wpdb->prefix . 'ruteo_negativas';
+
+    $current_user = wp_get_current_user();
+    $empresa_id   = self::get_user_empresa_id( $current_user->ID );
+    $is_super     = self::es_super_admin( $current_user );
+
+    if ( $is_super ) {
+        $db_registros = $wpdb->get_results( "SELECT * FROM $table ORDER BY id DESC", ARRAY_A );
+    } else {
+        $db_registros = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT * FROM $table WHERE empresa_id = %d ORDER BY id DESC",
+                $empresa_id
+            ),
+            ARRAY_A
+        );
+    }
+
+    if ( ! is_array( $db_registros ) ) {
+        $db_registros = array();
+    }
+
+    $db_map = array();
+    foreach ( $db_registros as $row ) {
+        if ( ! empty( $row['id'] ) ) {
+            $db_map[ intval( $row['id'] ) ] = $row;
+        }
+    }
+
+    $sheets_registros = array();
+    if ( $this->webhook_url ) {
+        $target_url = add_query_arg( array(
+            'action' => 'get_negativas',
+            '_ts'    => microtime( true )
+        ), $this->webhook_url );
+
+        $response = wp_remote_get( $target_url, array(
+            'timeout'     => 25,
+            'redirection' => 5,
+            'sslverify'   => false,
+            'user-agent'  => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        ) );
+
+        if ( ! is_wp_error( $response ) ) {
+            $code = wp_remote_retrieve_response_code( $response );
+            $body = wp_remote_retrieve_body( $response );
+            if ( $code === 200 && ! empty( $body ) ) {
+                $json = json_decode( $body, true );
+                if ( isset( $json['status'] ) && $json['status'] === 'success' && isset( $json['negativas'] ) && is_array( $json['negativas'] ) ) {
+                    $sheets_registros = $json['negativas'];
+                }
+            }
+        }
+    }
+
+    $final_registros = array();
+    if ( ! empty( $sheets_registros ) ) {
+        foreach ( $sheets_registros as $s_row ) {
+            $sid = isset( $s_row['id'] ) ? intval( $s_row['id'] ) : 0;
+            if ( $sid > 0 && isset( $db_map[ $sid ] ) ) {
+                $db_row = $db_map[ $sid ];
+                $merged = array_merge( $s_row, array_filter( $db_row, function( $v ) {
+                    return $v !== null && $v !== '';
+                } ) );
+
+                $img_keys = array( 'foto1_url', 'foto2_url', 'firma_tecnico_img', 'firma_sup_operativo_img', 'firma_sup_seguridad_img', 'firma_hse_img', 'cliente_logo' );
+                foreach ( $img_keys as $k ) {
+                    if ( ! empty( $db_row[ $k ] ) ) {
+                        $merged[ $k ] = $db_row[ $k ];
+                    }
+                }
+                $final_registros[] = $merged;
+                unset( $db_map[ $sid ] );
+            } elseif ( $is_super ) {
+                // Un registro que existe en Sheets pero no en la BD (o no en la BD
+                // filtrada por empresa) solo se muestra sin filtro al Administrador
+                // General, porque las filas de Sheets no tienen empresa_id y no
+                // podemos verificar de forma segura a que empresa pertenecen.
+                $final_registros[] = $s_row;
+            }
+        }
+        foreach ( $db_map as $db_row ) {
+            $final_registros[] = $db_row;
+        }
+    } else {
+        $final_registros = $db_registros;
+    }
+
+    update_option( 'ruteo_cache_negativas', $final_registros, false );
+    wp_send_json_success( array( 'registros' => $final_registros ) );
+}
 
     public function handle_ajax_sync_negativas_sheets() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
@@ -1721,11 +2502,12 @@ class WPRuteoApp {
         $user_pm   = $current_user->exists() ? get_user_meta( $current_user->ID, 'ruteo_pm_assigned', true ) : '';
 
         $entry = array(
-            'fecha'    => current_time( 'mysql' ),
-            'usuario'  => $user_name,
-            'pm'       => $user_pm ?: '-',
-            'accion'   => $accion,
-            'detalles' => $detalles,
+            'fecha'      => current_time( 'mysql' ),
+            'usuario'    => $user_name,
+            'pm'         => $user_pm ?: '-',
+            'accion'     => $accion,
+            'detalles'   => $detalles,
+            'empresa_id' => self::get_user_empresa_id( $current_user->exists() ? $current_user->ID : 0 ),
         );
 
         array_unshift( $logs, $entry );
@@ -1746,6 +2528,9 @@ class WPRuteoApp {
             wp_send_json_error( array( 'message' => 'Acceso denegado.' ) );
             return;
         }
+        $current_user = wp_get_current_user();
+        $empresa_id   = self::get_user_empresa_id( $current_user->ID );
+        $is_super     = self::es_super_admin( $current_user );
         $logs = get_option( 'ruteo_audit_logs', array() );
         if ( empty( $logs ) || ! is_array( $logs ) ) {
             $logs = array(
@@ -1783,6 +2568,28 @@ class WPRuteoApp {
             }
             $logs = $clean_logs;
         }
+
+        if ( ! $is_super ) {
+            $logs = array_values( array_filter( $logs, function( $l ) use ( $empresa_id ) {
+                $l_empresa = isset( $l['empresa_id'] ) ? (int) $l['empresa_id'] : -1;
+                return $l_empresa === $empresa_id;
+            } ) );
+        }
+
+        // Adjuntamos el nombre de la empresa a cada log, para poder filtrar por empresa en pantalla.
+        global $wpdb;
+        $tabla_empresas = $wpdb->prefix . 'ruteo_empresas';
+        $empresas_rows  = $wpdb->get_results( "SELECT id, nombre FROM $tabla_empresas", ARRAY_A );
+        $empresas_map   = array();
+        foreach ( $empresas_rows as $er ) {
+            $empresas_map[ (int) $er['id'] ] = $er['nombre'];
+        }
+        foreach ( $logs as &$l ) {
+            $eid = isset( $l['empresa_id'] ) ? (int) $l['empresa_id'] : 0;
+            $l['empresa'] = ( $eid && isset( $empresas_map[ $eid ] ) ) ? $empresas_map[ $eid ] : 'Admin General';
+        }
+        unset( $l );
+
         wp_send_json_success( array( 'logs' => $logs ) );
     }
 
@@ -1839,7 +2646,7 @@ class WPRuteoApp {
      * sin necesidad de reactivar el plugin ni ejecutarlo en cada carga de pagina.
      */
     public function maybe_upgrade_negativas_table() {
-        $version_actual = '2.3.0';
+        $version_actual = '2.4.0';
         if ( get_option( 'ruteo_negativas_db_version' ) === $version_actual ) {
             return;
         }
@@ -1900,12 +2707,41 @@ function ruteo_crear_tabla_negativas() {
         firma_hse_img LONGTEXT,
         estado VARCHAR(30) DEFAULT 'pendiente_tecnico',
         creado_por VARCHAR(150),
+        empresa_id BIGINT UNSIGNED DEFAULT 0,
         fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
     ) $charset_collate;";
 
     require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
     dbDelta( $sql );
 }
+
+/**
+ * Crea la tabla de Empresas (entidad real del sistema multiempresa).
+ * Cada empresa tiene su administrador vinculado via admin_user_id.
+ */
+function ruteo_crear_tabla_empresas() {
+    global $wpdb;
+    $table = $wpdb->prefix . 'ruteo_empresas';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE $table (
+        id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+        nombre VARCHAR(150) NOT NULL,
+        ruc VARCHAR(20),
+        direccion VARCHAR(255),
+        contacto VARCHAR(150),
+        logo LONGTEXT,
+        admin_user_id BIGINT UNSIGNED,
+        estado VARCHAR(20) DEFAULT 'activa',
+        fecha_creacion DATETIME DEFAULT CURRENT_TIMESTAMP
+    ) $charset_collate;";
+
+    require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
+    dbDelta( $sql );
+}
+register_activation_hook( __FILE__, 'ruteo_crear_tabla_empresas' );
+add_action( 'plugins_loaded', 'ruteo_crear_tabla_empresas' );
+
 register_activation_hook( __FILE__, 'ruteo_crear_tabla_negativas' );
 register_activation_hook( __FILE__, array( 'WPRuteoApp', 'activar_cuentas_prueba' ) );
 

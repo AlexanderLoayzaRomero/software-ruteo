@@ -129,6 +129,17 @@ jQuery(document).ready(function($) {
             $('#prof-firma-remove').hide();
         }
     }
+
+    $(document).on('change', '#prof-avatar-file', function() {
+        var file = this.files && this.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            $('#profile-avatar-img-box').html('<img src="' + e.target.result + '" alt="Avatar"><input type="file" id="prof-avatar-file" accept="image/png,image/jpeg,image/webp" style="display:none;">');
+        };
+        reader.readAsDataURL(file);
+    });
+
     $(document).on('change', '#prof-firma-file', function() {
         var f = this.files && this.files[0];
         if (!f) return;
@@ -222,16 +233,28 @@ jQuery(document).ready(function($) {
             $('#ruteo-user-badge').css('display', 'flex');
             $('#user-display-name').text(user.displayName || user.username);
             
+            var avatarInputHtml = '<input type="file" id="prof-avatar-file" accept="image/png,image/jpeg,image/webp" style="display:none;">';
+
             if (user.avatar) {
                 $('#user-avatar-box').html('<img src="' + user.avatar + '" alt="Avatar">');
-                $('#profile-avatar-img-box').html('<img src="' + user.avatar + '" alt="Avatar">');
+                $('#profile-avatar-img-box').html('<img src="' + user.avatar + '" alt="Avatar">' + avatarInputHtml);
+            } else if (user.empresaLogo) {
+                $('#user-avatar-box').html('<img src="' + user.empresaLogo + '" alt="Avatar">');
+                $('#profile-avatar-img-box').html('<img src="' + user.empresaLogo + '" alt="Avatar">' + avatarInputHtml);
             } else {
                 var initial = (user.displayName || user.username || '?').charAt(0).toUpperCase();
                 $('#user-avatar-box').html('<span id="user-avatar-text">' + initial + '</span>');
-                $('#profile-avatar-large-text').text(initial);
+                $('#profile-avatar-img-box').html('<span id="profile-avatar-large-text">' + initial + '</span>' + avatarInputHtml);
             }
 
-            var roleText = user.isAdmin ? 'Administrador (Admin)' : 'Operario (Worker)';
+            var roleText;
+if (user.isSuperAdmin) {
+    roleText = 'Admin (General)';
+} else {
+    var empresaTag = user.empresaNombre ? user.empresaNombre : 'Sin Empresa';
+    roleText = user.isAdmin ? ('Admin (' + empresaTag + ')') : ('Operario (' + empresaTag + ')');
+}
+
             $('#user-role-label').text(roleText);
             $('#btn-ruteo-logout').show();
 
@@ -244,11 +267,26 @@ jQuery(document).ready(function($) {
             $('#tab-btn-perfil').show();
 
             if (user.isAdmin) {
-                $('#tab-btn-usuarios').show();
-                $('#admin-sheets-box').show();
+              $('#tab-btn-usuarios').show();
+              $('#admin-sheets-box').show();
             } else {
-                $('#tab-btn-usuarios').hide();
-                $('#admin-sheets-box').hide();
+              $('#tab-btn-usuarios').hide();
+              $('#admin-sheets-box').hide();
+            }
+
+if (user.isSuperAdmin) {
+    $('#tab-btn-empresas').show();
+} else {
+    $('#tab-btn-empresas').hide();
+}
+
+            
+
+            if (user.isSuperAdmin) {
+                $('#tab-btn-empresas').show();
+                cargarEmpresas();
+            } else {
+                $('#tab-btn-empresas').hide();
             }
 
             // Llenar datos de perfil
@@ -381,7 +419,7 @@ jQuery(document).ready(function($) {
             'perfil': 'Perfil de Usuario',
             'login': 'Iniciar Sesion',
             'negativa': 'Formato de Negativa',
-            'lista-negativas': 'Informe de SLA',
+            'lista-negativas': 'Historial de Negativa',
         };
 
         if (titleMap[targetTab]) {
@@ -1270,6 +1308,16 @@ jQuery(document).ready(function($) {
                 $('#user-negativa-rol-select').val(u.negativaRol || '');
                 $('#user-position-input').val(u.position || '');
                 $('#user-pm-select').val(u.pmAssigned || '');
+                $('#user-avatar-input').val('');
+
+                if (u.avatar) {
+                    $('#user-avatar-preview').html(
+                        '<img src="' + u.avatar + '" style="width:56px; height:56px; object-fit:cover; border-radius:50%;">' +
+                        '<span style="font-size:11px; color:var(--text-muted); margin-left:8px;">Foto actual (sube un archivo solo si quieres reemplazarla)</span>'
+                    );
+                } else {
+                    $('#user-avatar-preview').html('<span style="font-size:11px; color:var(--text-muted);">Este usuario aun no tiene foto de perfil.</span>');
+                }
 
                 $('#user-form-title').text('Editar Cuenta: ' + u.username);
                 $('#user-create-card').slideDown(300);
@@ -1290,8 +1338,23 @@ jQuery(document).ready(function($) {
         $('#user-edit-id-input').val('0');
         $('#user-username-input').prop('readonly', false);
         $('#form-create-user')[0].reset();
+        $('#user-avatar-preview').empty();
         $('#user-form-title').text('Crear Nueva Cuenta de Usuario');
         $('#user-create-card').slideToggle(300);
+    });
+
+    // Vista previa en vivo del avatar al elegir un archivo (crear o editar)
+    $(document).on('change', '#user-avatar-input', function() {
+        var file = this.files && this.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            $('#user-avatar-preview').html(
+                '<img src="' + e.target.result + '" style="width:56px; height:56px; object-fit:cover; border-radius:50%;">' +
+                '<span style="font-size:11px; color:var(--text-muted); margin-left:8px;">Nueva foto (se guardara al enviar el formulario)</span>'
+            );
+        };
+        reader.readAsDataURL(file);
     });
 
     $('#btn-cancel-create-user').off('click').on('click', function() {
@@ -1335,6 +1398,7 @@ jQuery(document).ready(function($) {
                     $('#form-create-user')[0].reset();
                     $('#user-edit-id-input').val('0');
                     $('#user-username-input').prop('readonly', false);
+                    $('#user-avatar-preview').empty();
                     $('#user-create-card').slideUp(300);
                     cargarUsuarios();
                 } else {
@@ -1411,6 +1475,7 @@ jQuery(document).ready(function($) {
             $tbody.append('<tr><td colspan="6" style="text-align:center; padding:12px;">No hay clientes registrados.</td></tr>');
             return;
         }
+        
         clientes.forEach(function(c) {
             var logoImg = c.logo ? '<img src="' + c.logo + '" style="height:32px; max-width:80px; object-fit:contain;">' : '<span style="color:var(--text-muted); font-size:12px;">Sin logo</span>';
             var tr = '<tr>' +
@@ -1419,9 +1484,42 @@ jQuery(document).ready(function($) {
                 '<td>' + (c.ruc || '-') + '</td>' +
                 '<td>' + (c.direccion || '-') + '</td>' +
                 '<td>' + (c.contacto || '-') + '</td>' +
-                '<td><button type="button" class="btn-del-row btn-del-cliente" data-id="' + c.id + '" data-name="' + c.nombre + '">Eliminar</button></td>' +
+                '<td>' +
+                    '<button type="button" class="btn-edit-row btn-edit-cliente" data-id="' + c.id + '" data-nombre="' + (c.nombre || '').replace(/"/g, '&quot;') + '" data-ruc="' + (c.ruc || '').replace(/"/g, '&quot;') + '" data-direccion="' + (c.direccion || '').replace(/"/g, '&quot;') + '" data-contacto="' + (c.contacto || '').replace(/"/g, '&quot;') + '" data-logo="' + (c.logo || '').replace(/"/g, '&quot;') + '" style="margin-right:6px;">Editar</button>' +
+                    '<button type="button" class="btn-del-row btn-del-cliente" data-id="' + c.id + '" data-name="' + c.nombre + '">Eliminar</button>' +
+                '</td>' +
             '</tr>';
             $tbody.append(tr);
+        });
+
+        $('.btn-edit-cliente').off('click').on('click', function() {
+            var $btn = $(this);
+            $('#cli-id-input').val($btn.data('id'));
+            $('#cli-nombre-input').val($btn.data('nombre'));
+            $('#cli-ruc-input').val($btn.data('ruc'));
+            $('#cli-direccion-input').val($btn.data('direccion'));
+            $('#cli-contacto-input').val($btn.data('contacto'));
+            $('#cli-logo-file').val('');
+
+            var logoActual = $btn.data('logo');
+            if (logoActual) {
+                $('#cli-logo-actual-img').attr('src', logoActual);
+                $('#cli-logo-actual').css('display', 'flex');
+            } else {
+                $('#cli-logo-actual').hide();
+            }
+
+            $('#btn-guardar-cliente span').text('Actualizar Cliente');
+            $('#btn-cancelar-edicion-cliente').show();
+            $('html, body').animate({ scrollTop: $('#clientes-card').offset().top - 20 }, 300);
+        });
+
+        $('#btn-cancelar-edicion-cliente').off('click').on('click', function() {
+            $('#form-cliente')[0].reset();
+            $('#cli-id-input').val('');
+            $('#cli-logo-actual').hide();
+            $('#btn-guardar-cliente span').text('Guardar Cliente');
+            $(this).hide();
         });
 
         var $selects = $('.neg-select-cliente');
@@ -1438,6 +1536,11 @@ jQuery(document).ready(function($) {
                 $txt.val($sel.val());
             }
         });
+
+        // Si el usuario es de una empresa (tenant), el select recien poblado
+        // se vuelve a bloquear con el nombre de su propia empresa.
+        aplicarBloqueoClienteEmpresa($('#form-negativa-tecnico'), 'CYMTEL');
+        aplicarBloqueoClienteEmpresa($('#form-negativa-supervisor'), 'CYMTEL');
 
         $('.btn-del-cliente').off('click').on('click', function() {
             var cid = $(this).data('id');
@@ -1457,11 +1560,108 @@ jQuery(document).ready(function($) {
         renderTablaClientes(window.wpRuteoAjax.clientes);
     }
 
-    $('#form-cliente').on('submit', function(e) {
+    function cargarEmpresas() {
+        $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_get_empresas', nonce: wpRuteoAjax.nonce }, function(res) {
+            if (res.success) {
+                renderTablaEmpresas(res.data.empresas);
+            }
+        });
+    }
+
+    function renderTablaEmpresas(empresas) {
+        var $grid = $('#empresas-grid');
+        $grid.empty();
+        $('#empresas-count-badge').text(empresas ? empresas.length : 0);
+
+        if (!empresas || !empresas.length) {
+            $grid.append('<p style="text-align:center; color:var(--text-muted); padding:24px 0;">Aun no hay empresas registradas.</p>');
+            return;
+        }
+
+        empresas.forEach(function(e) {
+            var logoHtml = e.logo
+                ? '<img src="' + e.logo + '" alt="' + e.nombre + '">'
+                : '<span class="empresa-logo-placeholder">' + e.nombre.charAt(0) + '</span>';
+
+            var estadoClass = (e.estado === 'activa') ? 'status-badge-active' : 'status-badge-info';
+
+            $grid.append(
+                '<div class="empresa-card">' +
+                    '<div class="empresa-card-logo">' + logoHtml + '</div>' +
+                    '<div class="empresa-card-body">' +
+                        '<div class="empresa-card-top">' +
+                            '<h4>' + e.nombre + '</h4>' +
+                            '<span class="' + estadoClass + '">' + e.estado.toUpperCase() + '</span>' +
+                        '</div>' +
+                        '<p class="empresa-card-ruc">RUC: ' + (e.ruc || 'No registrado') + '</p>' +
+                        '<div class="empresa-card-actions">' +
+                            '<button type="button" class="btn-del-empresa" data-id="' + e.id + '" data-name="' + e.nombre + '">Eliminar</button>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>'
+            );
+        });
+
+        $('.btn-del-empresa').off('click').on('click', function() {
+            var eid = $(this).data('id');
+            var ename = $(this).data('name');
+            if (confirm('Eliminar la empresa ' + ename + '? Esta accion no se puede deshacer.')) {
+                $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_delete_empresa', nonce: wpRuteoAjax.nonce, empresa_id: eid }, function(res) {
+                    if (res.success) {
+                        cargarEmpresas();
+                    }
+                });
+            }
+        });
+    }
+
+    $('#form-empresa').on('submit', function(e) {
         e.preventDefault();
         var fd = new FormData();
+        fd.append('action', 'ruteo_save_empresa');
+        fd.append('nonce', wpRuteoAjax.nonce);
+        fd.append('nombre', $('#emp-nombre-input').val());
+        fd.append('ruc', $('#emp-ruc-input').val());
+        fd.append('direccion', $('#emp-direccion-input').val());
+        fd.append('contacto', $('#emp-contacto-input').val());
+        fd.append('admin_nombre', $('#emp-admin-nombre-input').val());
+        fd.append('admin_username', $('#emp-admin-username-input').val());
+        fd.append('admin_email', $('#emp-admin-email-input').val());
+        fd.append('admin_password', $('#emp-admin-password-input').val());
+
+        var fileInput = $('#emp-logo-file')[0];
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            fd.append('logo', fileInput.files[0]);
+        }
+
+        var $msg = $('#emp-msg');
+        $msg.removeClass('success error').hide();
+
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl,
+            type: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function(res) {
+                if (res.success) {
+                    $msg.addClass('success').text(res.data.message).fadeIn(200);
+                    $('#form-empresa')[0].reset();
+                    cargarEmpresas();
+                    setTimeout(function() { $msg.fadeOut(300); }, 4000);
+                } else {
+                    $msg.addClass('error').text(res.data.message || 'Error al crear la empresa.').fadeIn(200);
+                }
+            }
+        });
+    });
+
+    $('#form-cliente').on('submit', function(e) {
+        e.preventDefault();
+       var fd = new FormData();
         fd.append('action', 'ruteo_save_cliente');
         fd.append('nonce', wpRuteoAjax.nonce);
+        fd.append('id', $('#cli-id-input').val());
         fd.append('nombre', $('#cli-nombre-input').val());
         fd.append('ruc', $('#cli-ruc-input').val());
         fd.append('direccion', $('#cli-direccion-input').val());
@@ -1485,8 +1685,13 @@ jQuery(document).ready(function($) {
                 if (res.success) {
                     $msg.addClass('success').text(res.data.message).fadeIn(200);
                     $('#form-cliente')[0].reset();
+                    $('#cli-id-input').val('');
+                    $('#cli-logo-actual').hide();
+                    $('#btn-guardar-cliente span').text('Guardar Cliente');
+                    $('#btn-cancelar-edicion-cliente').hide();
                     wpRuteoAjax.clientes = res.data.clientes;
                     renderTablaClientes(res.data.clientes);
+                    poblarSelectsCliente();
                     setTimeout(function() { $msg.fadeOut(300); }, 4000);
                 } else {
                     $msg.addClass('error').text(res.data.message || 'Error al guardar cliente.').fadeIn(200);
@@ -1522,6 +1727,52 @@ jQuery(document).ready(function($) {
             $txt.hide().prop('required', false).val($sel.val());
         }
     });
+
+    // Para usuarios de una empresa (tenant: BCP, Alicorp, etc.) el campo
+    // "Cliente / Empresa Principal" del formulario de Negativa ya NO es un
+    // selector: se autocompleta con el nombre de SU propia empresa y queda
+    // bloqueado (no pueden elegir CYMTEL ni otro). El Administrador General
+    // (super admin) si conserva el selector clasico, porque no pertenece a
+    // una sola empresa.
+    function aplicarBloqueoClienteEmpresa($form, valorFallback) {
+        var esTenant = currentUser && currentUser.isLoggedIn && !currentUser.isSuperAdmin && currentUser.empresaNombre;
+        var $sel = $form.find('select.neg-select-cliente');
+        var $txt = $form.find('input.neg-input-cliente-otro');
+        if (esTenant) {
+            $sel.hide().prop('disabled', true).prop('required', false);
+            $txt.val(currentUser.empresaNombre)
+                .prop('readonly', true)
+                .prop('required', false)
+                .show()
+                .css({ background: 'var(--bg-subtle)', cursor: 'not-allowed' });
+        } else {
+            setClienteNombreField($form, valorFallback || 'CYMTEL');
+        }
+    }
+
+    // Resuelve el logo a usar en el PDF de Negativa para un "cliente_nombre" dado.
+    // Si el usuario actual es de una empresa (tenant) y el nombre coincide con
+    // su propia empresa, usa el logo de ESA empresa (wpRuteoAjax.user.empresaLogo)
+    // en vez de buscarlo en la lista de "clientes" (CYMTEL, etc.).
+    function resolverLogoCliente(clienteNombre) {
+        var nombre = String(clienteNombre || '').trim().toLowerCase();
+        if (currentUser && !currentUser.isSuperAdmin && currentUser.empresaNombre &&
+            currentUser.empresaNombre.trim().toLowerCase() === nombre && currentUser.empresaLogo) {
+            return currentUser.empresaLogo;
+        }
+        if (window.wpRuteoAjax && window.wpRuteoAjax.clientes && window.wpRuteoAjax.clientes.length) {
+            var foundCli = window.wpRuteoAjax.clientes.find(function(c) {
+                return c.nombre && (c.nombre.trim().toLowerCase() === nombre);
+            });
+            if (foundCli && foundCli.logo) {
+                return foundCli.logo;
+            }
+        }
+        if (window.wpRuteoAjax && window.wpRuteoAjax.siteLogo) {
+            return window.wpRuteoAjax.siteLogo;
+        }
+        return '';
+    }
 
     function negativaEstadoLabel(estado) {
         var labels = {
@@ -1570,7 +1821,7 @@ jQuery(document).ready(function($) {
                 $ftNew.find('button[type="submit"]').text('Guardar y Firmar como Tecnico');
             }
 
-            setClienteNombreField($ftNew, 'CYMTEL');
+            aplicarBloqueoClienteEmpresa($ftNew, 'CYMTEL');
             $ftNew.show();
             return;
         }
@@ -1624,7 +1875,7 @@ jQuery(document).ready(function($) {
         if (registro.estado === 'pendiente_tecnico') {
             if (puedeActuar) {
                 var $ft = $('#form-negativa-tecnico');
-                $ft.find('select[name="cliente_nombre"]').val(registro.cliente_nombre || 'CYMTEL');
+                aplicarBloqueoClienteEmpresa($ft, registro.cliente_nombre || 'CYMTEL');
                 $ft.find('input[name="proceso"]').val(registro.proceso || '');
                 $ft.find('input[name="cm_localidad"]').val(registro.cm_localidad || '');
                 $ft.find('input[name="contratista"]').val(registro.contratista || '');
@@ -1646,7 +1897,7 @@ jQuery(document).ready(function($) {
         } else if (registro.estado === 'pendiente_supervisor') {
             if (puedeActuar) {
                 var $fs = $('#form-negativa-supervisor');
-                setClienteNombreField($fs, registro.cliente_nombre || 'CYMTEL');
+                aplicarBloqueoClienteEmpresa($fs, registro.cliente_nombre || 'CYMTEL');
                 $fs.find('input[name="proceso"]').val(registro.proceso || '');
                 $fs.find('input[name="cm_localidad"]').val(registro.cm_localidad || '');
                 $fs.find('input[name="contratista"]').val(registro.contratista || '');
@@ -1741,24 +1992,29 @@ jQuery(document).ready(function($) {
             return;
         }
 
+        var esModoEdicion = ($f.data('modo') === 'edicion');
         var fd = new FormData(this);
-        fd.append('action', 'ruteo_negativa_guardar');
         fd.append('nonce', wpRuteoAjax.nonce);
-        fd.append('etapa', 'tecnico');
-        if (negativaActual && negativaActual.id) {
-            fd.append('id', negativaActual.id);
+        fd.append('id', negativaActual.id);
+        if (esModoEdicion) {
+            fd.append('action', 'ruteo_negativa_editar');
+        } else {
+            fd.append('action', 'ruteo_negativa_guardar');
+            fd.append('etapa', 'supervisor');
         }
-        var p1 = $('#neg-preview1 img.preview-img').attr('src');
-        var p2 = $('#neg-preview2 img.preview-img').attr('src');
-        if (p1 && p1.indexOf('data:image') === 0) fd.append('foto1_base64', p1);
-        if (p2 && p2.indexOf('data:image') === 0) fd.append('foto2_base64', p2);
         $.ajax({
             url: wpRuteoAjax.ajaxurl, type: 'POST', data: fd, processData: false, contentType: false,
             success: function(res) {
                 if (res.success) {
-                    showToast('Etapa Tecnico guardada y firmada exitosamente.', 'success');
+                    showToast(esModoEdicion ? 'Registro editado correctamente.' : 'Etapa Supervisor Operativo actualizada y firmada correctamente.', 'success');
+                    $f.data('modo', '');
+                    $f.find('button[type="submit"]').text('Guardar y Firmar como Supervisor Operativo');
                     cargarNegativas();
-                    renderNegativa(res.data.registro);
+                    if (esModoEdicion) {
+                        cargarListaNegativas();
+                    } else {
+                        renderNegativa(res.data.registro);
+                    }
                 } else {
                     showToast('Error: ' + res.data.message, 'error');
                 }
@@ -1888,21 +2144,7 @@ jQuery(document).ready(function($) {
         }
 
         var clienteNombre = r.cliente_nombre || r.cliente || 'CYMTEL';
-        var clientLogo = r._resolvedLogo || '';
-
-        if (!clientLogo) {
-            if (window.wpRuteoAjax && window.wpRuteoAjax.clientes && window.wpRuteoAjax.clientes.length) {
-                var foundCli = window.wpRuteoAjax.clientes.find(function(c) {
-                    return c.nombre && (c.nombre.trim().toLowerCase() === String(clienteNombre).trim().toLowerCase());
-                });
-                if (foundCli && foundCli.logo) {
-                    clientLogo = foundCli.logo;
-                }
-            }
-            if (!clientLogo && window.wpRuteoAjax && window.wpRuteoAjax.siteLogo) {
-                clientLogo = window.wpRuteoAjax.siteLogo;
-            }
-        }
+        var clientLogo = r._resolvedLogo || resolverLogoCliente(clienteNombre);
 
         var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         var pageW = doc.internal.pageSize.getWidth();
@@ -2246,18 +2488,7 @@ jQuery(document).ready(function($) {
         var copy = $.extend({}, r);
 
         var clienteNombre = copy.cliente_nombre || copy.cliente || 'CYMTEL';
-        var clientLogo = '';
-        if (window.wpRuteoAjax && window.wpRuteoAjax.clientes && window.wpRuteoAjax.clientes.length) {
-            var foundCli = window.wpRuteoAjax.clientes.find(function(c) {
-                return c.nombre && (c.nombre.trim().toLowerCase() === String(clienteNombre).trim().toLowerCase());
-            });
-            if (foundCli && foundCli.logo) {
-                clientLogo = foundCli.logo;
-            }
-        }
-        if (!clientLogo && window.wpRuteoAjax && window.wpRuteoAjax.siteLogo) {
-            clientLogo = window.wpRuteoAjax.siteLogo;
-        }
+        var clientLogo = resolverLogoCliente(clienteNombre);
         copy._resolvedLogo = clientLogo;
 
         var itemsToProcess = [
@@ -2313,6 +2544,77 @@ jQuery(document).ready(function($) {
         });
     }
 
+    window.editarNegativaIndex = function(idx) {
+        var list = window.ruteoNegativasFilteredCache || window.ruteoNegativasCache || [];
+        var registro = list[idx];
+        if (!registro) { showToast('No se encontro el registro de negativa.', 'error'); return; }
+
+        var puedeEditar = currentUser.isAdmin || currentUser.negativaRol === 'supervisor_operativo' || (registro.creado_por && currentUser.displayName && registro.creado_por === currentUser.displayName);
+        if (!puedeEditar) {
+            showToast('No tienes permiso para editar este registro. Solo puede editarlo quien lo creo, el Supervisor Operativo o un Administrador.', 'error');
+            return;
+        }
+
+        $('.sidebar-item[data-tab="negativa"]').trigger('click');
+        negativaActual = registro;
+
+        $('#form-negativa-tecnico, #form-negativa-supervisor, #form-negativa-seguridad, #form-negativa-hse, #negativa-firma-simple, #btn-negativa-exportar-pdf').hide();
+        $('#negativa-estado-badge').text('Modo Edicion - ' + negativaEstadoLabel(registro.estado));
+        $('#negativa-resumen').hide();
+
+        var $fe = $('#form-negativa-supervisor');
+        aplicarBloqueoClienteEmpresa($fe, registro.cliente_nombre || 'CYMTEL');
+        $fe.find('input[name="proceso"]').val(registro.proceso || '');
+        $fe.find('input[name="cm_localidad"]').val(registro.cm_localidad || '');
+        $fe.find('input[name="contratista"]').val(registro.contratista || '');
+        $fe.find('input[name="sub_contratista"]').val(registro.sub_contratista || '');
+        $fe.find('select[name="relacionado_a"]').val(registro.relacionado_a || 'PEXT');
+        $fe.find('input[name="lugar_trabajo"]').val(registro.lugar_trabajo || '');
+        $fe.find('input[name="fecha"]').val(registro.fecha || '');
+        $fe.find('input[name="hora_inicio"]').val(registro.hora_inicio || '');
+        $fe.find('input[name="hora_fin"]').val(registro.hora_fin || '');
+        $fe.find('input[name="total_horas"]').val(registro.total_horas || '');
+        $fe.find('input[name="supervisor_operativo_nombre"]').val(registro.supervisor_operativo_nombre || '');
+        $fe.find('input[name="trabajador_reportante"]').val(registro.trabajador_reportante || '');
+        $fe.find('textarea[name="razones_negativa"]').val(registro.razones_negativa || '');
+        $fe.find('select[name="satisface_negativa"]').val(registro.satisface_negativa || 'SI');
+        $fe.find('select[name="reinicia_labores"]').val(registro.reinicia_labores || 'SI');
+        $fe.find('textarea[name="medidas_correctivas"]').val(registro.medidas_correctivas || '');
+        $fe.find('input[name="fecha_reinicio"]').val(registro.fecha_reinicio || '');
+        $fe.find('input[name="hora_reinicio"]').val(registro.hora_reinicio || '');
+        $fe.find('.is-invalid').removeClass('is-invalid').css('border-color', '');
+        $fe.data('modo', 'edicion');
+        $fe.find('button[type="submit"]').text('Guardar Cambios (Edicion)');
+        $fe.show();
+    };
+
+    window.eliminarNegativaIndex = function(idx) {
+        var list = window.ruteoNegativasFilteredCache || window.ruteoNegativasCache || [];
+        var registro = list[idx];
+        if (!registro) { showToast('No se encontro el registro de negativa.', 'error'); return; }
+
+        if (!currentUser.isAdmin) {
+            showToast('Solo un Administrador puede eliminar este registro.', 'error');
+            return;
+        }
+
+        var confirmado = window.confirm('¿Seguro que deseas eliminar el registro #' + registro.id + '? Esta accion no se puede deshacer.');
+        if (!confirmado) return;
+
+        $.post(wpRuteoAjax.ajaxurl, {
+            action: 'ruteo_negativa_eliminar',
+            nonce: wpRuteoAjax.nonce,
+            id: registro.id
+        }, function(res) {
+            if (res.success) {
+                showToast(res.data.message || 'Registro eliminado correctamente.', 'success');
+                cargarListaNegativas();
+            } else {
+                showToast(res.data.message || 'No se pudo eliminar el registro.', 'error');
+            }
+        });
+    };
+
     window.abrirPDFNegativaIndex = function(idx) {
         var list = window.ruteoNegativasFilteredCache || window.ruteoNegativasCache || [];
         var r = list[idx];
@@ -2335,11 +2637,14 @@ jQuery(document).ready(function($) {
             showToast('Aun no se puede exportar el PDF: faltan firmas por completar (Tecnico, Supervisor Operativo, Supervisor de Seguridad y HSE).', 'error');
             return;
         }
-        generarPDFNegativa(r);
+        loadImagesAndGeneratePDF(r, function(rPrepared) {
+            generarPDFNegativa(rPrepared);
     });
 
+});
+
     if ($('.sidebar-item[data-tab="negativa"]').length) {
-        $('.sidebar-item[data-tab="negativa"]').on('click', function() { cargarNegativas(); });
+        $('.sidebar-item[data-tab="negativa"]').on('click', function() { cargarNegativas(); renderNegativa(null); });
     }
 
     // --- BINDING FOTOS NEGATIVA ---
@@ -2653,6 +2958,7 @@ jQuery(document).ready(function($) {
         cargarMateriales();
         cargarUsuarios();
         cargarNegativas();
+        renderNegativa(null);
     }
 
     window.abrirODocumentoGoogleDocs = function(idx) {
@@ -2971,11 +3277,13 @@ jQuery(document).ready(function($) {
         var actionFilter = $('#audit-filter-action').val() || '';
         var userFilter = $('#audit-filter-user').val() || '';
         var pmFilter = $('#audit-filter-pm').val() || '';
+        var empresaFilter = $('#audit-filter-empresa').val() || '';
 
         var filtered = allLogs.filter(function(l) {
             if (actionFilter && (l.accion || '').toLowerCase().indexOf(actionFilter.toLowerCase()) === -1) return false;
             if (userFilter && (l.usuario || '').toLowerCase() !== userFilter.toLowerCase()) return false;
             if (pmFilter && (l.pm || '').toLowerCase() !== pmFilter.toLowerCase()) return false;
+            if (empresaFilter && (l.empresa || '').toLowerCase() !== empresaFilter.toLowerCase()) return false;
             if (query) {
                 var haystack = (l.fecha + ' ' + l.usuario + ' ' + (l.pm || '') + ' ' + l.accion + ' ' + (l.detalles || l.detalle || '')).toLowerCase();
                 if (haystack.indexOf(query) === -1) return false;
@@ -2989,20 +3297,24 @@ jQuery(document).ready(function($) {
         var $userSel = $('#audit-filter-user');
         var $actionSel = $('#audit-filter-action');
         var $pmSel = $('#audit-filter-pm');
+        var $empresaSel = $('#audit-filter-empresa');
         if (!$userSel.length || !$actionSel.length) return;
 
         var currentUserVal = $userSel.val();
         var currentActionVal = $actionSel.val();
         var currentPmVal = $pmSel.length ? $pmSel.val() : '';
+        var currentEmpresaVal = $empresaSel.length ? $empresaSel.val() : '';
 
         var users = new Set();
         var actions = new Set();
         var pms = new Set();
+        var empresas = new Set();
 
         (logs || []).forEach(function(l) {
             if (l.usuario) users.add(l.usuario);
             if (l.accion) actions.add(l.accion);
             if (l.pm && l.pm !== '-') pms.add(l.pm);
+            if (l.empresa) empresas.add(l.empresa);
         });
 
         $userSel.html('<option value="">Todos los usuarios</option>');
@@ -3021,10 +3333,17 @@ jQuery(document).ready(function($) {
                 $pmSel.append('<option value="' + p + '"' + (p === currentPmVal ? ' selected' : '') + '>' + p + '</option>');
             });
         }
+
+        if ($empresaSel.length) {
+            $empresaSel.html('<option value="">Todas las empresas</option>');
+            Array.from(empresas).sort().forEach(function(e) {
+                $empresaSel.append('<option value="' + e + '"' + (e === currentEmpresaVal ? ' selected' : '') + '>' + e + '</option>');
+            });
+        }
     }
 
     $('#audit-log-search').on('input', filtrarAuditLogs);
-    $('#audit-filter-action, #audit-filter-user, #audit-filter-pm').on('change', filtrarAuditLogs);
+    $('#audit-filter-action, #audit-filter-user, #audit-filter-pm, #audit-filter-empresa').on('change', filtrarAuditLogs);
 
     $('#btn-refresh-audit-logs').on('click', cargarAuditLogs);
 
@@ -3035,6 +3354,17 @@ jQuery(document).ready(function($) {
         $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_negativa_listar', nonce: wpRuteoAjax.nonce }, function(res) {
             if (res.success && res.data && res.data.registros) {
                 window.ruteoNegativasCache = res.data.registros;
+
+                if (currentUser.isSuperAdmin) {
+                    $('#negativas-filter-empresa').closest('.filter-group').show();
+                    $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_get_empresas', nonce: wpRuteoAjax.nonce }, function(resEmp) {
+                        var empresasList = (resEmp.success && resEmp.data && resEmp.data.empresas) ? resEmp.data.empresas : [];
+                        poblarFiltroEmpresaNegativas(empresasList);
+                    });
+                } else {
+                    $('#negativas-filter-empresa').closest('.filter-group').hide();
+                }
+
                 filtrarListaNegativas();
             } else {
                 $tbody.html('<tr><td colspan="8" style="text-align:center; padding:20px; color:var(--text-muted);">No hay negativas registradas o no se pudieron cargar.</td></tr>');
@@ -3074,6 +3404,14 @@ jQuery(document).ready(function($) {
 
             var docLink = '<a href="javascript:void(0)" onclick="window.abrirPDFNegativaIndex(' + idx + ')" title="Abrir Documento PDF con Logo de Cliente" class="portal-link portal-link--red" style="padding:4px 8px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;"><svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>📄 Abrir Documento</a>';
 
+            var puedeEditarFila = currentUser.isAdmin || currentUser.negativaRol === 'supervisor_operativo' || (item.creado_por && currentUser.displayName && item.creado_por === currentUser.displayName);
+            if (puedeEditarFila) {
+                docLink += ' <a href="javascript:void(0)" onclick="window.editarNegativaIndex(' + idx + ')" title="Editar datos de esta Negativa" class="portal-link" style="padding:4px 8px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">Editar</a>';
+            }
+            if (currentUser.isAdmin) {
+                docLink += ' <a href="javascript:void(0)" onclick="window.eliminarNegativaIndex(' + idx + ')" title="Eliminar este registro" class="portal-link portal-link--red" style="padding:4px 8px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">Eliminar</a>';
+            }
+
             var tr = '<tr>' +
                 '<td><strong>#' + id + '</strong></td>' +
                 '<td><span style="font-size:12px; font-weight:600; color:var(--text-muted);">' + fecha + '</span></td>' +
@@ -3088,14 +3426,27 @@ jQuery(document).ready(function($) {
         });
     }
 
+    function poblarFiltroEmpresaNegativas(empresas) {
+        var $sel = $('#negativas-filter-empresa');
+        if (!$sel.length) return;
+        var currentVal = $sel.val();
+        $sel.html('<option value="">Todas las empresas</option>');
+        (empresas || []).forEach(function(emp) {
+            var selected = (String(emp.id) === String(currentVal)) ? ' selected' : '';
+            $sel.append('<option value="' + emp.id + '"' + selected + '>' + emp.nombre + '</option>');
+        });
+    }
+
     function filtrarListaNegativas() {
         var allNeg = window.ruteoNegativasCache || [];
         var query = $('#negativas-search').val() ? $('#negativas-search').val().toLowerCase().trim() : '';
         var estadoFilter = $('#negativas-filter-estado').val() || '';
+        var empresaFilter = $('#negativas-filter-empresa').val() || '';
 
         var filtered = allNeg.filter(function(n) {
             var nEstado = (n.estado || '').toLowerCase();
             if (estadoFilter && nEstado !== estadoFilter.toLowerCase()) return false;
+            if (empresaFilter && String(n.empresa_id || '') !== String(empresaFilter)) return false;
             if (query) {
                 var haystack = (
                     (n.id || '') + ' ' +
@@ -3115,9 +3466,10 @@ jQuery(document).ready(function($) {
 
     $('#negativas-search').on('input', filtrarListaNegativas);
     $('#negativas-filter-estado').on('change', filtrarListaNegativas);
+    $('#negativas-filter-empresa').on('change', filtrarListaNegativas);
     $('#btn-refresh-negativas').on('click', cargarListaNegativas);
 
-    // EXPORTAR A EXCEL MULTI-HOJA (.XLSX CON PESTAÑA PARA NEGATIVAS)
+    // EXPORTAR A EXCEL MULTI-HOJA CON ESTILO PROFESIONAL (ExcelJS: colores, bordes, encabezados)
     function exportarCSVRegistros() {
         var registros = window._ruteoRegistros || [];
         var materiales = window.allMaterialesList || [];
@@ -3128,162 +3480,303 @@ jQuery(document).ready(function($) {
             return;
         }
 
-        if (typeof XLSX !== 'undefined') {
-            var wb = XLSX.utils.book_new();
-
-            // 1. HOJA 1: Registros de Ruteo
-            var headersRegistros = ['Fecha', 'Tramo', 'ID Consol', 'Estructura', 'Tipo Estructura', 'Altura (m)', 'Codigo', 'Ubicacion', 'Mufa', 'Retencion', 'Suspension', 'Cruceta', 'Observaciones'];
-            var rowsRegistros = [headersRegistros];
-            registros.forEach(function(raw) {
-                var r = normalizarRegistro(raw);
-                rowsRegistros.push([
-                    r.fecha || '',
-                    r.tramo || '',
-                    r.id_consol || '',
-                    r.estructura || '',
-                    r.tipo_estructura || '',
-                    r.altura || '',
-                    r.codigo || '',
-                    r.ubicacion || '',
-                    r.mufa || '0',
-                    r.retencion || '0',
-                    r.suspension || '0',
-                    r.cruceta || '0',
-                    r.observacion || ''
-                ]);
-            });
-            var wsRegistros = XLSX.utils.aoa_to_sheet(rowsRegistros);
-            XLSX.utils.book_append_sheet(wb, wsRegistros, "Registros de Ruteo");
-
-            // 2. HOJA 2: Consumo de Materiales (con desglose de ítems)
-            var headersMateriales = ['ID Reporte', 'Fecha Intervención', 'Ticket INC / CRQ', 'Almacén / PM', 'Tramo', 'Descripción Trabajo', 'Item Material', 'Cantidad', 'Unidad', 'Usuario Registrador', 'Fecha Registro'];
-            var rowsMateriales = [headersMateriales];
-            materiales.forEach(function(m) {
-                if (m.items && m.items.length) {
-                    m.items.forEach(function(it) {
-                        rowsMateriales.push([
-                            m.id || '',
-                            m.fecha || '',
-                            (m.incidencia || '') + (m.crq ? ' / ' + m.crq : ''),
-                            m.almacen_pm || '',
-                            m.tramo || '',
-                            m.descripcion || '',
-                            (it.descripcion || '') + (it.codigo_sap ? ' [' + it.codigo_sap + ']' : ''),
-                            it.cantidad || 0,
-                            it.unidad || '',
-                            m.user || '',
-                            m.created_at || ''
-                        ]);
-                    });
-                } else {
-                    rowsMateriales.push([
-                        m.id || '',
-                        m.fecha || '',
-                        (m.incidencia || '') + (m.crq ? ' / ' + m.crq : ''),
-                        m.almacen_pm || '',
-                        m.tramo || '',
-                        m.descripcion || '',
-                        '-',
-                        0,
-                        '',
-                        m.user || '',
-                        m.created_at || ''
-                    ]);
-                }
-            });
-            var wsMateriales = XLSX.utils.aoa_to_sheet(rowsMateriales);
-            XLSX.utils.book_append_sheet(wb, wsMateriales, "Consumo de Materiales");
-
-            function getNegativaEstadoLabel(estado) {
-                if (!estado) return 'Pendiente Técnico';
-                switch (estado) {
-                    case 'pendiente_tecnico': return 'Pendiente Firma Técnico';
-                    case 'pendiente_supervisor': return 'Pendiente Firma Supervisor Op.';
-                    case 'pendiente_seguridad': return 'Pendiente Firma Supervisor Seg.';
-                    case 'pendiente_hse': return 'Pendiente Visto Bueno HSE';
-                    case 'aprobado':
-                    case 'completado': return 'Aprobado / Completado';
-                    default: return estado;
-                }
-            }
-
-            // 3. HOJA 3: Negativas al Trabajo (Formato Oficial HSE-RE-NEG-01)
-            var headersNegativas = ['ID Negativa', 'Fecha Registro', 'Estado Actual', 'Cliente / Empresa', 'Proceso / Proyecto', 'CM / Localidad', 'Contratista', 'Sub Contratista', 'Relacionado a', 'Lugar de Trabajo', 'Fecha Intervencion', 'Hora Inicio', 'Hora Fin', 'Total Horas', 'Trabajador Reportante', 'Firma Tecnico', 'Fecha Firma Tecnico', 'Supervisor Operativo', 'Firma Sup. Operativo', 'Fecha Firma Sup. Op.', 'Razones de Negativa', 'Medidas Correctivas', 'Satisface Negativa', 'Reinicia Labores', 'Fecha Reinicio', 'Hora Reinicio', 'Supervisor Seguridad', 'Observaciones Seguridad', 'Firma Sup. Seguridad', 'Dictamen HSE', 'Firma Area HSE'];
-            var rowsNegativas = [headersNegativas];
-            negativas.forEach(function(n) {
-                rowsNegativas.push([
-                    n.id || '',
-                    n.created_at || '',
-                    getNegativaEstadoLabel(n.estado) || n.estado || '',
-                    n.cliente_nombre || 'CYMTEL',
-                    n.proceso || '',
-                    n.cm_localidad || '',
-                    n.contratista || '',
-                    n.sub_contratista || '',
-                    n.relacionado_a || '',
-                    n.lugar_trabajo || '',
-                    n.fecha || '',
-                    n.hora_inicio || '',
-                    n.hora_fin || '',
-                    n.total_horas || '',
-                    n.trabajador_reportante || '',
-                    n.firma_tecnico_user || '',
-                    n.firma_tecnico_fecha || '',
-                    n.supervisor_operativo_nombre || '',
-                    n.firma_sup_operativo_user || '',
-                    n.firma_sup_operativo_fecha || '',
-                    n.razones_negativa || '',
-                    n.medidas_correctivas || '',
-                    n.satisface_negativa || '',
-                    n.reinicia_labores || '',
-                    n.fecha_reinicio || '',
-                    n.hora_reinicio || '',
-                    n.supervisor_seguridad_nombre || '',
-                    n.observaciones_seguridad || '',
-                    n.firma_sup_seguridad_user || '',
-                    n.dictamen_hse || '',
-                    n.firma_hse_user || ''
-                ]);
-            });
-            var wsNegativas = XLSX.utils.aoa_to_sheet(rowsNegativas);
-            XLSX.utils.book_append_sheet(wb, wsNegativas, "Negativas al Trabajo");
-
-            var filename = 'Consolidado_Ruteo_OM_' + new Date().toISOString().slice(0,10) + '.xlsx';
-            XLSX.writeFile(wb, filename);
+        if (typeof ExcelJS === 'undefined') {
+            showToast('Libreria de Excel no disponible. Por favor recargue la pagina.', 'error');
             return;
         }
 
-        // Fallback CSV en caso de no tener libreria XLSX cargada
-        var headers = ['Fecha', 'Tramo', 'ID Consol', 'Estructura', 'Tipo Estructura', 'Altura (m)', 'Codigo', 'Ubicacion', 'Mufa', 'Retencion', 'Suspension', 'Cruceta', 'Observaciones'];
-        var rows = [headers];
+        var AZUL_HEADER = 'FF0097D8';
+        var AZUL_BANDA = 'FFE1F0FC';
+        var GRIS_BORDE = 'FF96A5B9';
+        var BLANCO = 'FFFFFFFF';
+
+        var thinBorder = {
+            top: { style: 'thin', color: { argb: GRIS_BORDE } },
+            left: { style: 'thin', color: { argb: GRIS_BORDE } },
+            bottom: { style: 'thin', color: { argb: GRIS_BORDE } },
+            right: { style: 'thin', color: { argb: GRIS_BORDE } }
+        };
+
+        function estilizarHoja(ws, headers, rowsCount) {
+            ws.views = [{ state: 'frozen', ySplit: 1 }];
+            var headerRow = ws.getRow(1);
+            headerRow.eachCell(function(cell) {
+                cell.font = { bold: true, color: { argb: BLANCO }, size: 10.5 };
+                cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AZUL_HEADER } };
+                cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                cell.border = thinBorder;
+            });
+            headerRow.height = 26;
+            ws.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: headers.length } };
+
+            for (var r = 2; r <= rowsCount + 1; r++) {
+                var row = ws.getRow(r);
+                row.eachCell({ includeEmpty: true }, function(cell) {
+                    cell.border = thinBorder;
+                    cell.alignment = { vertical: 'middle', wrapText: true };
+                    cell.font = { size: 10 };
+                });
+                if (r % 2 === 0) {
+                    row.eachCell({ includeEmpty: true }, function(cell) {
+                        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: AZUL_BANDA } };
+                    });
+                }
+            }
+
+            ws.columns.forEach(function(col) {
+                var maxLen = 10;
+                col.eachCell({ includeEmpty: true }, function(cell) {
+                    var len = cell.value ? String(cell.value).length : 0;
+                    if (len > maxLen) maxLen = len;
+                });
+                col.width = Math.min(maxLen + 3, 45);
+            });
+        }
+
+        var wb = new ExcelJS.Workbook();
+        wb.creator = 'SOFTWARE O&M';
+        wb.created = new Date();
+
+        // 1. HOJA: Registros de Ruteo
+        var headersRegistros = ['Fecha', 'Tramo', 'ID Consol', 'Estructura', 'Tipo Estructura', 'Altura (m)', 'Codigo', 'Ubicacion', 'Mufa', 'Retencion', 'Suspension', 'Cruceta', 'Observaciones'];
+        var wsRegistros = wb.addWorksheet('Registros de Ruteo');
+        wsRegistros.addRow(headersRegistros);
         registros.forEach(function(raw) {
             var r = normalizarRegistro(raw);
-            rows.push([
-                '"' + (r.fecha || '') + '"',
-                '"' + (r.tramo || '').replace(/"/g, '""') + '"',
-                '"' + (r.id_consol || '').replace(/"/g, '""') + '"',
-                '"' + (r.estructura || '').replace(/"/g, '""') + '"',
-                '"' + (r.tipo_estructura || '').replace(/"/g, '""') + '"',
-                '"' + (r.altura || '') + '"',
-                '"' + (r.codigo || '').replace(/"/g, '""') + '"',
-                '"' + (r.ubicacion || '').replace(/"/g, '""') + '"',
-                '"' + (r.mufa || '0') + '"',
-                '"' + (r.retencion || '0') + '"',
-                '"' + (r.suspension || '0') + '"',
-                '"' + (r.cruceta || '0') + '"',
-                '"' + (r.observacion || '').replace(/"/g, '""') + '"'
+            wsRegistros.addRow([
+                r.fecha || '', r.tramo || '', r.id_consol || '', r.estructura || '',
+                r.tipo_estructura || '', r.altura || '', r.codigo || '', r.ubicacion || '',
+                r.mufa || '0', r.retencion || '0', r.suspension || '0', r.cruceta || '0', r.observacion || ''
             ]);
         });
-        var csvContent = '\uFEFF' + rows.map(function(e) { return e.join(','); }).join('\n');
-        var blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        var filenameCsv = 'Registros_Campo_OM_' + new Date().toISOString().slice(0,10) + '.csv';
+        estilizarHoja(wsRegistros, headersRegistros, registros.length);
 
-        if (typeof window.downloadBlobRuteo === 'function') {
-            window.downloadBlobRuteo(blob, filenameCsv);
+        // 2. HOJA: Consumo de Materiales
+        var headersMateriales = ['ID Reporte', 'Fecha Intervencion', 'Ticket INC / CRQ', 'Almacen / PM', 'Tramo', 'Descripcion Trabajo', 'Item Material', 'Cantidad', 'Unidad', 'Usuario Registrador', 'Fecha Registro'];
+        var wsMateriales = wb.addWorksheet('Consumo de Materiales');
+        wsMateriales.addRow(headersMateriales);
+        var filasMateriales = 0;
+        materiales.forEach(function(m) {
+            if (m.items && m.items.length) {
+                m.items.forEach(function(it) {
+                    wsMateriales.addRow([
+                        m.id || '', m.fecha || '', (m.incidencia || '') + (m.crq ? ' / ' + m.crq : ''),
+                        m.almacen_pm || '', m.tramo || '', m.descripcion || '',
+                        (it.descripcion || '') + (it.codigo_sap ? ' [' + it.codigo_sap + ']' : ''),
+                        it.cantidad || 0, it.unidad || '', m.user || '', m.created_at || ''
+                    ]);
+                    filasMateriales++;
+                });
+            } else {
+                wsMateriales.addRow([
+                    m.id || '', m.fecha || '', (m.incidencia || '') + (m.crq ? ' / ' + m.crq : ''),
+                    m.almacen_pm || '', m.tramo || '', m.descripcion || '', '-', 0, '', m.user || '', m.created_at || ''
+                ]);
+                filasMateriales++;
+            }
+        });
+        estilizarHoja(wsMateriales, headersMateriales, filasMateriales);
+
+        function getNegativaEstadoLabel(estado) {
+            if (!estado) return 'Pendiente Tecnico';
+            switch (estado) {
+                case 'pendiente_tecnico': return 'Pendiente Firma Tecnico';
+                case 'pendiente_supervisor': return 'Pendiente Firma Supervisor Op.';
+                case 'pendiente_seguridad': return 'Pendiente Firma Supervisor Seg.';
+                case 'pendiente_hse': return 'Pendiente Visto Bueno HSE';
+                case 'aprobado':
+                case 'completado': return 'Aprobado / Completado';
+                default: return estado;
+            }
         }
+
+        // 3. HOJA: Negativas al Trabajo (Formato Oficial HSE-RE-NEG-01)
+        var headersNegativas = ['ID Negativa', 'Fecha Registro', 'Estado Actual', 'Cliente / Empresa', 'Proceso / Proyecto', 'CM / Localidad', 'Contratista', 'Sub Contratista', 'Relacionado a', 'Lugar de Trabajo', 'Fecha Intervencion', 'Hora Inicio', 'Hora Fin', 'Total Horas', 'Trabajador Reportante', 'Firma Tecnico', 'Fecha Firma Tecnico', 'Supervisor Operativo', 'Firma Sup. Operativo', 'Fecha Firma Sup. Op.', 'Razones de Negativa', 'Medidas Correctivas', 'Satisface Negativa', 'Reinicia Labores', 'Fecha Reinicio', 'Hora Reinicio', 'Supervisor Seguridad', 'Observaciones Seguridad', 'Firma Sup. Seguridad', 'Dictamen HSE', 'Firma Area HSE'];
+        var wsNegativas = wb.addWorksheet('Negativas al Trabajo');
+        wsNegativas.addRow(headersNegativas);
+        negativas.forEach(function(n) {
+            wsNegativas.addRow([
+                n.id || '', n.created_at || '', getNegativaEstadoLabel(n.estado) || n.estado || '',
+                n.cliente_nombre || 'CYMTEL', n.proceso || '', n.cm_localidad || '', n.contratista || '',
+                n.sub_contratista || '', n.relacionado_a || '', n.lugar_trabajo || '', n.fecha || '',
+                n.hora_inicio || '', n.hora_fin || '', n.total_horas || '', n.trabajador_reportante || '',
+                n.firma_tecnico_user || '', n.firma_tecnico_fecha || '', n.supervisor_operativo_nombre || '',
+                n.firma_sup_operativo_user || '', n.firma_sup_operativo_fecha || '', n.razones_negativa || '',
+                n.medidas_correctivas || '', n.satisface_negativa || '', n.reinicia_labores || '',
+                n.fecha_reinicio || '', n.hora_reinicio || '', n.supervisor_seguridad_nombre || '',
+                n.observaciones_seguridad || '', n.firma_sup_seguridad_user || '', n.dictamen_hse || '',
+                n.firma_hse_user || ''
+            ]);
+        });
+        estilizarHoja(wsNegativas, headersNegativas, negativas.length);
+
+        var filename = 'Consolidado_Ruteo_OM_' + new Date().toISOString().slice(0,10) + '.xlsx';
+        wb.xlsx.writeBuffer().then(function(buffer) {
+            var blob = new Blob([buffer], { type: 'application/octet-stream' });
+            if (typeof window.downloadBlobRuteo === 'function') {
+                window.downloadBlobRuteo(blob, filename);
+            } else {
+                var link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }).catch(function(err) {
+            console.error(err);
+            showToast('Error al generar el Excel. Intente de nuevo.', 'error');
+        });
     }
 
-    $('#btn-download-excel, #btn-negativas-exportar-excel').on('click', exportarCSVRegistros);
+
+    // EXPORTAR SOLO NEGATIVAS A EXCEL, CON TABLA NATIVA DE EXCEL (ESTILO PROFESIONAL AUTOMATICO)
+    function exportarNegativasExcel() {
+        var negativas = window.ruteoNegativasCache || [];
+
+        if (!negativas.length) {
+            showToast('No hay negativas registradas para exportar.', 'error');
+            return;
+        }
+
+        if (typeof ExcelJS === 'undefined') {
+            showToast('Libreria de Excel no disponible. Por favor recargue la pagina.', 'error');
+            return;
+        }
+
+        function getNegativaEstadoLabel(estado) {
+            if (!estado) return 'Pendiente Tecnico';
+            switch (estado) {
+                case 'pendiente_tecnico': return 'Pendiente Firma Tecnico';
+                case 'pendiente_supervisor': return 'Pendiente Firma Supervisor Op.';
+                case 'pendiente_seguridad': return 'Pendiente Firma Supervisor Seg.';
+                case 'pendiente_hse': return 'Pendiente Visto Bueno HSE';
+                case 'aprobado':
+                case 'completado': return 'Aprobado / Completado';
+                default: return estado;
+            }
+        }
+
+        var wb = new ExcelJS.Workbook();
+        wb.creator = 'SOFTWARE O&M';
+        wb.created = new Date();
+
+        var ws = wb.addWorksheet('Negativas al Trabajo', {
+            views: [{ state: 'frozen', ySplit: 3 }]
+        });
+
+        // --- Titulo superior (fuera de la tabla) ---
+        ws.mergeCells('A1:F1');
+        var tituloCell = ws.getCell('A1');
+        tituloCell.value = 'REPORTE DE NEGATIVAS AL TRABAJO POR INMINENTE PELIGRO (HSE-RE-NEG-01)';
+        tituloCell.font = { bold: true, size: 13, color: { argb: 'FF0097D8' } };
+        ws.getRow(1).height = 24;
+
+        ws.mergeCells('A2:F2');
+        var subCell = ws.getCell('A2');
+        subCell.value = 'Generado: ' + new Date().toLocaleDateString('es-PE') + '  |  Total de registros: ' + negativas.length;
+        subCell.font = { italic: true, size: 9.5, color: { argb: 'FF666666' } };
+
+        var columnas = [
+            { name: 'ID Negativa', filterButton: true },
+            { name: 'Fecha Registro', filterButton: true },
+            { name: 'Estado Actual', filterButton: true },
+            { name: 'Cliente / Empresa', filterButton: true },
+            { name: 'Proceso / Proyecto', filterButton: true },
+            { name: 'CM / Localidad', filterButton: true },
+            { name: 'Contratista', filterButton: true },
+            { name: 'Sub Contratista', filterButton: true },
+            { name: 'Relacionado a', filterButton: true },
+            { name: 'Lugar de Trabajo', filterButton: true },
+            { name: 'Fecha Intervencion', filterButton: true },
+            { name: 'Hora Inicio', filterButton: true },
+            { name: 'Hora Fin', filterButton: true },
+            { name: 'Total Horas', filterButton: true },
+            { name: 'Trabajador Reportante', filterButton: true },
+            { name: 'Firma Tecnico', filterButton: true },
+            { name: 'Fecha Firma Tecnico', filterButton: true },
+            { name: 'Supervisor Operativo', filterButton: true },
+            { name: 'Firma Sup. Operativo', filterButton: true },
+            { name: 'Fecha Firma Sup. Op.', filterButton: true },
+            { name: 'Razones de Negativa', filterButton: true },
+            { name: 'Medidas Correctivas', filterButton: true },
+            { name: 'Satisface Negativa', filterButton: true },
+            { name: 'Reinicia Labores', filterButton: true },
+            { name: 'Fecha Reinicio', filterButton: true },
+            { name: 'Hora Reinicio', filterButton: true },
+            { name: 'Supervisor Seguridad', filterButton: true },
+            { name: 'Observaciones Seguridad', filterButton: true },
+            { name: 'Firma Sup. Seguridad', filterButton: true },
+            { name: 'Dictamen HSE', filterButton: true },
+            { name: 'Firma Area HSE', filterButton: true }
+        ];
+
+        var filas = negativas.map(function(n) {
+            return [
+                n.id || '', n.created_at || '', getNegativaEstadoLabel(n.estado) || n.estado || '',
+                n.cliente_nombre || 'CYMTEL', n.proceso || '', n.cm_localidad || '', n.contratista || '',
+                n.sub_contratista || '', n.relacionado_a || '', n.lugar_trabajo || '', n.fecha || '',
+                n.hora_inicio || '', n.hora_fin || '', n.total_horas || '', n.trabajador_reportante || '',
+                n.firma_tecnico_user || '', n.firma_tecnico_fecha || '', n.supervisor_operativo_nombre || '',
+                n.firma_sup_operativo_user || '', n.firma_sup_operativo_fecha || '', n.razones_negativa || '',
+                n.medidas_correctivas || '', n.satisface_negativa || '', n.reinicia_labores || '',
+                n.fecha_reinicio || '', n.hora_reinicio || '', n.supervisor_seguridad_nombre || '',
+                n.observaciones_seguridad || '', n.firma_sup_seguridad_user || '', n.dictamen_hse || '',
+                n.firma_hse_user || ''
+            ];
+        });
+
+        // --- Tabla nativa de Excel: estilo profesional automatico (bandas, filtro, encabezado) ---
+        ws.addTable({
+            name: 'TablaNegativas',
+            ref: 'A4',
+            headerRow: true,
+            totalsRow: false,
+            style: {
+                theme: 'TableStyleMedium9',
+                showRowStripes: true
+            },
+            columns: columnas,
+            rows: filas
+        });
+
+        ws.getRow(4).height = 24;
+        ws.getRow(4).eachCell(function(cell) {
+            cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+        });
+
+        ws.columns.forEach(function(col, idx) {
+            var maxLen = columnas[idx] ? columnas[idx].name.length : 10;
+            filas.forEach(function(row) {
+                var val = row[idx];
+                var len = val ? String(val).length : 0;
+                if (len > maxLen) maxLen = len;
+            });
+            col.width = Math.min(maxLen + 3, 40);
+        });
+
+        var filename = 'Negativas_al_Trabajo_OM_' + new Date().toISOString().slice(0,10) + '.xlsx';
+        wb.xlsx.writeBuffer().then(function(buffer) {
+            var blob = new Blob([buffer], { type: 'application/octet-stream' });
+            if (typeof window.downloadBlobRuteo === 'function') {
+                window.downloadBlobRuteo(blob, filename);
+            } else {
+                var link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+            showToast('Excel de Negativas generado correctamente.', 'success');
+        }).catch(function(err) {
+            console.error(err);
+            showToast('Error al generar el Excel de Negativas. Intente de nuevo.', 'error');
+        });
+    }
+
+    $('#btn-download-excel').on('click', exportarCSVRegistros);
+    $('#btn-negativas-exportar-excel').on('click', exportarNegativasExcel);
 
     $('#btn-negativa-guardar-drive').on('click', function() {
         var $msg = $('#negativa-msg');
