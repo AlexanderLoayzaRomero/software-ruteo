@@ -13,7 +13,6 @@ Sistema integral de captura de datos de campo, trazabilidad de infraestructura d
 | **Backend Cloud** | Google Apps Script (Google Sheets & Drive API) | Webhook `google_script.js` para almacenamiento en Google Sheets (pestaña por empresa) y gestion de archivos en Drive. |
 | **Base de Datos** | MySQL 8.0 / MariaDB | Tablas `wp_users`, `wp_usermeta`, `wp_options` y tabla personalizada `wp_ruteo_empresas`. |
 | **Librerias JS** | jsPDF 2.5.1, AutoTable 3.8.2, ExcelJS 4.4.0, docx 8.5.0, FileSaver 2.0.5 | Generacion automatica de documentos PDF, hojas de calculo `.xlsx` avanzadas y reportes Word `.docx` editables. |
-| **Infraestructura** | Docker & Docker Compose | Contenedor Apache/PHP (`ruteo-wp`) y contenedor MySQL 8.0 (`ruteo-db`). |
 
 ---
 
@@ -22,7 +21,6 @@ Sistema integral de captura de datos de campo, trazabilidad de infraestructura d
 ```
 software-ruteo/
 ├── README.md                           # Documentacion tecnica maestra del proyecto
-├── docker-compose.yml                  # Orquestacion de contenedores Docker (WordPress + MySQL)
 ├── google_script.js                    # Webhook de Google Apps Script (Sheets Multi-empresa & Drive)
 ├── .gitignore                          # Exclusiones de control de versiones Git
 └── wp-content/
@@ -125,44 +123,12 @@ UPDATE wp_users SET user_pass = MD5('123456') WHERE user_login = 'adminnuevo';
 
 ---
 
-### 3. Credenciales de Base de Datos y Servidor Docker
-
-| Parametro | Valor / Credencial | Descripcion |
-|-----------|--------------------|-------------|
-| **Contenedor WordPress** | `ruteo-wp` | Servidor web Apache + PHP 8.x (`http://localhost:8080`) |
-| **Contenedor MySQL** | `ruteo-db` | Base de datos MySQL 8.0 (`puerto 3306`) |
-| **Nombre de Base de Datos** | `wordpress` | Nombre del esquema MySQL principal |
-| **Usuario Root MySQL** | `root` / Clave: `ruteopassword` | Acceso administrador total MySQL |
-| **Usuario DB WordPress** | `wordpress` / Clave: `ruteopassword` | Usuario de conexion de WordPress a MySQL |
-| **Variables de Entorno Docker** | `RUTEO_PASS_...` = `TuClaveReal123!` | Definiciones en `docker-compose.yml` |
-
----
-
-## 🐳 Instalacion y Despliegue Local con Docker
-
-```bash
-# 1. Clonar el repositorio
-git clone https://github.com/AlexanderLoayzaRomero/software-ruteo.git
-cd software-ruteo
-
-# 2. Levantar los contenedores de WordPress y MySQL
-docker-compose up -d
-
-# 3. Abrir en el navegador
-# Sistema Portal: http://localhost:8080
-# Panel WP-Admin: http://localhost:8080/wp-admin
-```
-
----
-
-## 🌐 Guia de Migracion a Hostinger
+## 🌐 Guia de Instalacion y Migracion a Hostinger
 
 1. **Subir Archivos del Plugin:**
    Copiar la carpeta `wp-content/plugins/wp-ruteo` al directorio `public_html/wp-content/plugins/` en Hostinger via FTP o Administrador de Archivos.
-2. **Exportar / Importar Base de Datos:**
-   Exportar la base de datos local desde Docker:
-   `docker exec ruteo-db mysqldump -u root -pruteopassword wordpress > backup_ruteo.sql`
-   E importar el archivo `.sql` en el phpMyAdmin de Hostinger.
+2. **Importar Base de Datos MySQL:**
+   Importar el archivo `.sql` de tu respaldo en el phpMyAdmin de Hostinger.
 3. **Ejecutar Script SQL de Homologacion:**
    Ejecutar el script SQL de la seccion anterior en phpMyAdmin para asegurar que todas las contraseñas funcionen.
 4. **Configurar Pagina Estatica:**
