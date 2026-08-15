@@ -1955,32 +1955,67 @@ body.admin-bar .ruteo-app-layout {
 .login-card-title h3 { margin: 0 0 4px; font-size: 17px; font-weight: 700; color: #FFFFFF; }
 .login-card-title p  { margin: 0 0 20px; font-size: 13px; color: rgba(255,255,255,0.55); }
 
-.login-card-container .form-group label {
-    color: rgba(255,255,255,0.75);
-    font-size: 13px;
-    font-weight: 600;
-    display: block;
-    margin-bottom: 6px;
+.login-card-container label,
+.login-card-container .form-group label,
+.ruteo-auth-login-form label {
+    color: #0F172A !important;
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    display: block !important;
+    margin-bottom: 6px !important;
 }
 
-.login-card-container .input-wrapper input {
-    width: 100%;
-    box-sizing: border-box;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.15);
-    color: #FFFFFF;
-    padding: 12px 14px;
-    border-radius: 10px;
-    font-size: 14px;
-    outline: none;
-    transition: var(--transition);
+.login-card-container input[type="text"],
+.login-card-container input[type="password"],
+.ruteo-auth-login-form input[type="text"],
+.ruteo-auth-login-form input[type="password"] {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: #F8FAFC !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #0F172A !important;
+    padding: 12px 14px !important;
+    border-radius: 8px !important;
+    font-size: 14px !important;
+    outline: none !important;
+    transition: var(--transition) !important;
 }
-.login-card-container .input-wrapper input::placeholder { color: rgba(255,255,255,0.35); }
-.login-card-container .input-wrapper input:focus {
-    border-color: var(--accent-violet);
-    background: rgba(255,255,255,0.12);
-    box-shadow: 0 0 0 3px rgba(108,92,231,0.25);
+
+.login-card-container input::placeholder,
+.ruteo-auth-login-form input::placeholder {
+    color: #64748B !important;
+    opacity: 0.9 !important;
 }
+
+.login-card-container input:focus,
+.ruteo-auth-login-form input:focus {
+    border-color: #0097D8 !important;
+    background: #FFFFFF !important;
+    box-shadow: 0 0 0 3px rgba(0, 151, 216, 0.15) !important;
+}
+
+/* SOLO EN TEMA OSCURO EXPLÍCITO */
+html[data-theme="dark"] .login-card-container label,
+html[data-theme="dark"] .login-card-container .form-group label,
+html[data-theme="dark"] .ruteo-auth-login-form label {
+    color: #F8FAFC !important;
+}
+
+html[data-theme="dark"] .login-card-container input[type="text"],
+html[data-theme="dark"] .login-card-container input[type="password"],
+html[data-theme="dark"] .ruteo-auth-login-form input[type="text"],
+html[data-theme="dark"] .ruteo-auth-login-form input[type="password"] {
+    background: #1E293B !important;
+    border: 1px solid #334155 !important;
+    color: #F8FAFC !important;
+}
+
+html[data-theme="dark"] .login-card-container input::placeholder,
+html[data-theme="dark"] .ruteo-auth-login-form input::placeholder {
+    color: #94A3B8 !important;
+}
+
+
 
 .spinner {
     width: 16px;
@@ -1998,12 +2033,8 @@ body.admin-bar .ruteo-app-layout {
 .ruteo-message.error   { color: #FF6B6B; }
 .ruteo-message.success { color: #83CA16; }
 
-.demo-accounts-box p {
-    color: var(--text-secondary, #475569) !important;
-}
-.ruteo-wrapper .demo-accounts-box p,
-.ruteo-glass-container .demo-accounts-box p {
-    color: rgba(255,255,255,0.7) !important;
+.demo-accounts-box {
+    display: none !important;
 }
 
 .btn-demo-login {
@@ -2317,3 +2348,81 @@ body.admin-bar .ruteo-app-layout {
     padding: 24px;
     box-shadow: var(--shadow-md);
 }
+
+/* --- ESTILOS DE FORMULARIO DE ACCESO (LOGIN Y ACCESO RESTRINGIDO) --- */
+.ruteo-auth-login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    text-align: left;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+.ruteo-auth-login-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 0 !important;
+    width: 100%;
+}
+
+.ruteo-auth-login-form label {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+    color: var(--text-main) !important;
+    display: block !important;
+}
+
+.ruteo-auth-login-form .input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.ruteo-auth-login-form input[type="text"],
+.ruteo-auth-login-form input[type="password"] {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    font-family: inherit !important;
+    color: var(--text-main) !important;
+    background-color: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 8px !important;
+    outline: none !important;
+    transition: var(--transition) !important;
+    display: block !important;
+    min-height: 42px !important;
+    line-height: 1.4 !important;
+}
+
+.ruteo-auth-login-form input[type="text"]:focus,
+.ruteo-auth-login-form input[type="password"]:focus {
+    border-color: var(--secondary) !important;
+    box-shadow: 0 0 0 3px rgba(0, 151, 216, 0.15) !important;
+}
+
+.ruteo-auth-login-form input[type="text"]::placeholder,
+.ruteo-auth-login-form input[type="password"]::placeholder {
+    color: var(--text-muted) !important;
+    opacity: 0.8 !important;
+}
+
+.login-card-container {
+    background: var(--bg-card) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+.ruteo-tab-protected-notice p,
+.ruteo-login-required-notice p {
+    color: var(--text-main, #334155) !important;
+    opacity: 0.9 !important;
+}
+
+html[data-theme="dark"] .ruteo-tab-protected-notice p,
+html[data-theme="dark"] .ruteo-login-required-notice p {
+    color: #94A3B8 !important;
+}
+

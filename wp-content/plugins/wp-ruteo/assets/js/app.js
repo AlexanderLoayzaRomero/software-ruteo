@@ -362,9 +362,11 @@ if (user.isSuperAdmin) {
             if (res.success && res.data.user) {
                 $msg.text('¡Inicio de sesion exitoso! Cargando portal...').removeClass('error info').addClass('success');
                 actualizarInterfazUsuario(res.data.user);
+                $('.ruteo-tab-protected-notice').hide();
+                $('.ruteo-form, .portal-card, #ruteo-form').show();
                 setTimeout(function() {
-                    $('.sidebar-item[data-tab="inicio"]').click();
-                }, 500);
+                    location.reload();
+                }, 300);
             } else {
                 $msg.text(res.data && res.data.message ? res.data.message : 'Credenciales invalidas. Revisa usuario y clave.').removeClass('success info').addClass('error');
             }

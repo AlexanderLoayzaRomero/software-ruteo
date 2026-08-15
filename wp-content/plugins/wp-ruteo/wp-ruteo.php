@@ -18,6 +18,7 @@ class WPRuteoApp {
 
     public function __construct() {
         $this->register_roles();
+        add_action( 'template_redirect', array( $this, 'fuerza_redireccion_portal' ) );
         add_shortcode( 'formulario_ruteo', array( $this, 'render_form' ) );
         add_shortcode( 'portal_ruteo', array( $this, 'render_portal' ) );
         add_shortcode( 'login_ruteo', array( $this, 'render_login' ) );
@@ -253,6 +254,32 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
                 $wp_roles->roles[ $rol_id ]['name'] = $nombre;
                 $wp_roles->role_names[ $rol_id ]    = $nombre;
                 update_option( $wp_roles->role_key, $wp_roles->roles );
+            }
+        }
+    }
+
+    public function fuerza_redireccion_portal() {
+        if ( is_admin() || wp_doing_ajax() ) {
+            return;
+        }
+        if ( is_front_page() || is_home() ) {
+            $front_id = (int) get_option( 'page_on_front' );
+            $portal_page = get_page_by_path( 'portal' );
+            if ( ! $portal_page ) {
+                $portal_page = get_page_by_path( 'portal-ruteo' );
+            }
+            if ( $portal_page ) {
+                if ( (int) $portal_page->ID === $front_id ) {
+                    return; // Ya esta cargando el portal como portada, no redirigir a si mismo
+                }
+                $target_url = get_permalink( $portal_page->ID );
+            } else {
+                $target_url = home_url( '/portal/' );
+            }
+            
+            if ( ! empty( $target_url ) && rtrim( $target_url, '/' ) !== rtrim( home_url( '/' ), '/' ) ) {
+                wp_safe_redirect( $target_url );
+                exit;
             }
         }
     }
@@ -776,7 +803,9 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
     }
 
     public function handle_ajax_login() {
-        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+        if ( ! empty( $_POST['nonce'] ) ) {
+            check_ajax_referer( 'ruteo_submit_nonce', 'nonce', false );
+        }
 
         $raw_input = isset( $_POST['username'] ) ? trim( wp_unslash( $_POST['username'] ) ) : '';
         $password  = isset( $_POST['password'] ) ? $_POST['password'] : '';

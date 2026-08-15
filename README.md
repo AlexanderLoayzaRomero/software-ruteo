@@ -1,118 +1,187 @@
 # 🗺️ Aplicativo de Ruteo y Gestion de Campo O&M
 
-Sistema de captura de datos de campo, trazabilidad de infraestructura, monitoreo en tiempo real, auditoria y gestion de seguridad laboral (SST/HSE) para proyectos de ingenieria y mantenimiento. Plugin WordPress integral con backend en Google Sheets, almacenamiento en Google Drive, modulo de Negativa al Trabajo (HSE-RE-NEG-01) y matriz de firmantes por jerarquia.
+Sistema integral de captura de datos de campo, trazabilidad de infraestructura de telecomunicaciones, monitoreo en tiempo real, auditoria multiempresa y gestion de seguridad laboral (SST/HSE) para proyectos de ingenieria y mantenimiento. Plugin WordPress desarrollado para la operacion de cuadrillas en campo, con backend conectado a Google Sheets, almacenamiento en Google Drive, modulo de Negativa al Trabajo (HSE-RE-NEG-01) y matriz de firmantes digitales por jerarquia.
 
 ---
 
 ## 🚀 Stack Tecnologico
 
-| Capa | Tecnologia |
-|------|-----------|
-| **Frontend** | Plugin WordPress (PHP 8.x + JavaScript ES6 + Vanilla CSS) |
-| **Backend** | Google Apps Script (Google Sheets + Drive API) + MySQL 8.0 / WordPress Options |
-| **Librerias** | jsPDF 2.5.1, jsPDF AutoTable 3.8.2, ExcelJS 4.4.0, docx 8.5.0, FileSaver.js 2.0.5 |
-| **Infraestructura** | Docker (WordPress + MySQL 8.0) |
+| Capa | Tecnologia / Herramienta | Descripcion |
+|------|--------------------------|-------------|
+| **Frontend** | Plugin WordPress (PHP 8.x + ES6 Vanilla JS + CSS3) | Interfaz SPA sin recarga de pagina, diseño responsivo Glassmorphism con soporte de temas claro/oscuro. |
+| **Backend Plugin** | PHP 8.x + WordPress Options & Transients API | Endpoints AJAX personalizados, endpoints de proxy, gestion de roles, autenticacion y logs de auditoria. |
+| **Backend Cloud** | Google Apps Script (Google Sheets & Drive API) | Webhook `google_script.js` para almacenamiento en Google Sheets (pestaña por empresa) y gestion de archivos en Drive. |
+| **Base de Datos** | MySQL 8.0 / MariaDB | Tablas `wp_users`, `wp_usermeta`, `wp_options` y tabla personalizada `wp_ruteo_empresas`. |
+| **Librerias JS** | jsPDF 2.5.1, AutoTable 3.8.2, ExcelJS 4.4.0, docx 8.5.0, FileSaver 2.0.5 | Generacion automatica de documentos PDF, hojas de calculo `.xlsx` avanzadas y reportes Word `.docx` editables. |
+| **Infraestructura** | Docker & Docker Compose | Contenedor Apache/PHP (`ruteo-wp`) y contenedor MySQL 8.0 (`ruteo-db`). |
 
 ---
 
-## 📦 Estructura del Proyecto
+## 📦 Arquitectura y Estructura de Archivos
 
 ```
 software-ruteo/
-├── README.md
-├── docker-compose.yml              # Docker: WordPress + MySQL
-├── google_script.js                # Google Apps Script (backend API & Drive Proxy)
-├── .gitignore
+├── README.md                           # Documentacion tecnica maestra del proyecto
+├── docker-compose.yml                  # Orquestacion de contenedores Docker (WordPress + MySQL)
+├── google_script.js                    # Webhook de Google Apps Script (Sheets Multi-empresa & Drive)
+├── .gitignore                          # Exclusiones de control de versiones Git
 └── wp-content/
     └── plugins/
-        └── wp-ruteo/               # Plugin principal (v2.0.0)
-            ├── wp-ruteo.php         # Entry point, shortcodes, AJAX handlers, DB & Audit Logs
+        └── wp-ruteo/                   # Plugin principal de WordPress (v2.0.0)
+            ├── wp-ruteo.php             # Entry point, shortcodes, AJAX, roles, auditoria y empresas
             ├── assets/
             │   ├── css/
-            │   │   └── style.css    # Estilos (temas dinamicos, glassmorphism, responsive)
+            │   │   └── style.css        # Sistema de diseño, variables CSS, Glassmorphism, Toasts, Responsive
             │   └── js/
-            │       └── app.js       # SPA Router, login, formularios, exportacion, auditoria
+            │       └── app.js           # Router SPA, renderizado, firmas canvas, exportacion PDF/Excel/Word
             └── includes/
-                ├── portal-template.php   # 🏠 Portal: dashboard, auditoria, usuarios, Negativas
-                ├── form-template.php     # 📝 Formulario de captura de campo e inline login
-                └── login-template.php    # 🔐 Login de acceso general
+                ├── portal-template.php  # 🏠 Portal: Dashboard, Registros, Materiales, Auditoria, Usuarios, Negativas
+                ├── form-template.php    # 📝 Formulario de captura de campo de 17 campos e inline login
+                └── login-template.php   # 🔐 Plantilla de inicio de sesion independiente
 ```
 
 ---
 
-## ⚙️ Funcionalidades Principales
+## ⚙️ Modulos Tecnicos del Sistema
 
-### 🏠 Portal de Registros (`[portal_ruteo]`)
-- ✅ **Dashboard de Control**: Estadisticas en tiempo real de registros, mufas, postes, torres, clientes y logs de auditoria.
-- ✅ **Filtros Avanzados**: Filtrado por tramo, texto libre y **tipo de estructura** (Poste, Torre, Mufa, Camara).
-- ✅ **PDF Grupal**: Reporte general formateado en hoja horizontal A4 landscape con 19 columnas tecnicas.
-- ✅ **Excel Grupal**: Archivo `.xlsx` con dos pestañas (Portada de Informacion General + Registros de Campo), 21 columnas e hipervinculos directos a fotografias de Drive y archivo KMZ.
-- ✅ **PDF Individual**: Ficha tecnica oficial por estructura con datos consolidados e imagenes incrustadas.
-- ✅ **Word Individual**: Exportacion a `.docx` 100% editable generada dinamicamente en el navegador del cliente.
+### 1. 🏠 Portal de Registros (`[portal_ruteo]`)
+- **Dashboard de Control**: KPIs dinamicos en tiempo real con contadores de estructuras (Postes, Torres, Mufas, Camaras, Clientes y total de registros).
+- **Filtros Avanzados**: Filtrado dinamico por tramo, texto libre y tipo de estructura.
+- **Exportacion PDF Masiva**: Generacion de reporte general horizontal A4 con 19 columnas tecnicas.
+- **Exportacion Excel Masiva (`.xlsx`)**: Archivo con portada corporativa, dos pestañas (Informacion General + Detalle de Registros de Campo), 21 columnas e hipervinculos directos a fotografias de Drive y archivo KMZ.
+- **Fichas Individuales (PDF / Word)**: Ficha tecnica detallada por estructura con fotografias incrustadas y firmas digitales de los responsables.
 
-### 🛡️ Jerarquia de Roles y Permisos de Firmantes Digitales
-El Administrador General es el unico responsable habilitado para configurar y asignar roles, puestos y permisos de firmante al personal en la seccion de *Gestion de Usuarios*:
+### 2. 📝 Formulario de Captura de Campo (`[formulario_ruteo]`)
+- Registro completo de infraestructura en campo con 17 campos tecnicos (Tramo, Codigo, Tipo de Estructura, Coordenadas GPS, Materiales, etc.).
+- Geolocalizacion automatica mediante API de Ubicacion del navegador.
+- Captura de fotografias en formato Base64 con vista previa e integracion directa para subir a Google Drive.
+- Tarjeta de restriccion con login inline integrado para usuarios no logueados.
 
-| Rol del Sistema | Nivel de Jerarquia | Atribucion de Firma Digital Autorizada |
-| :--- | :--- | :--- |
-| **Administrador General** (`ruteo_admin`) | Nivel 1 (Total) | Permiso total de administracion, gestion de usuarios, parametros, auditoria y firma global. |
-| **Supervisor Operativo** (`ruteo_sup_operativo`) | Nivel 2 (Operaciones) | **Firma Operativa:** Valida liberaciones de obra, pruebas de calidad de mufas/postes y cierre de OT. |
-| **Supervisor HSE / Seguridad** (`ruteo_sup_hse`) | Nivel 2 (Seguridad) | **Firma HSE:** Valida cumplimiento de normas de seguridad, aprueba AST, checklist EPP y Negativa al Trabajo. |
-| **Operario de Campo** (`ruteo_worker`) | Nivel 3 (Ejecutor) | **Firma Ejecutor:** Registra datos tecnicos en campo, llena checklist inicial y firma reportes de cuadrilla. |
+### 3. 🛡️ Modulo de Negativa al Trabajo (HSE-RE-NEG-01)
+Modulo diseñado bajo el marco legal de la **Ley 29783 (Art. 63)** y el **D.S. 005-2012-TR** para el derecho del trabajador a interrumpir actividades ante un riesgo grave e inminente.
+- **Etapa 1 (Tecnico Reportante):** Registro del evento, causa de la negativa, condiciones de riesgo y subida de 2 evidencias fotograficas.
+- **Etapa 2 (Supervisor Operativo):** Evaluacion operativa, definicion de medidas de control y acuerdo de trabajo seguro.
+- **Etapa 3 (Supervisor de Seguridad SST):** Inspeccion de seguridad HSE y firma digital de conformidad.
+- **Etapa 4 (Area HSE / Gerencia):** Visto bueno final y habilitacion de descarga del reporte PDF oficial impreso.
 
-### 📜 Modulo de Auditoria y Registro de Logs
-- **Trazabilidad en Tiempo Real**: Captura eventos criticos (inicios de sesion, creacion y edicion de usuarios, cambios de roles, permisos de firmantes y firma de actas).
-- **Control de Acceso**: Pestaña protegida visible unicamente para usuarios autenticados.
-- **Boton de Actualizacion**: Refresco instantaneo via AJAX (`ruteo_get_logs`) de la tabla de auditoria.
+### 4. 🏢 Gestion Multiempresa y Pestañas Dinamicas en Google Sheets
+- Tabla personalizada `wp_ruteo_empresas` para administracion de contratas y empresas colaboradoras.
+- El script de Google Apps Script (`google_script.js`) detecta la empresa asignada al registro y crea/escribe automaticamente en una pestaña independiente dedicada a esa empresa dentro del libro de Google Sheets.
 
-### 🛡️ Modulo de Negativa al Trabajo (HSE-RE-NEG-01)
-- **Etapa 1 (Tecnico Reportante):** Registro de motivos, base legal (Ley 29783 Art. 63) y carga de 2 evidencias fotograficas en formato Base64 con vista previa.
-- **Etapa 2 (Supervisor Operativo):** Registro de medidas correctivas y acuerdos de trabajo seguro.
-- **Etapa 3 (Supervisor de Seguridad):** Firma de conformidad SST por el Supervisor HSE.
-- **Etapa 4 (Area HSE):** Visto bueno final y habilitacion de descarga del PDF oficial.
+### 5. 📜 Modulo de Auditoria y Logs de Sistema
+- Trazabilidad total de eventos criticos: Inicios de sesion, creacion/edicion/eliminacion de usuarios, asignacion de permisos de firmantes y registro/modificacion de negativas al trabajo.
+- Pestaña protegida en el portal accesible unicamente para usuarios con rol de Administrador.
 
-### 📝 Formulario de Captura de Campo (`[formulario_ruteo]`)
-- Registro completo de estructuras (torres, postes, mufas, camaras) con 17 campos tecnicos.
-- Login inline integrado en la tarjeta de restriccion para usuarios no autenticados.
-- Carga automatica de fotografias a Google Drive y archivo KMZ con geolocalizacion inteligente.
+### 6. 🔔 Sistema de Notificaciones Toast
+- Sistema de avisos flotantes interactivos (Toasts) que reemplaza las alertas nativas del navegador (`alert()`).
+- Soporta notificaciones de Exito, Error, Advertencia e Informacion con temporizador de auto-cierre y animaciones fluidas.
 
 ---
 
-## 🔐 Cuentas de Prueba Preconfiguradas
+## 🛡️ Jerarquia de Roles y Atribuciones de Firmantes Digitales
 
-| Usuario | Clave de Acceso | Rol del Sistema | Cargo Asignado | Atribucion de Firma Activa |
-|---------|-----------------|-----------------|----------------|----------------------------|
-| `admingeneral` | `AdminGeneral123!` | Administrador General | Administrador General O&M | Ejecutor, Operativo, HSE |
-| `supervisor1` | `Supervisor123!` | Supervisor Operativo | Supervisor Operativo de Campo | Firma Supervisor Operativo |
-| `seguridad1` | `Seguridad123!` | Supervisor HSE | Supervisor de Seguridad SST | Firma Supervisor HSE |
-| `hse1` | `Hse123!` | Supervisor HSE | Lider de Area HSE | Firma Supervisor HSE |
-| `tecnico1` | `Tecnico123!` | Operario de Campo | Tecnico de Campo O&M | Firma Ejecutor |
+El Administrador General es el unico usuario habilitado para configurar y asignar roles, puestos y atribuciones de firma digital desde la seccion de *Gestion de Usuarios*:
+
+| Rol del Sistema | Identificador WP | Atribucion de Firma Autorizada | Responsabilidades y Permisos |
+| :--- | :--- | :--- | :--- |
+| **Administrador General** | `ruteo_super_admin` / `ruteo_admin` | **Firma Global / Total** | Administracion total del sistema, gestion de usuarios, auditoria, asignacion de empresas y firmado total. |
+| **Supervisor Operativo** | `ruteo_sup_operativo` | **Firma Operativa** | Valida liberaciones de obra, pruebas de calidad en mufas/postes, cierre de OT y firma Etapa 2 de Negativas. |
+| **Supervisor HSE / Seguridad** | `ruteo_sup_hse` | **Firma HSE / SST** | Valida cumplimiento de normas de seguridad, aprueba AST, checklist EPP y firma Etapas 3 y 4 de Negativas. |
+| **Operario de Campo** | `ruteo_worker` | **Firma Ejecutor** | Registra datos de campo, llena checklist inicial de cuadrilla y reporta Etapa 1 de Negativas al Trabajo. |
 
 ---
 
-## 🐳 Instalacion con Docker
+## 🔐 Tabla Maestra de Cuentas y Credenciales del Sistema
+
+### 1. Cuentas de Usuarios del Aplicativo y WordPress (WP-Admin & Portal)
+
+| Usuario | Clave de Acceso | Correo Electronico | Rol del Sistema | Cargo Asignado | Atribucion de Firma / Accesos |
+|---------|-----------------|--------------------|-----------------|----------------|-------------------------------|
+| `admin_ruteo` | `AdminGeneral123!` | `admin@ruteo.com` | Administrador General (`administrator`) | Administrador General O&M | Acceso Total WP-Admin y Portal |
+| `admingeneral` | `AdminGeneral123!` | `admin@software-om.org.pe` | Administrador General (`ruteo_super_admin`) | Administrador General O&M | Acceso Total, Firma Ejecutor, Operativo, HSE |
+| `supervisor1` | `Supervisor123!` | `supervisor1@ruteo.org.pe` | Supervisor Operativo (`ruteo_sup_operativo`) | Supervisor Operativo de Campo | Firma Supervisor Operativo (Etapa 2 Negativas) |
+| `seguridad1` | `Seguridad123!` | `seguridad1@ruteo.org.pe` | Supervisor HSE (`ruteo_sup_hse`) | Supervisor de Seguridad SST | Firma Supervisor HSE (Etapa 3 Negativas) |
+| `hse1` | `Hse123!` | `hse1@ruteo.org.pe` | Supervisor HSE (`ruteo_sup_hse`) | Lider de Area HSE | Firma Supervisor HSE / Visto Bueno (Etapa 4) |
+| `tecnico1` | `Tecnico123!` | `tecnico1@ruteo.org.pe` | Operario de Campo (`ruteo_worker`) | Tecnico de Campo O&M | Firma Ejecutor (Etapa 1 Negativas) |
+| `worker_ruteo` | `worker123` | `worker@ruteo.com` | Operario de Campo (`ruteo_worker`) | Operario de Campo | Firma Ejecutor |
+| `adminnuevo` | `123456` | `nuevo@ruteo.com` | Administrador General (`administrator`) | Administrador Contingencia | Acceso Total WP-Admin |
+
+---
+
+### 2. Script SQL de Homologacion de Contraseñas (para Hostinger / phpMyAdmin)
+
+Para sincronizar de un solo clic todas las contraseñas en tu servidor de Hostinger y hacer que coincidan exactamente con este README, copia y ejecuta este bloque en la pestaña **SQL** de tu phpMyAdmin:
+
+```sql
+-- Script de homologacion de contraseñas de usuarios
+UPDATE wp_users SET user_pass = MD5('AdminGeneral123!') WHERE user_login IN ('admin_ruteo', 'admingeneral');
+UPDATE wp_users SET user_pass = MD5('Supervisor123!') WHERE user_login = 'supervisor1';
+UPDATE wp_users SET user_pass = MD5('Seguridad123!') WHERE user_login = 'seguridad1';
+UPDATE wp_users SET user_pass = MD5('Hse123!') WHERE user_login = 'hse1';
+UPDATE wp_users SET user_pass = MD5('Tecnico123!') WHERE user_login = 'tecnico1';
+UPDATE wp_users SET user_pass = MD5('worker123') WHERE user_login = 'worker_ruteo';
+UPDATE wp_users SET user_pass = MD5('123456') WHERE user_login = 'adminnuevo';
+```
+
+---
+
+### 3. Credenciales de Base de Datos y Servidor Docker
+
+| Parametro | Valor / Credencial | Descripcion |
+|-----------|--------------------|-------------|
+| **Contenedor WordPress** | `ruteo-wp` | Servidor web Apache + PHP 8.x (`http://localhost:8080`) |
+| **Contenedor MySQL** | `ruteo-db` | Base de datos MySQL 8.0 (`puerto 3306`) |
+| **Nombre de Base de Datos** | `wordpress` | Nombre del esquema MySQL principal |
+| **Usuario Root MySQL** | `root` / Clave: `ruteopassword` | Acceso administrador total MySQL |
+| **Usuario DB WordPress** | `wordpress` / Clave: `ruteopassword` | Usuario de conexion de WordPress a MySQL |
+| **Variables de Entorno Docker** | `RUTEO_PASS_...` = `TuClaveReal123!` | Definiciones en `docker-compose.yml` |
+
+---
+
+## 🐳 Instalacion y Despliegue Local con Docker
 
 ```bash
+# 1. Clonar el repositorio
 git clone https://github.com/AlexanderLoayzaRomero/software-ruteo.git
 cd software-ruteo
+
+# 2. Levantar los contenedores de WordPress y MySQL
 docker-compose up -d
-# Acceso al sistema: http://localhost:8080
+
+# 3. Abrir en el navegador
+# Sistema Portal: http://localhost:8080
+# Panel WP-Admin: http://localhost:8080/wp-admin
 ```
 
 ---
 
-## 🔌 Shortcodes de WordPress
+## 🌐 Guia de Migracion a Hostinger
 
-| Shortcode | Descripcion |
-|-----------|-------------|
-| `[portal_ruteo]` | Portal de gestion con dashboard, auditoria, usuarios, Negativa al Trabajo y exportacion |
-| `[formulario_ruteo]` | Formulario de captura de datos de campo con login inline |
-| `[login_ruteo]` | Pantalla de inicio de sesion |
+1. **Subir Archivos del Plugin:**
+   Copiar la carpeta `wp-content/plugins/wp-ruteo` al directorio `public_html/wp-content/plugins/` en Hostinger via FTP o Administrador de Archivos.
+2. **Exportar / Importar Base de Datos:**
+   Exportar la base de datos local desde Docker:
+   `docker exec ruteo-db mysqldump -u root -pruteopassword wordpress > backup_ruteo.sql`
+   E importar el archivo `.sql` en el phpMyAdmin de Hostinger.
+3. **Ejecutar Script SQL de Homologacion:**
+   Ejecutar el script SQL de la seccion anterior en phpMyAdmin para asegurar que todas las contraseñas funcionen.
+4. **Configurar Pagina Estatica:**
+   En el panel de WordPress (`wp-admin`), ir a **Ajustes > Lectura**, seleccionar **Una pagina estatica** y asignar la pagina **Portal de Ruteo**.
+
+---
+
+## 🔌 Shortcodes Disponibles en WordPress
+
+| Shortcode | Descripcion | Ubicacion de Pagina Recomendada |
+|-----------|-------------|---------------------------------|
+| `[portal_ruteo]` | Portal de gestion con Dashboard, Registros, Materiales, Auditoria, Usuarios, Empresas, Negativas y Exportacion. | Pagina `/portal` (Portada) |
+| `[formulario_ruteo]` | Formulario de captura de datos de campo con geolocalizacion, fotos y login inline. | Pagina `/formulario` |
+| `[login_ruteo]` | Pantalla de inicio de sesion dedicada. | Pagina `/iniciar-sesion` |
 
 ---
 
 ## 📝 Licencia y Autor
 
-Proyecto privado. Todos los derechos reservados.
+Proyecto de Software de Ingenieria y Ruteo O&M. Todos los derechos reservados.
 
 **Autor:** [Alexander Loayza Romero](https://github.com/AlexanderLoayzaRomero)
