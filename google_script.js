@@ -1,18 +1,11 @@
 // ---------------------------------------------------------------
-<<<<<<< HEAD
-// GET: Devuelve registros de ruteo o materiales del sheet como JSON
-=======
 // GET: Devuelve registros de ruteo, materiales o negativas del sheet como JSON
->>>>>>> origin/master
 // Usado por el Aplicativo de Ruteo en WordPress
 // ---------------------------------------------------------------
 function doGet(e) {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
     
-<<<<<<< HEAD
-    // Si solicitan materiales via doGet ?action=get_materiales
-=======
     // 1. Si solicitan negativas via doGet ?action=get_negativas
     if (e && e.parameter && e.parameter.action === 'get_negativas') {
       var negSheet = ss.getSheetByName('Negativas');
@@ -42,7 +35,6 @@ function doGet(e) {
     }
 
     // 2. Si solicitan materiales via doGet ?action=get_materiales
->>>>>>> origin/master
     if (e && e.parameter && e.parameter.action === 'get_materiales') {
       var matSheet = ss.getSheetByName('Materiales');
       if (!matSheet) {
@@ -70,12 +62,14 @@ function doGet(e) {
       return outputResponse({ status: 'success', materiales: materiales, total: materiales.length }, e);
     }
 
-<<<<<<< HEAD
-    // Por defecto: devuelve registros de ruteo de campo
-=======
     // 3. Por defecto: devuelve registros de ruteo de campo
->>>>>>> origin/master
-    var sheet = ss.getActiveSheet();
+    var empresaParam = (e && e.parameter && e.parameter.empresa) ? e.parameter.empresa : '';
+    var sheet = empresaParam ? ss.getSheetByName('Ruteo - ' + empresaParam) : ss.getSheetByName('Ruteo');
+
+    if (!sheet) {
+      return outputResponse({ status: 'success', registros: [], total: 0 }, e);
+    }
+
     var data  = sheet.getDataRange().getValues();
 
     if (data.length <= 1) {
@@ -134,10 +128,6 @@ function doPost(e) {
     var FOLDER_ID = '1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
 
     var data = JSON.parse(e.postData.contents);
-<<<<<<< HEAD
-    
-    // Si la peticion es para crear/sincronizar documento Google Docs en Drive
-=======
 
     // 1. Peticion para guardar / registrar / actualizar Negativa al Trabajo en Google Sheets y Drive
     if (data.action_type === 'save_negativa' || data.action_type === 'save_negativa_drive' || data.document_type === 'negativa_hse_re_neg_01') {
@@ -318,18 +308,13 @@ function doPost(e) {
     }
     
     // 2. Si la peticion es para crear/sincronizar documento Google Docs en Drive para Ruteo
->>>>>>> origin/master
     if (data.action_type === 'create_doc') {
       var docUrl = generarGoogleDoc(data.record || data, FOLDER_ID);
       return ContentService.createTextOutput(JSON.stringify({"status": "success", "doc_url": docUrl}))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-<<<<<<< HEAD
-    // Si la peticion es para guardar reporte de materiales
-=======
     // 3. Si la peticion es para guardar reporte de materiales
->>>>>>> origin/master
     if (data.action_type === 'save_materiales') {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
       var matSheet = ss.getSheetByName('Materiales');
@@ -358,22 +343,6 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
     
-<<<<<<< HEAD
-    // Si la peticion es para subir un documento generado (Word)
-    if (data.action_type === 'save_document') {
-      var folder = DriveApp.getFolderById(FOLDER_ID);
-      var decoded = Utilities.base64Decode(data.file_base64);
-      var blob = Utilities.newBlob(decoded, data.mimeType, data.filename);
-      var file = folder.createFile(blob);
-      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-      return ContentService.createTextOutput(JSON.stringify({"status": "success", "url": file.getUrl()}))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    
-    // Sino, es la subida normal del formulario de campo
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    
-=======
     // 4. Si la peticion es para actualizar/editar un Registro de Ruteo existente
     if (data.action_type === 'update_registro') {
       var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -486,8 +455,8 @@ function doPost(e) {
     }
 
     // 7. Sino, es la subida normal del formulario de campo
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
->>>>>>> origin/master
+    var empresaNombre = data.empresa_nombre || '';
+    var sheet = empresaNombre ? getOrCreateSheetEmpresa(ss, empresaNombre) : ss.getSheetByName('Ruteo');
     var nextRow = sheet.getLastRow() + 1;
     
     if (nextRow === 1) {
@@ -571,8 +540,6 @@ function extraerFolderId(input) {
   return str || DEFAULT_ID;
 }
 
-<<<<<<< HEAD
-=======
 function generarGoogleDocNegativa(data, folderId) {
   try {
     var validFolderId = extraerFolderId(folderId);
@@ -638,7 +605,6 @@ function generarGoogleDocNegativa(data, folderId) {
   }
 }
 
->>>>>>> origin/master
 function generarGoogleDoc(data, folderId) {
   try {
     var validFolderId = extraerFolderId(folderId);
@@ -766,14 +732,6 @@ function generarKMZ(data, folderId) {
   }
 }
 
-<<<<<<< HEAD
-// ---------------------------------------------------------------
-// FUNCION MANUAL EN APPS SCRIPT: Genera/Regenera Google Docs para
-// TODOS los registros existentes en la hoja de Google Sheets.
-// Se ejecuta directamente desde el editor seleccionando la funcion.
-// ---------------------------------------------------------------
-=======
->>>>>>> origin/master
 function generarDocumentosTodosLosRegistros() {
   var FOLDER_ID = '1e9qvf_OKyqzCTxzhs8cF0E3t61UVlRXO';
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();

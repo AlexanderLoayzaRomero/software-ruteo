@@ -509,7 +509,13 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         header( 'Pragma: no-cache' );
         header( 'Expires: 0' );
 
-        $target_url = add_query_arg( '_ts', microtime( true ), $this->webhook_url );
+        $current_user = wp_get_current_user();
+        $empresa_id   = self::get_user_empresa_id( $current_user->ID );
+        $args = array( '_ts' => microtime( true ) );
+        if ( $empresa_id ) {
+            $args['empresa'] = self::get_empresa_nombre( $empresa_id );
+        }
+        $target_url = add_query_arg( $args, $this->webhook_url );
 
         $response = wp_remote_get( $target_url, array(
             'timeout'     => 35,
@@ -669,6 +675,11 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
 
         $data['foto1_base64'] = $photo_data[0];
         $data['foto2_base64'] = $photo_data[1];
+
+        $empresa_id = self::get_user_empresa_id( get_current_user_id() );
+        if ( $empresa_id ) {
+            $data['empresa_nombre'] = self::get_empresa_nombre( $empresa_id );
+        }
 
         if ( $this->webhook_url ) {
             wp_remote_post( $this->webhook_url, array(
