@@ -1813,6 +1813,86 @@ if (user.isSuperAdmin) {
         });
     });
 
+    // DETECCION DE ENLACE DE RECUPERACION DE CONTRASEÑA EN URL
+    (function checkResetPasswordUrl() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var rpAction = urlParams.get('action');
+        var rpKey = urlParams.get('key');
+        var rpLogin = urlParams.get('login');
+
+        if ((rpAction === 'rp' || rpAction === 'resetpass') && rpKey && rpLogin) {
+            var $resetModal = $('#modal-reset-password');
+            if ($resetModal.length) {
+                $('#reset-key').val(rpKey);
+                $('#reset-login').val(rpLogin);
+                $resetModal.attr('style', 'display: flex !important; position: fixed !important; inset: 0 !important; z-index: 9999999 !important; background: rgba(0,0,0,0.7) !important; backdrop-filter: blur(6px) !important; align-items: center !important; justify-content: center !important; padding: 16px !important;');
+                setTimeout(function() { $('#reset-new-password').focus(); }, 300);
+            }
+        }
+    })();
+
+    $(document).on('click', '#btn-close-reset-modal, #modal-reset-password', function(e) {
+        if (e.target === this || $(e.target).hasClass('btn-close-modal')) {
+            e.preventDefault();
+            e.stopPropagation();
+            $('#modal-reset-password').attr('style', 'display: none !important;');
+        }
+    });
+
+    $('#form-reset-password').on('submit', function(e) {
+        e.preventDefault();
+        var $btn = $(this).find('button[type="submit"]');
+        var $msg = $(this).find('.reset-message');
+        var key = $('#reset-key').val();
+        var login = $('#reset-login').val();
+        var pass1 = $('#reset-new-password').val();
+        var pass2 = $('#reset-confirm-password').val();
+
+        if (!pass1 || pass1.length < 6) {
+            $msg.removeClass('success').addClass('error').text('La clave debe tener al menos 6 caracteres.').fadeIn(200);
+            return;
+        }
+
+        if (pass1 !== pass2) {
+            $msg.removeClass('success').addClass('error').text('Las claves ingresadas no coinciden.').fadeIn(200);
+            return;
+        }
+
+        $btn.prop('disabled', true);
+        $msg.removeClass('success error').hide();
+
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'ruteo_reset_password',
+                nonce: wpRuteoAjax.nonce,
+                key: key,
+                login: login,
+                password: pass1
+            },
+            success: function(res) {
+                $btn.prop('disabled', false);
+                if (res.success) {
+                    $msg.addClass('success').text(res.data.message).fadeIn(200);
+                    $('#reset-new-password, #reset-confirm-password').val('');
+                    setTimeout(function() {
+                        $('#modal-reset-password').attr('style', 'display: none !important;');
+                        if (window.history && window.history.replaceState) {
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                        }
+                    }, 2500);
+                } else {
+                    $msg.addClass('error').text(res.data.message || 'Error al restablecer la clave.').fadeIn(200);
+                }
+            },
+            error: function() {
+                $btn.prop('disabled', false);
+                $msg.addClass('error').text('Error de conexion al restablecer la clave.').fadeIn(200);
+            }
+        });
+    });
+
     // --- MODULO: GESTION DE CLIENTES Y LOGOS ---
     function renderTablaClientes(clientes) {
         var $tbody = $('#clientes-tbody');

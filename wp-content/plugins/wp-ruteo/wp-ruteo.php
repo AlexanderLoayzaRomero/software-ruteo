@@ -48,6 +48,8 @@ class WPRuteoApp {
         add_action( 'wp_ajax_nopriv_ruteo_logout', array( $this, 'handle_ajax_logout' ) );
         add_action( 'wp_ajax_ruteo_recover_password', array( $this, 'handle_ajax_recover_password' ) );
         add_action( 'wp_ajax_nopriv_ruteo_recover_password', array( $this, 'handle_ajax_recover_password' ) );
+        add_action( 'wp_ajax_ruteo_reset_password', array( $this, 'handle_ajax_reset_password' ) );
+        add_action( 'wp_ajax_nopriv_ruteo_reset_password', array( $this, 'handle_ajax_reset_password' ) );
         add_action( 'wp_ajax_ruteo_get_users', array( $this, 'handle_ajax_get_users' ) );
         add_action( 'wp_ajax_ruteo_create_user', array( $this, 'handle_ajax_create_user' ) );
         add_action( 'wp_ajax_ruteo_delete_user', array( $this, 'handle_ajax_delete_user' ) );
@@ -1515,13 +1517,49 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
         if ( is_wp_error( $retrieved ) ) {
             $err_msg = wp_strip_all_tags( $retrieved->get_error_message() );
             wp_send_json_error( array(
-                'message' => 'No se pudo enviar el correo de recuperacion. El servidor de correo de Hostinger no esta activo o requiere configuracion de SMTP en WordPress. (' . esc_html( $err_msg ) . ')'
+                'message' => 'No se pudo enviar el correo de recuperacion. (' . esc_html( $err_msg ) . ')'
             ) );
             return;
         }
 
         wp_send_json_success( array(
             'message' => 'Se ha enviado un correo de recuperacion a ' . esc_html( $user->user_email ) . '. Revisa tu bandeja de entrada o carpeta de SPAM.'
+        ) );
+    }
+
+    public function handle_ajax_reset_password() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+
+        $key      = isset( $_POST['key'] ) ? sanitize_text_field( wp_unslash( $_POST['key'] ) ) : '';
+        $login    = isset( $_POST['login'] ) ? sanitize_text_field( wp_unslash( $_POST['login'] ) ) : '';
+        $password = isset( $_POST['password'] ) ? $_POST['password'] : '';
+
+        if ( empty( $key ) || empty( $login ) || empty( $password ) ) {
+            wp_send_json_error( array( 'message' => 'Todos los campos son obligatorios.' ) );
+            return;
+        }
+
+        if ( strlen( $password ) < 6 ) {
+            wp_send_json_error( array( 'message' => 'La clave debe tener al menos 6 caracteres.' ) );
+            return;
+        }
+
+        if ( ! function_exists( 'check_password_reset_key' ) ) {
+            require_once ABSPATH . 'wp-includes/user.php';
+        }
+
+        $user = check_password_reset_key( $key, $login );
+
+        if ( is_wp_error( $user ) ) {
+            $err = wp_strip_all_tags( $user->get_error_message() );
+            wp_send_json_error( array( 'message' => 'El enlace de recuperacion ha expirado o no es valido. (' . esc_html( $err ) . ')' ) );
+            return;
+        }
+
+        reset_password( $user, $password );
+
+        wp_send_json_success( array(
+            'message' => '¡Tu clave ha sido restablecida exitosamente! Ya puedes iniciar sesion con tu nueva clave.'
         ) );
     }
 
@@ -1554,6 +1592,48 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
                         <div class="spinner" style="display:none;"></div>
                     </button>
                     <div class="ruteo-message recover-message" style="margin-top:12px; font-size:13px; text-align:center;"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL DE ESTABLECER NUEVA CONTRASEÑA GLOBAL -->
+        <div class="ruteo-modal-overlay" id="modal-reset-password" style="display:none; position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.7); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px;">
+            <div class="ruteo-modal-card" style="max-width:440px; width:100%; background:var(--bg-card, #0F172A); border:1px solid var(--border, #334155); border-radius:16px; padding:28px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); position:relative;">
+                <button type="button" class="btn-close-modal" id="btn-close-reset-modal" style="position:absolute; top:16px; right:16px; background:none; border:none; color:var(--text-muted, #94A3B8); cursor:pointer; font-size:24px; line-height:1;">&times;</button>
+                
+                <div style="text-align:center; margin-bottom:20px;">
+                    <div style="width:56px; height:56px; margin:0 auto 12px auto; background:rgba(34, 197, 94, 0.15); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="28" height="28" fill="none" stroke="#22C55E" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <h3 style="font-size:18px; font-weight:700; color:var(--menu-title, #F8FAFC); margin:0 0 6px 0;">Establecer Nueva Clave</h3>
+                    <p style="font-size:13px; color:var(--text-muted, #94A3B8); margin:0;">Ingresa tu nueva clave de acceso para actualizar tu cuenta de forma segura.</p>
+                </div>
+
+                <form id="form-reset-password">
+                    <input type="hidden" id="reset-key" name="key">
+                    <input type="hidden" id="reset-login" name="login">
+                    
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label style="font-size:13px; font-weight:600; color:var(--text-main, #F8FAFC); display:block; margin-bottom:6px;">Nueva Clave de Acceso</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="reset-new-password" placeholder="Mínimo 6 caracteres" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border, #334155); background:var(--bg-light, #1E293B); color:var(--text-main, #F8FAFC); font-size:14px; box-sizing:border-box;">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom:20px;">
+                        <label style="font-size:13px; font-weight:600; color:var(--text-main, #F8FAFC); display:block; margin-bottom:6px;">Confirmar Nueva Clave</label>
+                        <div class="input-wrapper">
+                            <input type="password" id="reset-confirm-password" placeholder="Repite la nueva clave" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border, #334155); background:var(--bg-light, #1E293B); color:var(--text-main, #F8FAFC); font-size:14px; box-sizing:border-box;">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="ruteo-submit-btn" style="width:100%; height:44px; background:#22C55E; color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
+                        <span class="btn-text">Guardar Nueva Clave</span>
+                        <div class="spinner" style="display:none;"></div>
+                    </button>
+                    <div class="ruteo-message reset-message" style="margin-top:12px; font-size:13px; text-align:center;"></div>
                 </form>
             </div>
         </div>
