@@ -428,8 +428,8 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         return;
     }
     $this->assets_enqueued = true;
-    $css_ver = filemtime( plugin_dir_path( __FILE__ ) . 'assets/css/style.css' );
-    $js_ver  = filemtime( plugin_dir_path( __FILE__ ) . 'assets/js/app.js' );
+    $css_ver = time();
+    $js_ver  = time();
     wp_enqueue_style( 'wp-ruteo-style', plugin_dir_url( __FILE__ ) . 'assets/css/style.css', array(), $css_ver );
     wp_enqueue_script( 'jspdf-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', array(), '2.5.1', true );
     wp_enqueue_script( 'jspdf-autotable-cdn', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js', array( 'jspdf-cdn' ), '3.5.28', true );
