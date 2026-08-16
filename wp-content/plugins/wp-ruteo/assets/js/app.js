@@ -769,29 +769,52 @@ if (user.isSuperAdmin) {
     }
 
     $('.btn-sla-action').on('click', function() {
-        currentSlaType = $(this).data('type') || 'Formato SLA';
+        currentSlaType = $(this).data('type') || 'Informe SLA';
         $('#sla-modal-title').text(currentSlaType);
         $('#sla-modal-desc').text('Complete o use los datos de ejemplo cargados para generar el ' + currentSlaType + ' oficial PRONATEL - CYMTEL.');
         
         var user = (window.wpRuteoAjax && window.wpRuteoAjax.user) ? window.wpRuteoAjax.user : {};
 
-        if (!$('#sla-input-titulo').val()) {
-            $('#sla-input-titulo').val('PERDIDA DE ENLACE MOYOBAMBA-MENDOZA');
-        }
-        if (!$('#sla-input-incidencia').val()) {
-            $('#sla-input-incidencia').val('101-2026-RI-N2-RDNFO-DIOP');
-        }
-        if (!$('#sla-input-tramo').val()) {
+        if (currentSlaType === 'Informe Planta Interna (PINT)') {
+            $('#sla-input-titulo').val('INFORME DE MANTENIMIENTO CORRECTIVO PLANTA INTERNA - NODO PISCOBAMBA');
+            $('#sla-input-incidencia').val('INC-88791');
+            $('#sla-input-tramo').val('Nodo Piscobamba - Ancash');
+            $('#sla-input-causa').val('Corte de energia AC comercial / Energizado con GEP');
+            $('#sla-input-tecnico').val(cleanText(user.displayName || user.username || 'Jhon Crispin Carbajal'));
+            $('#sla-input-detalle').val('Se acudio al nodo Piscobamba tras reporte de falla por falta de energia comercial. Se verifico ausencia de tension AC y se procedio con la conexion del GEP portatil para restablecer el servicio. Se mantuvieron coordinaciones con NOC y SOC Pronatel durante las pruebas y se dejo el equipo IP en servicio normal.');
+        } else if (currentSlaType === 'Abastecimiento Combustible GEE') {
+            $('#sla-input-titulo').val('INFORME DE ABASTECIMIENTO DE COMBUSTIBLE - NODO IÑAPARI');
+            $('#sla-input-incidencia').val('CRQ/OT-41415');
+            $('#sla-input-tramo').val('Nodo Iñapari - Tahuamanu - Puerto Maldonado');
+            $('#sla-input-causa').val('Reabastecimiento periodico de combustible GEE1');
+            $('#sla-input-tecnico').val(cleanText(user.displayName || user.username || 'Jose Luis Quispe Quico'));
+            $('#sla-input-detalle').val('Se realizo la visita de mantenimiento y abastecimiento de combustible al Grupo Electrogeno GEE1 del nodo Iñapari. Se verifico nivel inicial al 22%, se retiraron precintos de seguridad, se suministraron 50 galones de combustible diesel y kit antiderrames dejando el tanque al 35% de capacidad y en operacion optima.');
+        } else if (currentSlaType === 'Reporte Incidencia PEXT') {
+            $('#sla-input-titulo').val('REPORTE DE INCIDENCIA N°101-2026-RI-N2-RDNFO-DIOP - PERDIDA DE ENLACE MOYOBAMBA-MENDOZA');
+            $('#sla-input-incidencia').val('INC000000089393');
             $('#sla-input-tramo').val('Nodo Moyobamba - Nodo Mendoza');
-        }
-        if (!$('#sla-input-causa').val()) {
-            $('#sla-input-causa').val('Dano por vandalismo (machetazo)');
-        }
-        if (!$('#sla-input-tecnico').val()) {
+            $('#sla-input-causa').val('Corte de fibra optica por vandalismo (machetazo)');
             $('#sla-input-tecnico').val(cleanText(user.displayName || user.username || 'Elquin Castillo Siccha'));
-        }
-        if (!$('#sla-input-detalle').val()) {
-            $('#sla-input-detalle').val('El 09 de junio de 2026 se produjo una interrupcion del servicio en la red de fibra optica entre el nodo de distribucion Mendoza y el nodo agregador Moyobamba, debido a danos ocasionados por actos vandalicos (machetazo), los cuales afectaron el cable de fibra optica. La incidencia fue reportada a las 07:38 hrs y el servicio fue restablecido a las 08:13 hrs registrabase una duracion total de 27,405 minutos (456 horas y 45 minutos). Durante este periodo, se realizaron multiples acciones correctivas para restaurar el servicio y minimizar el impacto en los clientes afectados.');
+            $('#sla-input-detalle').val('Interrupcion del servicio por atenuacion y corte de cable ADSS-48 en tramo de fibra optica. Se realizaron caminatas por zona de dificil acceso, coordinacion con autoridades locales y ejecucion de fusiones de fibra para restitucion total del enlace.');
+        } else {
+            if (!$('#sla-input-titulo').val()) {
+                $('#sla-input-titulo').val('PERDIDA DE ENLACE MOYOBAMBA-MENDOZA');
+            }
+            if (!$('#sla-input-incidencia').val()) {
+                $('#sla-input-incidencia').val('101-2026-RI-N2-RDNFO-DIOP');
+            }
+            if (!$('#sla-input-tramo').val()) {
+                $('#sla-input-tramo').val('Nodo Moyobamba - Nodo Mendoza');
+            }
+            if (!$('#sla-input-causa').val()) {
+                $('#sla-input-causa').val('Dano por vandalismo (machetazo)');
+            }
+            if (!$('#sla-input-tecnico').val()) {
+                $('#sla-input-tecnico').val(cleanText(user.displayName || user.username || 'Elquin Castillo Siccha'));
+            }
+            if (!$('#sla-input-detalle').val()) {
+                $('#sla-input-detalle').val('El 09 de junio de 2026 se produjo una interrupcion del servicio en la red de fibra optica entre el nodo de distribucion Mendoza y el nodo agregador Moyobamba, debido a danos ocasionados por actos vandalicos (machetazo), los cuales afectaron el cable de fibra optica. La incidencia fue reportada a las 07:38 hrs y el servicio fue restablecido a las 08:13 hrs registrabase una duracion total de 27,405 minutos (456 horas y 45 minutos). Durante este periodo, se realizaron multiples acciones correctivas para restaurar el servicio y minimizar el impacto en los clientes afectados.');
+            }
         }
 
         poblarListasSla();

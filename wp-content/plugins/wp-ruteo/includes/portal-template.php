@@ -848,6 +848,39 @@ body.admin-bar .ruteo-app-layout {
                             <p>Reporte detallado de atencion de incidencias, reparacion de hilos, empalmes y consumo de fibra.</p>
                             <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Informe Correctivo">Generar Informe</button>
                         </div>
+
+                        <div class="sla-card">
+                            <div class="sla-icon" style="background:rgba(245, 158, 11, 0.15); color:#F59E0B;">
+                                <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                </svg>
+                            </div>
+                            <h4>Mantenimiento Correctivo PINT</h4>
+                            <p>Informe de mantenimiento correctivo Planta Interna, atencion en nodos, energia AC/GEP, bitacora y tarjetas.</p>
+                            <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Informe Planta Interna (PINT)">Generar Informe PINT</button>
+                        </div>
+
+                        <div class="sla-card">
+                            <div class="sla-icon" style="background:rgba(234, 179, 8, 0.15); color:#EAB308;">
+                                <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L5.6 15.12a2 2 0 00-1.168.176l-1.022.512a2 2 0 00-1.11 1.79v2.804A1.6 1.6 0 003.9 22h16.2a1.6 1.6 0 001.6-1.6v-2.804a2 2 0 00-1.11-1.79l-1.162-.378zM12 3v9m0 0l-3-3m3 3l3-3"/>
+                                </svg>
+                            </div>
+                            <h4>Abastecimiento Combustible GEE</h4>
+                            <p>Informe de abastecimiento de combustible para Grupos Electrogenos, galonaje, precintos y kit antiderrames.</p>
+                            <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Abastecimiento Combustible GEE">Generar Informe GEE</button>
+                        </div>
+
+                        <div class="sla-card">
+                            <div class="sla-icon" style="background:rgba(6, 182, 212, 0.15); color:#06B6D4;">
+                                <svg width="32" height="32" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <h4>Reporte Incidencia PEXT</h4>
+                            <p>Informe completo de incidencias Planta Externa, cortes de fibra optica, mediciones OTDR y causas de fuerza mayor.</p>
+                            <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Reporte Incidencia PEXT">Generar Reporte PEXT</button>
+                        </div>
                     </div>
                 </div>
             </div>
