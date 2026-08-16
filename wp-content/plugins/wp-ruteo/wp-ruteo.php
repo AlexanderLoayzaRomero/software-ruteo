@@ -41,6 +41,7 @@ class WPRuteoApp {
         // Auth & User Management AJAX Endpoints
         add_filter( 'auth_cookie_expiration', array( $this, 'extender_duracion_sesion' ), 10, 3 );
         add_action( 'wp_logout', array( $this, 'ruteo_redireccionar_logout' ) );
+        add_action( 'wp_footer', array( $this, 'render_global_modals' ) );
         add_action( 'wp_ajax_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_nopriv_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_ruteo_logout', array( $this, 'handle_ajax_logout' ) );
@@ -1490,6 +1491,41 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
         wp_send_json_success( array(
             'message' => 'Se ha enviado un correo de recuperacion a ' . esc_html( $user->user_email ) . '. Revisa tu bandeja de entrada o carpeta de SPAM.'
         ) );
+    }
+
+    public function render_global_modals() {
+        ?>
+        <!-- MODAL DE RECUPERACION DE CONTRASEÑA GLOBAL -->
+        <div class="ruteo-modal-overlay" id="modal-recover-password" style="display:none; position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.7); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px;">
+            <div class="ruteo-modal-card" style="max-width:440px; width:100%; background:var(--bg-card, #0F172A); border:1px solid var(--border, #334155); border-radius:16px; padding:28px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); position:relative;">
+                <button type="button" class="btn-close-modal" id="btn-close-recover-modal" style="position:absolute; top:16px; right:16px; background:none; border:none; color:var(--text-muted, #94A3B8); cursor:pointer; font-size:24px; line-height:1;">&times;</button>
+                
+                <div style="text-align:center; margin-bottom:20px;">
+                    <div style="width:56px; height:56px; margin:0 auto 12px auto; background:rgba(0, 151, 216, 0.15); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="28" height="28" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                        </svg>
+                    </div>
+                    <h3 style="font-size:18px; font-weight:700; color:var(--menu-title, #F8FAFC); margin:0 0 6px 0;">Recuperar Clave de Acceso</h3>
+                    <p style="font-size:13px; color:var(--text-muted, #94A3B8); margin:0;">Ingresa tu usuario o correo electronico registrado para restablecer tu clave.</p>
+                </div>
+
+                <form id="form-recover-password">
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label style="font-size:13px; font-weight:600; color:var(--text-main, #F8FAFC); display:block; margin-bottom:6px;">Usuario o Correo Electronico</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="recover-input" placeholder="correo@dominio.com o usuario" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border, #334155); background:var(--bg-light, #1E293B); color:var(--text-main, #F8FAFC); font-size:14px; box-sizing:border-box;">
+                        </div>
+                    </div>
+                    <button type="submit" class="ruteo-submit-btn" style="width:100%; height:44px; background:#0097D8; color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
+                        <span class="btn-text">Enviar Enlace de Recuperacion</span>
+                        <div class="spinner" style="display:none;"></div>
+                    </button>
+                    <div class="ruteo-message recover-message" style="margin-top:12px; font-size:13px; text-align:center;"></div>
+                </form>
+            </div>
+        </div>
+        <?php
     }
 
     public function handle_ajax_update_profile() {

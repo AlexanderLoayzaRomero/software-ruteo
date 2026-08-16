@@ -1754,13 +1754,20 @@ if (user.isSuperAdmin) {
     // RECUPERACION DE CONTRASEÑA
     $(document).on('click', '.btn-forgot-pass-trigger', function(e) {
         e.preventDefault();
-        $('#modal-recover-password').css('display', 'flex').hide().fadeIn(200);
-        $('#recover-input').focus();
+        e.stopPropagation();
+        var $modal = $('#modal-recover-password');
+        if ($modal.length) {
+            $modal.css({'display': 'flex', 'opacity': '1'}).show();
+            $('#recover-input').val('').focus();
+        } else {
+            alert('El modal de recuperacion no se encuentra cargado en esta pagina.');
+        }
     });
 
     $(document).on('click', '#btn-close-recover-modal, #modal-recover-password', function(e) {
-        if (e.target === this) {
-            $('#modal-recover-password').fadeOut(200);
+        if (e.target === this || $(e.target).hasClass('btn-close-modal')) {
+            e.preventDefault();
+            $('#modal-recover-password').css('display', 'none').hide();
         }
     });
 
