@@ -899,15 +899,6 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
             return;
         }
 
-        $ip           = isset( $_SERVER['REMOTE_ADDR'] ) ? $_SERVER['REMOTE_ADDR'] : 'unknown';
-        $intentos_key = 'ruteo_login_intentos_' . md5( $ip . '|' . $raw_input );
-        $intentos     = (int) get_transient( $intentos_key );
-
-        if ( $intentos >= 5 ) {
-            wp_send_json_error( array( 'message' => 'Demasiados intentos fallidos. Intenta de nuevo en 10 minutos.' ) );
-            return;
-        }
-
         $username = $raw_input;
         if ( is_email( $raw_input ) ) {
             $user_by_email = get_user_by( 'email', $raw_input );
@@ -929,7 +920,6 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         $user = wp_signon( $creds, $secure_cookie );
 
         if ( is_wp_error( $user ) ) {
-            set_transient( $intentos_key, $intentos + 1, 10 * MINUTE_IN_SECONDS );
             wp_send_json_error( array( 'message' => 'Credenciales invalidas. Revisa usuario o correo y clave.' ) );
             return;
         }
