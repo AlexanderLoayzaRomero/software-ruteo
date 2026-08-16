@@ -2870,6 +2870,7 @@ function ruteo_crear_tabla_empresas() {
 }
 register_activation_hook( __FILE__, 'ruteo_crear_tabla_empresas' );
 function ruteo_configurar_portada_automatica() {
+    update_option( 'page_for_posts', 0 );
     $portal_page = get_page_by_path( 'portal' );
     if ( ! $portal_page ) {
         $portal_page = get_page_by_path( 'portal-ruteo' );
