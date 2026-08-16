@@ -1462,6 +1462,16 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
     wp_send_json_success( array( 'message' => 'Usuario eliminado correctamente.' ) );
 }
 
+    public function ruteo_custom_wp_mail_from( $email ) {
+        $domain = isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : 'oracleperu.org';
+        $domain = preg_replace( '/^www\./', '', $domain );
+        return 'noreply@' . $domain;
+    }
+
+    public function ruteo_custom_wp_mail_from_name( $name ) {
+        return get_bloginfo( 'name' ) . ' O&M';
+    }
+
     public function handle_ajax_recover_password() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
         $user_input = isset( $_POST['user_login'] ) ? trim( wp_unslash( $_POST['user_login'] ) ) : '';
@@ -1481,10 +1491,19 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
             require_once ABSPATH . 'wp-includes/user.php';
         }
 
+        add_filter( 'wp_mail_from', array( $this, 'ruteo_custom_wp_mail_from' ) );
+        add_filter( 'wp_mail_from_name', array( $this, 'ruteo_custom_wp_mail_from_name' ) );
+
         $retrieved = retrieve_password( $user->user_login );
 
+        remove_filter( 'wp_mail_from', array( $this, 'ruteo_custom_wp_mail_from' ) );
+        remove_filter( 'wp_mail_from_name', array( $this, 'ruteo_custom_wp_mail_from_name' ) );
+
         if ( is_wp_error( $retrieved ) ) {
-            wp_send_json_error( array( 'message' => 'Error al iniciar la recuperacion: ' . $retrieved->get_error_message() ) );
+            $err_msg = wp_strip_all_tags( $retrieved->get_error_message() );
+            wp_send_json_error( array(
+                'message' => 'No se pudo enviar el correo de recuperacion. El servidor de correo de Hostinger no esta activo o requiere configuracion de SMTP en WordPress. (' . esc_html( $err_msg ) . ')'
+            ) );
             return;
         }
 
