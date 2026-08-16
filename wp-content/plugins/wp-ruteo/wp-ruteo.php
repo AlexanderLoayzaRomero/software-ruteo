@@ -42,6 +42,7 @@ class WPRuteoApp {
         add_filter( 'auth_cookie_expiration', array( $this, 'extender_duracion_sesion' ), 10, 3 );
         add_action( 'wp_logout', array( $this, 'ruteo_redireccionar_logout' ) );
         add_action( 'wp_footer', array( $this, 'render_global_modals' ) );
+        add_action( 'phpmailer_init', array( $this, 'configurar_smtp_gmail' ) );
         add_action( 'wp_ajax_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_nopriv_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_ruteo_logout', array( $this, 'handle_ajax_logout' ) );
@@ -1473,6 +1474,21 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
 
     public function ruteo_custom_wp_mail_from_name( $name ) {
         return get_bloginfo( 'name' ) . ' O&M';
+    }
+
+    public function configurar_smtp_gmail( $phpmailer ) {
+        if ( ! is_object( $phpmailer ) ) {
+            return;
+        }
+        $phpmailer->isSMTP();
+        $phpmailer->Host       = 'smtp.gmail.com';
+        $phpmailer->SMTPAuth   = true;
+        $phpmailer->Port       = 465;
+        $phpmailer->SMTPSecure = 'ssl';
+        $phpmailer->Username   = 'alexander.loayza@tecsup.edu.pe';
+        $phpmailer->Password   = 'iandsktzrykcavix';
+        $phpmailer->From       = 'alexander.loayza@tecsup.edu.pe';
+        $phpmailer->FromName   = get_bloginfo( 'name' ) . ' O&M';
     }
 
     public function handle_ajax_recover_password() {
