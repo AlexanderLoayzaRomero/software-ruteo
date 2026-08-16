@@ -2456,4 +2456,23 @@ html[data-theme="dark"] .ruteo-tab-protected-notice p,
 html[data-theme="dark"] .ruteo-login-required-notice p {
     color: #94A3B8 !important;
 }
+
+/* Quitar por completo cajas y botones de cuentas rapidas de prueba */
+.demo-accounts-box,
+.btn-demo-login,
+[data-user="admingeneral"],
+[data-user="tecnico1"],
+[data-user="supervisor1"],
+[data-user="seguridad1"],
+[data-user="hse1"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
 
