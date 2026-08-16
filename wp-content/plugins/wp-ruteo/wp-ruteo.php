@@ -284,6 +284,7 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
             header( "Expires: 0" );
         }
         do_action( 'litespeed_control_set_nocache', 'Desactivar cache en portal O&M' );
+        do_action( 'litespeed_purge_all' );
 
         $this->enqueue_assets();
 
