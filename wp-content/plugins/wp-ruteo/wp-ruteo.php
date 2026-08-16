@@ -18,7 +18,7 @@ class WPRuteoApp {
 
     public function __construct() {
         $this->register_roles();
-        add_action( 'template_redirect', array( $this, 'fuerza_redireccion_portal' ) );
+        add_action( 'wp', array( $this, 'fuerza_redireccion_portal' ), 1 );
         add_filter( 'template_include', array( $this, 'cargar_plantilla_portal_directa' ), 999 );
         add_shortcode( 'formulario_ruteo', array( $this, 'render_form' ) );
         add_shortcode( 'portal_ruteo', array( $this, 'render_portal' ) );
@@ -264,7 +264,7 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
     }
 
     public function fuerza_redireccion_portal() {
-        if ( is_admin() || wp_doing_ajax() ) {
+        if ( is_admin() || ( defined( 'DOING_AJAX' ) && DOING_AJAX ) || ( defined( 'DOING_CRON' ) && DOING_CRON ) ) {
             return;
         }
 
@@ -272,6 +272,10 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         $current_path = parse_url( $request_uri, PHP_URL_PATH ) ?: '';
 
         // Excluir acceso directo a login y admin de WordPress
+        if ( strpos( $current_path, 'wp-login' ) !== false || strpos( $current_path, 'wp-admin' ) !== false || strpos( $current_path, 'wp-cron' ) !== false || strpos( $current_path, 'wp-json' ) !== false ) {
+            return;
+        }
+
         if ( strpos( $current_path, 'hello-world' ) !== false || strpos( $current_path, 'hola-mundo' ) !== false ) {
             wp_safe_redirect( home_url( '/' ) );
             exit;
@@ -285,7 +289,6 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
             header( "Expires: 0" );
         }
         do_action( 'litespeed_control_set_nocache', 'Desactivar cache en portal O&M' );
-        do_action( 'litespeed_purge_all' );
 
         $this->enqueue_assets();
 
