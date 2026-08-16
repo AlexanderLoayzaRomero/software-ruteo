@@ -2887,9 +2887,29 @@ function ruteo_crear_tabla_empresas() {
     dbDelta( $sql );
 }
 register_activation_hook( __FILE__, 'ruteo_crear_tabla_empresas' );
-add_action( 'plugins_loaded', 'ruteo_crear_tabla_empresas' );
-
-register_activation_hook( __FILE__, 'ruteo_crear_tabla_negativas' );
-register_activation_hook( __FILE__, array( 'WPRuteoApp', 'activar_cuentas_prueba' ) );
+function ruteo_configurar_portada_automatica() {
+    $portal_page = get_page_by_path( 'portal' );
+    if ( ! $portal_page ) {
+        $portal_page = get_page_by_path( 'portal-ruteo' );
+    }
+    if ( ! $portal_page ) {
+        $page_id = wp_insert_post( array(
+            'post_title'     => 'Portal',
+            'post_name'      => 'portal',
+            'post_content'   => '[portal_ruteo]',
+            'post_status'    => 'publish',
+            'post_type'      => 'page',
+            'comment_status' => 'closed',
+        ) );
+        if ( $page_id && ! is_wp_error( $page_id ) ) {
+            update_option( 'show_on_front', 'page' );
+            update_option( 'page_on_front', $page_id );
+        }
+    } else {
+        update_option( 'show_on_front', 'page' );
+        update_option( 'page_on_front', $portal_page->ID );
+    }
+}
+add_action( 'admin_init', 'ruteo_configurar_portada_automatica' );
 
 $GLOBALS['wp_ruteo_app'] = new WPRuteoApp();
