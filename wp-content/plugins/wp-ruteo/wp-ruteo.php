@@ -268,42 +268,18 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
             return;
         }
 
-        $request_uri = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/';
-        $current_path = rtrim( parse_url( $request_uri, PHP_URL_PATH ) ?: '/', '/' );
+        $request_uri  = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '';
+        $current_path = parse_url( $request_uri, PHP_URL_PATH ) ?: '';
 
-        // Si ya estamos en la portada o raiz del sitio (/), NO ejecutar redirecciones para prevenir ERR_TOO_MANY_REDIRECTS
-        if ( empty( $current_path ) || $current_path === '' || $current_path === '/' ) {
+        // Excluir acceso directo a login y admin de WordPress
+        if ( strpos( $current_path, 'wp-login.php' ) !== false || strpos( $current_path, 'wp-admin' ) !== false || strpos( $current_path, 'wp-cron.php' ) !== false || strpos( $current_path, 'wp-json' ) !== false ) {
             return;
         }
 
-        // Si es una pagina 404 (no encontrada) y no estamos en la raiz, redirigir a la portada
-        if ( is_404() ) {
-            wp_safe_redirect( home_url( '/' ) );
+        $portal_file = plugin_dir_path( __FILE__ ) . 'includes/portal-standalone-template.php';
+        if ( file_exists( $portal_file ) ) {
+            include $portal_file;
             exit;
-        }
-
-        if ( is_front_page() || is_home() ) {
-            $front_id = (int) get_option( 'page_on_front' );
-            $portal_page = get_page_by_path( 'portal' );
-            if ( ! $portal_page ) {
-                $portal_page = get_page_by_path( 'portal-ruteo' );
-            }
-            if ( ! $portal_page ) {
-                $portal_page = get_page_by_path( 'portal-de-ruteo' );
-            }
-            if ( $portal_page ) {
-                if ( (int) $portal_page->ID === $front_id ) {
-                    return; // Ya esta cargando el portal como portada, no redirigir a si mismo
-                }
-                $target_url = get_permalink( $portal_page->ID );
-            } else {
-                return;
-            }
-            
-            if ( ! empty( $target_url ) && rtrim( $target_url, '/' ) !== rtrim( home_url( '/' ), '/' ) ) {
-                wp_safe_redirect( $target_url );
-                exit;
-            }
         }
     }
 
@@ -312,7 +288,6 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
             return $template;
         }
 
-        // Forzar la plantilla del portal O&M en cualquier vista publica del sitio evitando el tema por defecto de WordPress
         $portal_file = plugin_dir_path( __FILE__ ) . 'includes/portal-standalone-template.php';
         if ( file_exists( $portal_file ) ) {
             return $portal_file;
