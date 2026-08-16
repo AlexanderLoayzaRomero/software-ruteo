@@ -272,8 +272,9 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         $current_path = parse_url( $request_uri, PHP_URL_PATH ) ?: '';
 
         // Excluir acceso directo a login y admin de WordPress
-        if ( strpos( $current_path, 'wp-login.php' ) !== false || strpos( $current_path, 'wp-admin' ) !== false || strpos( $current_path, 'wp-cron.php' ) !== false || strpos( $current_path, 'wp-json' ) !== false ) {
-            return;
+        if ( strpos( $current_path, 'hello-world' ) !== false || strpos( $current_path, 'hola-mundo' ) !== false ) {
+            wp_safe_redirect( home_url( '/' ) );
+            exit;
         }
 
         if ( ! headers_sent() ) {
@@ -2946,6 +2947,6 @@ function ruteo_configurar_portada_automatica() {
         update_option( 'page_on_front', $portal_page->ID );
     }
 }
-add_action( 'admin_init', 'ruteo_configurar_portada_automatica' );
+add_action( 'init', 'ruteo_configurar_portada_automatica' );
 
 $GLOBALS['wp_ruteo_app'] = new WPRuteoApp();
