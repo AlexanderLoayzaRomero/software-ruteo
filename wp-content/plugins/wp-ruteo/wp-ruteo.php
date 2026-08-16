@@ -285,11 +285,47 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         }
         do_action( 'litespeed_control_set_nocache', 'Desactivar cache en portal O&M' );
 
-        $portal_file = plugin_dir_path( __FILE__ ) . 'includes/portal-standalone-template.php';
-        if ( file_exists( $portal_file ) ) {
-            include $portal_file;
-            exit;
-        }
+        $this->enqueue_assets();
+
+        ?><!DOCTYPE html>
+        <html <?php language_attributes(); ?> data-theme="light">
+        <head>
+            <meta charset="<?php bloginfo( 'charset' ); ?>">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+            <title><?php echo esc_html( get_bloginfo( 'name' ) ); ?> | Portal de Operaciones y Mantenimiento</title>
+            <?php wp_head(); ?>
+            <style>
+                html, body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                    width: 100% !important;
+                    min-height: 100vh !important;
+                    background-color: var(--bg-main, #f8fafc) !important;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+                    overflow-x: hidden;
+                }
+                /* Ocultar elementos sobrantes del tema de WordPress */
+                #page, .site-header, .site-footer, header:not(.ruteo-top-header), footer:not(.ruteo-footer), .entry-header, .entry-content > h1, .wp-site-blocks, body > div > header, body > div > footer {
+                    display: none !important;
+                }
+                .ruteo-standalone-wrapper {
+                    width: 100%;
+                    min-height: 100vh;
+                    display: block;
+                }
+            </style>
+        </head>
+        <body <?php body_class( 'ruteo-portal-standalone' ); ?>>
+
+        <div class="ruteo-standalone-wrapper">
+            <?php echo $this->render_portal(); ?>
+        </div>
+
+        <?php wp_footer(); ?>
+        </body>
+        </html>
+        <?php
+        exit;
     }
 
     public function cargar_plantilla_portal_directa( $template ) {
