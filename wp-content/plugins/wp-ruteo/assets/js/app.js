@@ -1757,17 +1757,24 @@ if (user.isSuperAdmin) {
         e.stopPropagation();
         var $modal = $('#modal-recover-password');
         if ($modal.length) {
-            $modal.css({'display': 'flex', 'opacity': '1'}).show();
+            $modal.attr('style', 'display: flex !important; position: fixed !important; inset: 0 !important; z-index: 9999999 !important; background: rgba(0,0,0,0.7) !important; backdrop-filter: blur(6px) !important; align-items: center !important; justify-content: center !important; padding: 16px !important;');
             $('#recover-input').val('').focus();
         } else {
-            alert('El modal de recuperacion no se encuentra cargado en esta pagina.');
+            console.error('Modal #modal-recover-password not found in DOM');
         }
     });
 
-    $(document).on('click', '#btn-close-recover-modal, #modal-recover-password', function(e) {
-        if (e.target === this || $(e.target).hasClass('btn-close-modal')) {
+    $(document).on('click', '#btn-close-recover-modal', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $('#modal-recover-password').attr('style', 'display: none !important;');
+    });
+
+    $(document).on('click', '#modal-recover-password', function(e) {
+        if (e.target === this) {
             e.preventDefault();
-            $('#modal-recover-password').css('display', 'none').hide();
+            e.stopPropagation();
+            $('#modal-recover-password').attr('style', 'display: none !important;');
         }
     });
 
