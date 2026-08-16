@@ -23,7 +23,7 @@ class WPRuteoApp {
         add_shortcode( 'formulario_ruteo', array( $this, 'render_form' ) );
         add_shortcode( 'portal_ruteo', array( $this, 'render_portal' ) );
         add_shortcode( 'login_ruteo', array( $this, 'render_login' ) );
-        add_action( 'wp_enqueue_scripts', array( $this, 'maybe_enqueue_assets' ) );
+        add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
         add_action( 'wp_ajax_ruteo_submit', array( $this, 'handle_ajax_submit' ) );
         add_action( 'wp_ajax_nopriv_ruteo_submit', array( $this, 'handle_ajax_submit' ) );
         add_action( 'wp_ajax_ruteo_update_registro', array( $this, 'handle_ajax_update_registro' ) );
