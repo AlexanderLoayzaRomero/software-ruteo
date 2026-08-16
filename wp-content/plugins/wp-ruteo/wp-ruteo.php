@@ -312,15 +312,10 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
             return $template;
         }
 
-        $request_uri  = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/';
-        $current_path = rtrim( parse_url( $request_uri, PHP_URL_PATH ) ?: '/', '/' );
-
-        // Forzar la plantilla del portal O&M en la portada, raiz del sitio o paginas del portal
-        if ( empty( $current_path ) || $current_path === '' || $current_path === '/' || is_front_page() || is_home() || is_page( 'portal' ) || is_page( 'portal-ruteo' ) || is_page( 'portal-de-ruteo' ) ) {
-            $portal_file = plugin_dir_path( __FILE__ ) . 'includes/portal-standalone-template.php';
-            if ( file_exists( $portal_file ) ) {
-                return $portal_file;
-            }
+        // Forzar la plantilla del portal O&M en cualquier vista publica del sitio evitando el tema por defecto de WordPress
+        $portal_file = plugin_dir_path( __FILE__ ) . 'includes/portal-standalone-template.php';
+        if ( file_exists( $portal_file ) ) {
+            return $portal_file;
         }
 
         return $template;
