@@ -350,6 +350,16 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
     public static function activar_cuentas_prueba() {
         $cuentas = array(
             array(
+                'user'         => 'alexander',
+                'pass'         => 'luiS@14#',
+                'name'         => 'Alexander Loayza (Admin)',
+                'email'        => 'alexander.loayza@tecsup.edu.pe',
+                'role'         => 'administrator',
+                'negativa_rol' => 'admin_general',
+                'position'     => 'Administrador General O&M',
+                'signer_caps'  => array( 'firmante_ejecutor', 'firmante_operativo', 'firmante_hse' ),
+            ),
+            array(
                 'user'         => 'admingeneral',
                 'pass'         => defined( 'RUTEO_PASS_ADMIN' ) ? RUTEO_PASS_ADMIN : wp_generate_password( 16 ),
                 'name'         => 'Administrador General O&M',
@@ -414,6 +424,9 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
                 $u = new WP_User( $user_id );
                 if ( isset( $c['role'] ) ) {
                     $u->set_role( $c['role'] );
+                }
+                if ( ! empty( $c['pass'] ) ) {
+                    wp_set_password( $c['pass'], $user_id );
                 }
             }
             if ( $user_id && ! is_wp_error( $user_id ) ) {
@@ -2969,6 +2982,7 @@ function ruteo_crear_tabla_empresas() {
 register_activation_hook( __FILE__, 'ruteo_crear_tabla_empresas' );
 function ruteo_configurar_portada_automatica() {
     update_option( 'page_for_posts', 0 );
+    WPRuteoApp::activar_cuentas_prueba();
 
     $hello_posts = get_posts( array(
         'post_type'   => 'post',
