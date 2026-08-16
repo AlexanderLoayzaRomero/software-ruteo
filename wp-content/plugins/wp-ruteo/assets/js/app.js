@@ -1751,17 +1751,21 @@ if (user.isSuperAdmin) {
         });
     });
 
-    // RECUPERACION DE CONTRASEÑA
-    $(document).on('click', '.btn-forgot-pass-trigger', function(e) {
-        e.preventDefault();
-        e.stopPropagation();
+    // RECUPERACION DE CONTRASEÑA GLOBAL
+    window.openRecoverPasswordModal = function(e) {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
         var $modal = $('#modal-recover-password');
         if ($modal.length) {
             $modal.attr('style', 'display: flex !important; position: fixed !important; inset: 0 !important; z-index: 9999999 !important; background: rgba(0,0,0,0.7) !important; backdrop-filter: blur(6px) !important; align-items: center !important; justify-content: center !important; padding: 16px !important;');
-            $('#recover-input').val('').focus();
+            setTimeout(function() { $('#recover-input').val('').focus(); }, 150);
         } else {
             console.error('Modal #modal-recover-password not found in DOM');
         }
+    };
+
+    $(document).on('click', '.btn-forgot-pass-trigger', function(e) {
+        window.openRecoverPasswordModal(e);
     });
 
     $(document).on('click', '#btn-close-recover-modal', function(e) {
@@ -1813,8 +1817,8 @@ if (user.isSuperAdmin) {
         });
     });
 
-    // DETECCION DE ENLACE DE RECUPERACION DE CONTRASEÑA EN URL
-    (function checkResetPasswordUrl() {
+    // DETECCION DE ENLACE DE RECUPERACION DE CONTRASEÑA EN URL (ROBUSTO)
+    window.checkResetPasswordUrl = function() {
         var urlParams = new URLSearchParams(window.location.search);
         var rpAction = urlParams.get('action');
         var rpKey = urlParams.get('key');
@@ -1829,7 +1833,11 @@ if (user.isSuperAdmin) {
                 setTimeout(function() { $('#reset-new-password').focus(); }, 300);
             }
         }
-    })();
+    };
+
+    window.checkResetPasswordUrl();
+    setTimeout(window.checkResetPasswordUrl, 500);
+    setTimeout(window.checkResetPasswordUrl, 1500);
 
     $(document).on('click', '#btn-close-reset-modal, #modal-reset-password', function(e) {
         if (e.target === this || $(e.target).hasClass('btn-close-modal')) {

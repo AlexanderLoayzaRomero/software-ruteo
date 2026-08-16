@@ -44,7 +44,7 @@ $nonce    = esc_js( wp_create_nonce( 'ruteo_submit_nonce' ) );
                 <div class="form-group" style="margin-bottom:24px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
                         <label style="font-size:13px; font-weight:600; margin:0;">Clave de Acceso</label>
-                        <a href="#" class="btn-forgot-pass-trigger" style="font-size:12px; color:var(--accent, #0097D8); text-decoration:none; font-weight:500;">¿Olvidaste tu clave?</a>
+                        <a href="#" onclick="if(typeof openRecoverPasswordModal==='function'){openRecoverPasswordModal(event);}return false;" class="btn-forgot-pass-trigger" style="font-size:12px; color:var(--accent, #0097D8); text-decoration:none; font-weight:500;">¿Olvidaste tu clave?</a>
                     </div>
                     <div class="input-wrapper">
                         <input type="password" name="password" placeholder="--------" required>
