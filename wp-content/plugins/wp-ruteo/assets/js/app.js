@@ -1730,6 +1730,8 @@ if (user.isSuperAdmin) {
         formData.append('action', 'ruteo_update_profile');
         formData.append('nonce', wpRuteoAjax.nonce);
         formData.append('display_name', $('#prof-display-name').val());
+        formData.append('email', $('#prof-email').val());
+        formData.append('new_password', $('#prof-password').val() || '');
         formData.append('phone', $('#prof-phone').val());
         formData.append('position', $('#prof-position').val() || '');
         formData.append('pm_assigned', $('#prof-pm').val());
@@ -1759,6 +1761,54 @@ if (user.isSuperAdmin) {
                 } else {
                     $msg.addClass('error').text(res.data.message || 'Error al actualizar perfil.').fadeIn(200);
                 }
+            }
+        });
+    });
+
+    // RECUPERACION DE CONTRASEÑA
+    $(document).on('click', '.btn-forgot-pass-trigger', function(e) {
+        e.preventDefault();
+        $('#modal-recover-password').css('display', 'flex').hide().fadeIn(200);
+        $('#recover-input').focus();
+    });
+
+    $(document).on('click', '#btn-close-recover-modal, #modal-recover-password', function(e) {
+        if (e.target === this) {
+            $('#modal-recover-password').fadeOut(200);
+        }
+    });
+
+    $('#form-recover-password').on('submit', function(e) {
+        e.preventDefault();
+        var $btn = $(this).find('button[type="submit"]');
+        var $msg = $(this).find('.recover-message');
+        var userLogin = $('#recover-input').val().trim();
+
+        if (!userLogin) return;
+
+        $btn.prop('disabled', true);
+        $msg.removeClass('success error').hide();
+
+        $.ajax({
+            url: wpRuteoAjax.ajaxurl,
+            type: 'POST',
+            data: {
+                action: 'ruteo_recover_password',
+                nonce: wpRuteoAjax.nonce,
+                user_login: userLogin
+            },
+            success: function(res) {
+                $btn.prop('disabled', false);
+                if (res.success) {
+                    $msg.addClass('success').text(res.data.message).fadeIn(200);
+                    $('#recover-input').val('');
+                } else {
+                    $msg.addClass('error').text(res.data.message || 'Error al solicitar recuperacion.').fadeIn(200);
+                }
+            },
+            error: function() {
+                $btn.prop('disabled', false);
+                $msg.addClass('error').text('Error de conexion con el servidor.').fadeIn(200);
             }
         });
     });

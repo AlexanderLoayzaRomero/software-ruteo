@@ -253,7 +253,10 @@ body.admin-bar .ruteo-app-layout {
                             </div>
                         </div>
                         <div class="form-group" style="margin-bottom:18px;">
-                            <label style="font-size:13px; font-weight:600;">Clave de Acceso</label>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                                <label style="font-size:13px; font-weight:600; margin:0;">Clave de Acceso</label>
+                                <a href="#" class="btn-forgot-pass-trigger" style="font-size:12px; color:var(--accent, #0097D8); text-decoration:none; font-weight:500;">¿Olvidaste tu clave?</a>
+                            </div>
                             <div class="input-wrapper">
                                 <input type="password" name="password" placeholder="--------" required>
                             </div>
@@ -1412,7 +1415,14 @@ body.admin-bar .ruteo-app-layout {
                                 <div class="form-group">
                                     <label>Correo Electronico</label>
                                     <div class="input-wrapper">
-                                        <input type="email" id="prof-email" disabled readonly>
+                                        <input type="email" id="prof-email" placeholder="correo@dominio.com" required>
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Nueva Clave de Acceso (Opcional)</label>
+                                    <div class="input-wrapper">
+                                        <input type="password" id="prof-password" placeholder="Dejar en blanco para mantener la clave actual">
                                     </div>
                                 </div>
 
@@ -1866,7 +1876,37 @@ body.admin-bar .ruteo-app-layout {
                         </div>
                         <div id="edit-mat-msg" class="ruteo-message" style="margin-top:12px;"></div>
                     </form>
+            </div>
+        </div>
+
+        <!-- MODAL DE RECUPERACION DE CONTRASEÑA -->
+        <div class="ruteo-modal-overlay" id="modal-recover-password" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.6); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px;">
+            <div class="ruteo-modal-card" style="max-width:440px; width:100%; background:var(--bg-card, #0F172A); border:1px solid var(--border); border-radius:16px; padding:28px; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5); position:relative;">
+                <button type="button" class="btn-close-modal" id="btn-close-recover-modal" style="position:absolute; top:16px; right:16px; background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:20px;">&times;</button>
+                
+                <div style="text-align:center; margin-bottom:20px;">
+                    <div style="width:56px; height:56px; margin:0 auto 12px auto; background:rgba(0, 151, 216, 0.15); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                        <svg width="28" height="28" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
+                        </svg>
+                    </div>
+                    <h3 style="font-size:18px; font-weight:700; color:var(--menu-title); margin:0 0 6px 0;">Recuperar Clave de Acceso</h3>
+                    <p style="font-size:13px; color:var(--text-muted); margin:0;">Ingresa tu usuario o correo electronico registrado para restablecer tu clave.</p>
                 </div>
+
+                <form id="form-recover-password">
+                    <div class="form-group" style="margin-bottom:16px;">
+                        <label style="font-size:13px; font-weight:600;">Usuario o Correo Electronico</label>
+                        <div class="input-wrapper">
+                            <input type="text" id="recover-input" placeholder="correo@dominio.com o usuario" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border); background:var(--bg-light); color:var(--text-main);">
+                        </div>
+                    </div>
+                    <button type="submit" class="ruteo-submit-btn" style="width:100%;">
+                        <span class="btn-text">Enviar Enlace de Recuperacion</span>
+                        <div class="spinner"></div>
+                    </button>
+                    <div class="ruteo-message recover-message" style="margin-top:12px;"></div>
+                </form>
             </div>
         </div>
 

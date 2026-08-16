@@ -45,6 +45,8 @@ class WPRuteoApp {
         add_action( 'wp_ajax_nopriv_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_ruteo_logout', array( $this, 'handle_ajax_logout' ) );
         add_action( 'wp_ajax_nopriv_ruteo_logout', array( $this, 'handle_ajax_logout' ) );
+        add_action( 'wp_ajax_ruteo_recover_password', array( $this, 'handle_ajax_recover_password' ) );
+        add_action( 'wp_ajax_nopriv_ruteo_recover_password', array( $this, 'handle_ajax_recover_password' ) );
         add_action( 'wp_ajax_ruteo_get_users', array( $this, 'handle_ajax_get_users' ) );
         add_action( 'wp_ajax_ruteo_create_user', array( $this, 'handle_ajax_create_user' ) );
         add_action( 'wp_ajax_ruteo_delete_user', array( $this, 'handle_ajax_delete_user' ) );
@@ -1439,6 +1441,37 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
     wp_send_json_success( array( 'message' => 'Usuario eliminado correctamente.' ) );
 }
 
+    public function handle_ajax_recover_password() {
+        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+        $user_input = isset( $_POST['user_login'] ) ? trim( wp_unslash( $_POST['user_login'] ) ) : '';
+
+        if ( empty( $user_input ) ) {
+            wp_send_json_error( array( 'message' => 'Por favor ingresa tu usuario o correo electronico.' ) );
+            return;
+        }
+
+        $user = is_email( $user_input ) ? get_user_by( 'email', $user_input ) : get_user_by( 'login', $user_input );
+        if ( ! $user ) {
+            wp_send_json_error( array( 'message' => 'No se encontro ninguna cuenta registrada con esa informacion.' ) );
+            return;
+        }
+
+        if ( ! function_exists( 'retrieve_password' ) ) {
+            require_once ABSPATH . 'wp-includes/user.php';
+        }
+
+        $retrieved = retrieve_password( $user->user_login );
+
+        if ( is_wp_error( $retrieved ) ) {
+            wp_send_json_error( array( 'message' => 'Error al iniciar la recuperacion: ' . $retrieved->get_error_message() ) );
+            return;
+        }
+
+        wp_send_json_success( array(
+            'message' => 'Se ha enviado un correo de recuperacion a ' . esc_html( $user->user_email ) . '. Revisa tu bandeja de entrada o carpeta de SPAM.'
+        ) );
+    }
+
     public function handle_ajax_update_profile() {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
         if ( ! is_user_logged_in() ) {
@@ -1448,13 +1481,40 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
 
         $user_id      = get_current_user_id();
         $display_name = isset( $_POST['display_name'] ) ? sanitize_text_field( wp_unslash( $_POST['display_name'] ) ) : '';
+        $email        = isset( $_POST['email'] ) ? sanitize_email( wp_unslash( $_POST['email'] ) ) : '';
+        $new_password = isset( $_POST['new_password'] ) ? $_POST['new_password'] : '';
         $phone        = isset( $_POST['phone'] ) ? sanitize_text_field( wp_unslash( $_POST['phone'] ) ) : '';
         $pm_assigned  = isset( $_POST['pm_assigned'] ) ? sanitize_text_field( wp_unslash( $_POST['pm_assigned'] ) ) : '';
         $position     = isset( $_POST['position'] ) ? sanitize_text_field( wp_unslash( $_POST['position'] ) ) : '';
 
+        $update_data = array( 'ID' => $user_id );
         if ( ! empty( $display_name ) ) {
-            wp_update_user( array( 'ID' => $user_id, 'display_name' => $display_name ) );
+            $update_data['display_name'] = $display_name;
         }
+        if ( ! empty( $email ) && is_email( $email ) ) {
+            $existing_user = get_user_by( 'email', $email );
+            if ( $existing_user && (int) $existing_user->ID !== (int) $user_id ) {
+                wp_send_json_error( array( 'message' => 'El correo electronico ya esta registrado en otra cuenta.' ) );
+                return;
+            }
+            $update_data['user_email'] = $email;
+        }
+        if ( ! empty( $new_password ) ) {
+            if ( strlen( $new_password ) < 6 ) {
+                wp_send_json_error( array( 'message' => 'La nueva clave debe tener al menos 6 caracteres.' ) );
+                return;
+            }
+            $update_data['user_pass'] = $new_password;
+        }
+
+        if ( count( $update_data ) > 1 ) {
+            $updated = wp_update_user( $update_data );
+            if ( is_wp_error( $updated ) ) {
+                wp_send_json_error( array( 'message' => 'Error actualizando usuario: ' . $updated->get_error_message() ) );
+                return;
+            }
+        }
+
         update_user_meta( $user_id, 'ruteo_phone', $phone );
         update_user_meta( $user_id, 'ruteo_pm_assigned', $pm_assigned );
         update_user_meta( $user_id, 'ruteo_position', $position );
@@ -1482,7 +1542,7 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
             $firma_actual = '';
         }
 
-        wp_send_json_success( array( 'message' => 'Perfil actualizado correctamente.', 'firma' => $firma_actual ) );
+        wp_send_json_success( array( 'message' => 'Perfil y datos actualizados correctamente.', 'firma' => $firma_actual ) );
     }
     
     public function handle_ajax_update_site_logo() {
