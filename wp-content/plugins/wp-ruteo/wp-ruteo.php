@@ -40,6 +40,7 @@ class WPRuteoApp {
 
         // Auth & User Management AJAX Endpoints
         add_filter( 'auth_cookie_expiration', array( $this, 'extender_duracion_sesion' ), 10, 3 );
+        add_action( 'wp_logout', array( $this, 'ruteo_redireccionar_logout' ) );
         add_action( 'wp_ajax_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_nopriv_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_ruteo_logout', array( $this, 'handle_ajax_logout' ) );
@@ -945,6 +946,11 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
         wp_logout();
         wp_send_json_success( array( 'message' => 'Sesion cerrada correctamente.' ) );
+    }
+
+    public function ruteo_redireccionar_logout() {
+        wp_safe_redirect( home_url( '/' ) );
+        exit;
     }
 
     public function handle_ajax_get_users() {
