@@ -19,6 +19,7 @@ class WPRuteoApp {
     public function __construct() {
         $this->register_roles();
         add_action( 'template_redirect', array( $this, 'fuerza_redireccion_portal' ) );
+        add_filter( 'template_include', array( $this, 'cargar_plantilla_portal_directa' ), 999 );
         add_shortcode( 'formulario_ruteo', array( $this, 'render_form' ) );
         add_shortcode( 'portal_ruteo', array( $this, 'render_portal' ) );
         add_shortcode( 'login_ruteo', array( $this, 'render_login' ) );
@@ -301,6 +302,25 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
                 exit;
             }
         }
+    }
+
+    public function cargar_plantilla_portal_directa( $template ) {
+        if ( is_admin() || wp_doing_ajax() ) {
+            return $template;
+        }
+
+        $request_uri  = isset( $_SERVER['REQUEST_URI'] ) ? $_SERVER['REQUEST_URI'] : '/';
+        $current_path = rtrim( parse_url( $request_uri, PHP_URL_PATH ) ?: '/', '/' );
+
+        // Forzar la plantilla del portal O&M en la portada, raiz del sitio o paginas del portal
+        if ( empty( $current_path ) || $current_path === '' || $current_path === '/' || is_front_page() || is_home() || is_page( 'portal' ) || is_page( 'portal-ruteo' ) || is_page( 'portal-de-ruteo' ) ) {
+            $portal_file = plugin_dir_path( __FILE__ ) . 'includes/portal-standalone-template.php';
+            if ( file_exists( $portal_file ) ) {
+                return $portal_file;
+            }
+        }
+
+        return $template;
     }
 
     public static function activar_cuentas_prueba() {
