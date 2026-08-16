@@ -279,9 +279,11 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         if ( ! headers_sent() ) {
             nocache_headers();
             header( "Cache-Control: no-cache, no-store, must-revalidate, max-age=0" );
+            header( "X-LiteSpeed-Cache-Control: no-cache" );
             header( "Pragma: no-cache" );
             header( "Expires: 0" );
         }
+        do_action( 'litespeed_control_set_nocache', 'Desactivar cache en portal O&M' );
 
         $portal_file = plugin_dir_path( __FILE__ ) . 'includes/portal-standalone-template.php';
         if ( file_exists( $portal_file ) ) {
