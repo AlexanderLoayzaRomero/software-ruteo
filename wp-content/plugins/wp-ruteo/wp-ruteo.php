@@ -2831,4 +2831,4 @@ add_action( 'plugins_loaded', 'ruteo_crear_tabla_empresas' );
 register_activation_hook( __FILE__, 'ruteo_crear_tabla_negativas' );
 register_activation_hook( __FILE__, array( 'WPRuteoApp', 'activar_cuentas_prueba' ) );
 
-new WPRuteoApp();
+$GLOBALS['wp_ruteo_app'] = new WPRuteoApp();

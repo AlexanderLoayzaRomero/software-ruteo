@@ -8,8 +8,10 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-// Cargar scripts y estilos obligatorios de Ruteo
-Wp_Ruteo::get_instance()->enqueue_assets();
+global $wp_ruteo_app;
+if ( isset( $wp_ruteo_app ) && is_object( $wp_ruteo_app ) && method_exists( $wp_ruteo_app, 'enqueue_assets' ) ) {
+    $wp_ruteo_app->enqueue_assets();
+}
 
 ?><!DOCTYPE html>
 <html <?php language_attributes(); ?> data-theme="light">
@@ -42,7 +44,13 @@ Wp_Ruteo::get_instance()->enqueue_assets();
 <body <?php body_class( 'ruteo-portal-standalone' ); ?>>
 
 <div class="ruteo-standalone-wrapper">
-    <?php echo Wp_Ruteo::get_instance()->render_portal(); ?>
+    <?php
+    if ( isset( $wp_ruteo_app ) && is_object( $wp_ruteo_app ) && method_exists( $wp_ruteo_app, 'render_portal' ) ) {
+        echo $wp_ruteo_app->render_portal();
+    } else {
+        echo do_shortcode( '[portal_ruteo]' );
+    }
+    ?>
 </div>
 
 <?php wp_footer(); ?>
