@@ -855,6 +855,7 @@ if (user.isSuperAdmin) {
             var currentUser = (window.wpRuteoAjax && window.wpRuteoAjax.user) ? window.wpRuteoAjax.user : {};
             var empresaNombre = (currentUser && currentUser.empresaNombre) ? currentUser.empresaNombre : 'CYMTEL S.A.C.';
             var clientLogo = (currentUser && currentUser.empresaLogo) ? currentUser.empresaLogo : ((window.wpRuteoAjax && window.wpRuteoAjax.siteLogo) ? window.wpRuteoAjax.siteLogo : '');
+            var userFirma = currentUser.firma || currentUser.firma_img || '';
 
             function getJsPdfImageFormat(url) {
                 if (url.indexOf('.png') > -1) return 'PNG';
@@ -870,6 +871,46 @@ if (user.isSuperAdmin) {
                 pdf.setFontSize(5.5);
                 pdf.setFont('helvetica', 'normal');
                 pdf.text('Lider al Servicio de las Telecomunicaciones', pW - 18, 20.5, { align: 'right' });
+            }
+
+            function dibujarBloqueFirma(pdf, posX, posY, ancho, tituloCargo, nombrePersona, empName, firmaImg) {
+                var centerX = posX + (ancho / 2);
+                
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(8.5);
+                pdf.setTextColor(15, 23, 42);
+                pdf.text(empName || 'CYMTEL S.A.C.', centerX, posY, { align: 'center' });
+
+                if (firmaImg && (firmaImg.indexOf('data:image') === 0 || firmaImg.indexOf('http') === 0 || firmaImg.indexOf('/') === 0)) {
+                    try {
+                        var mimeF = getJsPdfImageFormat(firmaImg);
+                        pdf.addImage(firmaImg, mimeF, centerX - 18, posY + 2, 36, 12, undefined, 'FAST');
+                    } catch(e) {
+                        pdf.setFontSize(6.5);
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setTextColor(0, 151, 216);
+                        pdf.text('✔ FIRMA DIGITAL REGISTRADA', centerX, posY + 9, { align: 'center' });
+                    }
+                } else {
+                    pdf.setFontSize(6.5);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setTextColor(0, 151, 216);
+                    pdf.text('✔ FIRMA DIGITAL REGISTRADA', centerX, posY + 9, { align: 'center' });
+                }
+
+                pdf.setDrawColor(30, 41, 59);
+                pdf.setLineWidth(0.4);
+                pdf.line(posX + 4, posY + 15, posX + ancho - 4, posY + 15);
+
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(8);
+                pdf.setTextColor(15, 23, 42);
+                pdf.text(nombrePersona, centerX, posY + 19.5, { align: 'center' });
+
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(7);
+                pdf.setTextColor(71, 85, 105);
+                pdf.text(tituloCargo, centerX, posY + 23.5, { align: 'center' });
             }
 
             function drawHeaderFooter(pageNumber, subTitleDoc) {
@@ -1042,22 +1083,12 @@ if (user.isSuperAdmin) {
                 doc.setFont('helvetica', 'normal');
                 doc.text('• NOC Pronatel informo oportunamente de la incidencia en Planta Interna.', 18, nextY3 + 6);
                 doc.text('• Personal de ' + empresaNombre + ' energizo con GEP portatil el nodo por periodo de contingencia.', 18, nextY3 + 12);
-                doc.text('• Se atendio la incidencia estrictamente dentro del SLA establecido.', 18, nextY3 + 18);
+                doc.text('• Se atendio la incidencia strictly dentro del SLA establecido.', 18, nextY3 + 18);
                 doc.text('• Recomendacion: Se recomienda evaluar la adquisicion de bancos de baterias adicionales para nodos con baja autonomia.', 18, nextY3 + 24, { maxWidth: pageW - 32 });
 
-                doc.setFont('helvetica', 'bold');
-                doc.text(empresaNombre, 50, nextY3 + 55, { align: 'center' });
-                doc.line(25, nextY3 + 53, 75, nextY3 + 53);
-                doc.setFont('helvetica', 'normal');
-                doc.text(tecnico, 50, nextY3 + 59, { align: 'center' });
-                doc.text('COORDINADOR DE MANTENIMIENTO', 50, nextY3 + 63, { align: 'center' });
-
-                doc.setFont('helvetica', 'bold');
-                doc.text(empresaNombre, pageW - 50, nextY3 + 55, { align: 'center' });
-                doc.line(pageW - 75, nextY3 + 53, pageW - 25, nextY3 + 53);
-                doc.setFont('helvetica', 'normal');
-                doc.text('ARISTOTELES SONDOR', pageW - 50, nextY3 + 59, { align: 'center' });
-                doc.text('SUPERVISOR PLANTA INTERNA', pageW - 50, nextY3 + 63, { align: 'center' });
+                // FIRMAS DUALES PINT
+                dibujarBloqueFirma(doc, 20, nextY3 + 32, 75, 'COORDINADOR DE MANTENIMIENTO', tecnico, empresaNombre, userFirma);
+                dibujarBloqueFirma(doc, pageW - 95, nextY3 + 32, 75, 'SUPERVISOR PLANTA INTERNA', 'ARISTOTELES SONDOR', empresaNombre, '');
 
             } else if (currentSlaType === 'Abastecimiento Combustible GEE') {
                 drawHeaderFooter(1, 'INFORME DE ABASTECIMIENTO DE COMBUSTIBLE');
@@ -1134,19 +1165,9 @@ if (user.isSuperAdmin) {
                 doc.text('• Se realizo el monitoreo y trabajo bajo el procedimiento de seguridad ambiental aprobado.', 18, nextYComb2 + 12);
                 doc.text('• Conclusion: Se realizo con exito el abastecimiento elevando el nivel del tanque del 22% al 35%.', 18, nextYComb2 + 18);
 
-                doc.setFont('helvetica', 'bold');
-                doc.text(empresaNombre, 50, nextYComb2 + 45, { align: 'center' });
-                doc.line(25, nextYComb2 + 43, 75, nextYComb2 + 43);
-                doc.setFont('helvetica', 'normal');
-                doc.text(tecnico, 50, nextYComb2 + 49, { align: 'center' });
-                doc.text('RESPONSABLE DE ABASTECIMIENTO', 50, nextYComb2 + 53, { align: 'center' });
-
-                doc.setFont('helvetica', 'bold');
-                doc.text(empresaNombre, pageW - 50, nextYComb2 + 45, { align: 'center' });
-                doc.line(pageW - 75, nextYComb2 + 43, pageW - 25, nextYComb2 + 43);
-                doc.setFont('helvetica', 'normal');
-                doc.text('BRANDON BORDA ALIAGA', pageW - 50, nextYComb2 + 49, { align: 'center' });
-                doc.text('SUPERVISOR PLANTA INTERNA', pageW - 50, nextYComb2 + 53, { align: 'center' });
+                // FIRMAS DUALES GEE
+                dibujarBloqueFirma(doc, 20, nextYComb2 + 30, 75, 'RESPONSABLE DE ABASTECIMIENTO', tecnico, empresaNombre, userFirma);
+                dibujarBloqueFirma(doc, pageW - 95, nextYComb2 + 30, 75, 'SUPERVISOR PLANTA INTERNA', 'BRANDON BORDA ALIAGA', empresaNombre, '');
 
             } else {
                 drawHeaderFooter(1, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
@@ -1385,13 +1406,9 @@ if (user.isSuperAdmin) {
                 doc.setFont('helvetica', 'normal');
                 doc.text('El restablecimiento del servicio no pudo efectuarse dentro del plazo inicial del SLA debido a circunstancias de fuerza mayor y factores externos no atribuibles a ' + empresaNombre + ' (acceso bloqueado por comunidad, terrenos de dificil acceso y lluvias persistentes). Articulo 1315 del Codigo Civil Peruano y Ley 29783.', 14, nextY3 + 6, { maxWidth: pageW - 28 });
 
-                doc.setFont('helvetica', 'bold');
-                doc.setTextColor(15, 23, 42);
-                doc.text(empresaNombre, pageW - 65, nextY3 + 35, { align: 'center' });
-                doc.line(pageW - 90, nextY3 + 33, pageW - 40, nextY3 + 33);
-                doc.setFont('helvetica', 'normal');
-                doc.text(tecnico, pageW - 65, nextY3 + 39, { align: 'center' });
-                doc.text('SUPERVISOR PLANTA EXTERNA', pageW - 65, nextY3 + 43, { align: 'center' });
+                // FIRMAS DUALES PEXT
+                dibujarBloqueFirma(doc, 20, nextY3 + 25, 75, 'RESPONSABLE TÉCNICO DE CAMPO', tecnico, empresaNombre, userFirma);
+                dibujarBloqueFirma(doc, pageW - 95, nextY3 + 25, 75, 'SUPERVISOR PLANTA EXTERNA', 'ELQUIN CASTILLO SICCHA', empresaNombre, '');
             }
 
             if (typeof doc.putTotalPages === 'function') {
