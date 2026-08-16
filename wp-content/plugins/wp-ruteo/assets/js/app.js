@@ -1396,8 +1396,10 @@ if (user.isSuperAdmin) {
 
             if (typeof doc.putTotalPages === 'function') {
                 doc.putTotalPages(totalPagesExp);
+            }
+
             var blob = doc.output('blob');
-            var safeName = 'Reporte_Oficial_PRONATEL_CYMTEL_' + incidencia.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
+            var safeName = currentSlaType.replace(/[^a-zA-Z0-9]/g, '_') + '_' + incidencia.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
             if (typeof window.downloadBlobRuteo === 'function') {
                 window.downloadBlobRuteo(blob, safeName);
             } else {
