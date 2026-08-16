@@ -833,6 +833,9 @@ if (user.isSuperAdmin) {
 
     $('#form-generar-sla').on('submit', function(e) {
         e.preventDefault();
+        var $btnSubmit = $(this).find('button[type="submit"]');
+        $btnSubmit.prop('disabled', true).text('Generando PDF...');
+
         var titulo = $('#sla-input-titulo').val() || 'PERDIDA DE ENLACE MOYOBAMBA-MENDOZA';
         var incidencia = $('#sla-input-incidencia').val() || '101-2026-RI-N2-RDNFO-DIOP';
         var tramo = $('#sla-input-tramo').val() || 'Nodo Moyobamba - Nodo Mendoza';
@@ -843,595 +846,615 @@ if (user.isSuperAdmin) {
         var jsPDFConstructor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : window.jsPDF;
         if (!jsPDFConstructor) {
             showToast('Cargando libreria PDF, intente de nuevo en un instante.', 'error');
+            $btnSubmit.prop('disabled', false).text('Generar PDF');
             return;
         }
-        try {
-            var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            var pageW = doc.internal.pageSize.getWidth();
-            var pageH = doc.internal.pageSize.getHeight();
-            var totalPagesExp = "{total_pages_count_string}";
-            var autoTableFn = doc.autoTable || (window.jspdf && window.jspdf.autoTable);
 
-            var currentUser = (window.wpRuteoAjax && window.wpRuteoAjax.user) ? window.wpRuteoAjax.user : {};
-            var empresaNombre = (currentUser && currentUser.empresaNombre) ? currentUser.empresaNombre : 'CYMTEL S.A.C.';
-            var clientLogo = (currentUser && currentUser.empresaLogo) ? currentUser.empresaLogo : ((window.wpRuteoAjax && window.wpRuteoAjax.siteLogo) ? window.wpRuteoAjax.siteLogo : '');
-            var userFirma = currentUser.firma || currentUser.firma_img || '';
+        var currentUser = (window.wpRuteoAjax && window.wpRuteoAjax.user) ? window.wpRuteoAjax.user : {};
+        var empresaNombre = (currentUser && currentUser.empresaNombre) ? currentUser.empresaNombre : 'CYMTEL S.A.C.';
+        var domLogoSrc = $('#sidebar-brand-logo img').attr('src') || $('#site-logo-preview img').attr('src') || '';
+        var rawLogo = currentUser.empresaLogo || currentUser.avatar || (window.wpRuteoAjax && window.wpRuteoAjax.siteLogo) || domLogoSrc || '';
+        var userFirma = currentUser.firma || currentUser.firma_img || '';
 
-            function getJsPdfImageFormat(url) {
-                if (url.indexOf('.png') > -1) return 'PNG';
-                if (url.indexOf('.jpg') > -1 || url.indexOf('.jpeg') > -1) return 'JPEG';
-                return 'PNG';
-            }
+        var logoPromise = (rawLogo && typeof convertImageToBase64 === 'function') ? convertImageToBase64(rawLogo) : Promise.resolve(null);
+        var firmaPromise = (userFirma && typeof convertImageToBase64 === 'function') ? convertImageToBase64(userFirma) : Promise.resolve(null);
 
-            function dibujarLogoEmpresaTexto(pdf, pW, empName) {
-                pdf.setTextColor(0, 151, 216);
-                pdf.setFontSize(11);
-                pdf.setFont('helvetica', 'bold');
-                pdf.text(empName || 'CYMTEL S.A.C.', pW - 18, 16, { align: 'right' });
-                pdf.setFontSize(5.5);
-                pdf.setFont('helvetica', 'normal');
-                pdf.text('Lider al Servicio de las Telecomunicaciones', pW - 18, 20.5, { align: 'right' });
-            }
+        Promise.all([logoPromise, firmaPromise]).then(function(results) {
+            var logoObj = results[0];
+            var firmaObj = results[1];
 
-            function dibujarBloqueFirma(pdf, posX, posY, ancho, tituloCargo, nombrePersona, empName, firmaImg) {
-                var centerX = posX + (ancho / 2);
-                
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(8.5);
-                pdf.setTextColor(15, 23, 42);
-                pdf.text(empName || 'CYMTEL S.A.C.', centerX, posY, { align: 'center' });
+            var logoDataUrl = (logoObj && logoObj.dataUrl) ? logoObj.dataUrl : (rawLogo.indexOf('data:image') === 0 ? rawLogo : '');
+            var firmaDataUrl = (firmaObj && firmaObj.dataUrl) ? firmaObj.dataUrl : (userFirma.indexOf('data:image') === 0 ? userFirma : '');
 
-                if (firmaImg && (firmaImg.indexOf('data:image') === 0 || firmaImg.indexOf('http') === 0 || firmaImg.indexOf('/') === 0)) {
-                    try {
-                        var mimeF = getJsPdfImageFormat(firmaImg);
-                        pdf.addImage(firmaImg, mimeF, centerX - 18, posY + 2, 36, 12, undefined, 'FAST');
-                    } catch(e) {
+            try {
+                var doc = new jsPDFConstructor({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                var pageW = doc.internal.pageSize.getWidth();
+                var pageH = doc.internal.pageSize.getHeight();
+                var totalPagesExp = "{total_pages_count_string}";
+                var autoTableFn = doc.autoTable || (window.jspdf && window.jspdf.autoTable);
+
+                function getJsPdfImageFormat(url) {
+                    if (!url) return 'PNG';
+                    if (url.indexOf('image/png') > -1 || url.indexOf('.png') > -1) return 'PNG';
+                    if (url.indexOf('image/jpeg') > -1 || url.indexOf('.jpg') > -1 || url.indexOf('.jpeg') > -1) return 'JPEG';
+                    return 'PNG';
+                }
+
+                function dibujarLogoEmpresaTexto(pdf, pW, empName) {
+                    pdf.setTextColor(0, 151, 216);
+                    pdf.setFontSize(11);
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.text(empName || 'CYMTEL S.A.C.', pW - 18, 16, { align: 'right' });
+                    pdf.setFontSize(5.5);
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.text('Lider al Servicio de las Telecomunicaciones', pW - 18, 20.5, { align: 'right' });
+                }
+
+                function dibujarBloqueFirma(pdf, posX, posY, ancho, tituloCargo, nombrePersona, empName, fDataUrl) {
+                    var centerX = posX + (ancho / 2);
+                    
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(8.5);
+                    pdf.setTextColor(15, 23, 42);
+                    pdf.text(empName || 'CYMTEL S.A.C.', centerX, posY, { align: 'center' });
+
+                    if (fDataUrl) {
+                        try {
+                            var fmtF = (firmaObj && firmaObj.format) ? firmaObj.format : getJsPdfImageFormat(fDataUrl);
+                            pdf.addImage(fDataUrl, fmtF, centerX - 18, posY + 2, 36, 12, undefined, 'FAST');
+                        } catch(e) {
+                            pdf.setFontSize(6.5);
+                            pdf.setFont('helvetica', 'bold');
+                            pdf.setTextColor(0, 151, 216);
+                            pdf.text('✔ FIRMA DIGITAL REGISTRADA', centerX, posY + 9, { align: 'center' });
+                        }
+                    } else {
                         pdf.setFontSize(6.5);
                         pdf.setFont('helvetica', 'bold');
                         pdf.setTextColor(0, 151, 216);
                         pdf.text('✔ FIRMA DIGITAL REGISTRADA', centerX, posY + 9, { align: 'center' });
                     }
-                } else {
-                    pdf.setFontSize(6.5);
+
+                    pdf.setDrawColor(30, 41, 59);
+                    pdf.setLineWidth(0.4);
+                    pdf.line(posX + 4, posY + 15, posX + ancho - 4, posY + 15);
+
                     pdf.setFont('helvetica', 'bold');
-                    pdf.setTextColor(0, 151, 216);
-                    pdf.text('✔ FIRMA DIGITAL REGISTRADA', centerX, posY + 9, { align: 'center' });
+                    pdf.setFontSize(8);
+                    pdf.setTextColor(15, 23, 42);
+                    pdf.text(nombrePersona, centerX, posY + 19.5, { align: 'center' });
+
+                    pdf.setFont('helvetica', 'normal');
+                    pdf.setFontSize(7);
+                    pdf.setTextColor(71, 85, 105);
+                    pdf.text(tituloCargo, centerX, posY + 23.5, { align: 'center' });
                 }
 
-                pdf.setDrawColor(30, 41, 59);
-                pdf.setLineWidth(0.4);
-                pdf.line(posX + 4, posY + 15, posX + ancho - 4, posY + 15);
+                function drawHeaderFooter(pageNumber, subTitleDoc) {
+                    doc.setDrawColor(0, 0, 0);
+                    doc.setLineWidth(0.4);
+                    doc.rect(14, 8, pageW - 28, 18);
 
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(8);
-                pdf.setTextColor(15, 23, 42);
-                pdf.text(nombrePersona, centerX, posY + 19.5, { align: 'center' });
+                    doc.line(62, 8, 62, 26);
+                    doc.line(pageW - 62, 8, pageW - 62, 26);
 
-                pdf.setFont('helvetica', 'normal');
-                pdf.setFontSize(7);
-                pdf.setTextColor(71, 85, 105);
-                pdf.text(tituloCargo, centerX, posY + 23.5, { align: 'center' });
-            }
+                    // Izquierda: PRONATEL
+                    doc.setFillColor(230, 81, 0);
+                    doc.rect(17, 10, 4, 14, 'F');
+                    doc.setTextColor(0, 51, 102);
+                    doc.setFontSize(10);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('PRONATEL', 23, 17);
+                    doc.setFontSize(5.5);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('PROGRAMA NACIONAL DE TELECOMUNICACIONES', 23, 21);
 
-            function drawHeaderFooter(pageNumber, subTitleDoc) {
-                doc.setDrawColor(0, 0, 0);
-                doc.setLineWidth(0.4);
-                doc.rect(14, 8, pageW - 28, 18);
+                    // Centro: Titulo del Proceso
+                    doc.setTextColor(15, 23, 42);
+                    doc.setFontSize(7.5);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(subTitleDoc || 'FORMATO DE INFORME TÉCNICO', pageW / 2, 13, { align: 'center' });
+                    doc.setFontSize(6.5);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('PROCESO: Gestión de la Operación y Mantenimiento', pageW / 2, 17.5, { align: 'center' });
+                    doc.text('RED DORSAL NACIONAL DE FIBRA ÓPTICA', pageW / 2, 21.5, { align: 'center' });
 
-                doc.line(62, 8, 62, 26);
-                doc.line(pageW - 62, 8, pageW - 62, 26);
-
-                // Izquierda: PRONATEL
-                doc.setFillColor(230, 81, 0);
-                doc.rect(17, 10, 4, 14, 'F');
-                doc.setTextColor(0, 51, 102);
-                doc.setFontSize(10);
-                doc.setFont('helvetica', 'bold');
-                doc.text('PRONATEL', 23, 17);
-                doc.setFontSize(5.5);
-                doc.setFont('helvetica', 'normal');
-                doc.text('PROGRAMA NACIONAL DE TELECOMUNICACIONES', 23, 21);
-
-                // Centro: Titulo del Proceso
-                doc.setTextColor(15, 23, 42);
-                doc.setFontSize(7.5);
-                doc.setFont('helvetica', 'bold');
-                doc.text(subTitleDoc || 'FORMATO DE INFORME TÉCNICO', pageW / 2, 13, { align: 'center' });
-                doc.setFontSize(6.5);
-                doc.setFont('helvetica', 'normal');
-                doc.text('PROCESO: Gestión de la Operación y Mantenimiento', pageW / 2, 17.5, { align: 'center' });
-                doc.text('RED DORSAL NACIONAL DE FIBRA ÓPTICA', pageW / 2, 21.5, { align: 'center' });
-
-                // Derecha: Logo de Empresa / CYMTEL
-                if (clientLogo && (clientLogo.indexOf('data:image') === 0 || clientLogo.indexOf('http') === 0 || clientLogo.indexOf('/') === 0)) {
-                    try {
-                        var mimeSite = getJsPdfImageFormat(clientLogo);
-                        doc.addImage(clientLogo, mimeSite, pageW - 58, 9.5, 40, 15, undefined, 'FAST');
-                    } catch (e) {
+                    // Derecha: Logo de Empresa
+                    if (logoDataUrl) {
+                        try {
+                            var fmtL = (logoObj && logoObj.format) ? logoObj.format : getJsPdfImageFormat(logoDataUrl);
+                            doc.addImage(logoDataUrl, fmtL, pageW - 58, 9.5, 40, 15, undefined, 'FAST');
+                        } catch (e) {
+                            dibujarLogoEmpresaTexto(doc, pageW, empresaNombre);
+                        }
+                    } else {
                         dibujarLogoEmpresaTexto(doc, pageW, empresaNombre);
                     }
+
+                    doc.setDrawColor(200, 200, 200);
+                    doc.setLineWidth(0.3);
+                    doc.line(14, pageH - 14, pageW - 14, pageH - 14);
+
+                    doc.setTextColor(100, 116, 139);
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('Versión 1.0', 14, pageH - 9);
+                    doc.text('RED DORSAL NACIONAL DE FIBRA ÓPTICA', pageW / 2, pageH - 9, { align: 'center' });
+                    doc.text('Página ' + pageNumber + ' de ' + totalPagesExp, pageW - 14, pageH - 9, { align: 'right' });
+                }
+
+                if (currentSlaType === 'Informe Planta Interna (PINT)') {
+                    drawHeaderFooter(1, 'INFORME DE MANTENIMIENTO CORRECTIVO PLANTA INTERNA');
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('1. UBICACIÓN DEL NODO EN ATENCIÓN', 14, 34);
+
+                    var ubicacionBody = [
+                        ['Nombre del Nodo', 'Dirección', 'Coordenadas (Lat / Long)', 'Altura'],
+                        [tramo || 'Piscobamba', 'Predio denominado Parara valle Callejon de Conchucos', 'Lat: -8.862111  Long: -77.359905', '3269 m']
+                    ];
+
+                    if (autoTableFn) {
+                        autoTableFn.call(doc, {
+                            startY: 38,
+                            body: ubicacionBody,
+                            theme: 'grid',
+                            headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' },
+                            bodyStyles: { fontSize: 8, cellPadding: 3 },
+                            margin: { left: 14, right: 14 }
+                        });
+                    }
+
+                    var nextY1 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 65;
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('2. INFORMACIÓN DE LA ATENCIÓN', 14, nextY1);
+
+                    var atencionBody = [
+                        [{ content: 'NODO:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tramo || 'Piscobamba', { content: 'DEPARTAMENTO:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Ancash'],
+                        [{ content: 'INC:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, incidencia || '88791', { content: 'OT:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'OT-2026-PINT'],
+                        [{ content: 'FECHA Y HORA INICIO:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '03/05/2026 03:53 am', { content: 'FECHA Y HORA FIN:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '03/05/2026 09:18 am'],
+                        [{ content: 'TIEMPO SOLUCIÓN:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '05:25 horas', { content: 'SLA:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '24 horas'],
+                        [{ content: 'TÉCNICO EN CAMPO:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tecnico, { content: 'SUPERVISOR:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Aristoteles Sondor'],
+                        [{ content: 'MOTIVO DE ATENCIÓN:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, causa, { content: 'TIPO DE NODO:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Distribución']
+                    ];
+
+                    if (autoTableFn) {
+                        autoTableFn.call(doc, {
+                            startY: nextY1 + 4,
+                            body: atencionBody,
+                            theme: 'grid',
+                            bodyStyles: { fontSize: 8, cellPadding: 3 },
+                            margin: { left: 14, right: 14 }
+                        });
+                    }
+
+                    var nextY2 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 130;
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(11);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('3. PERSONAL EN CAMPO:  • ' + tecnico, 14, nextY2);
+                    doc.text('4. DESCARTES / ANÁLISIS:  • Se consulto a la concesionaria si era corte programado.', 14, nextY2 + 6);
+
+                    doc.setFontSize(11);
+                    doc.text('5. BITÁCORA DE ATENCIÓN:', 14, nextY2 + 14);
+
+                    var bitacoraPint = [
+                        ['1', '03/05/2026 09:06 am', 'Personal de O&M ingresa al nodo para energizar con GEP.'],
+                        ['2', '03/05/2026 09:13 am', 'Verifica la ausencia de energia electrica comercial en el nodo.'],
+                        ['3', '03/05/2026 09:18 am', 'Se procede a encender el GEP portatil.'],
+                        ['4', '04/05/2026 14:55 pm', 'Personal verifica que retorno la energia comercial al nodo.'],
+                        ['5', '04/05/2026 14:59 pm', 'Se validan los trabajos con NOC y SOC Pronatel.']
+                    ];
+
+                    if (autoTableFn) {
+                        autoTableFn.call(doc, {
+                            startY: nextY2 + 18,
+                            head: [['ITEM', 'FECHA Y HORA', 'DESCRIPCIÓN DE MANIOBRA']],
+                            body: bitacoraPint,
+                            theme: 'grid',
+                            headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255] },
+                            bodyStyles: { fontSize: 8, cellPadding: 2.5 },
+                            margin: { left: 14, right: 14 }
+                        });
+                    }
+
+                    doc.addPage();
+                    drawHeaderFooter(2, 'INFORME DE MANTENIMIENTO CORRECTIVO PLANTA INTERNA');
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('6. REGISTRO DE TARJETAS Y EQUIPOS (EMPLEADAS / RETIRADAS)', 14, 34);
+
+                    var tarjetasBody = [
+                        ['1', 'GEP PORTATIL 5.0KW', 'Generador portatil de emergencia', 'GEP-9021', 'PARTE-GEP-01', 'SHELF-01', 'SLOT-A']
+                    ];
+
+                    if (autoTableFn) {
+                        autoTableFn.call(doc, {
+                            startY: 38,
+                            head: [['ITEM', 'EQUIPO', 'DESCRIPCIÓN', 'N° SERIE', 'N° PARTE', 'SHELF', 'SLOT']],
+                            body: tarjetasBody,
+                            theme: 'grid',
+                            headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255] },
+                            bodyStyles: { fontSize: 8, cellPadding: 2.5 },
+                            margin: { left: 14, right: 14 }
+                        });
+                    }
+
+                    var nextY3 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 70;
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('7. OBSERVACIONES, CONCLUSIONES Y RECOMENDACIONES', 14, nextY3);
+
+                    doc.setTextColor(15, 23, 42);
+                    doc.setFontSize(8.5);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('• NOC Pronatel informo oportunamente de la incidencia en Planta Interna.', 18, nextY3 + 6);
+                    doc.text('• Personal de ' + empresaNombre + ' energizo con GEP portatil el nodo por periodo de contingencia.', 18, nextY3 + 12);
+                    doc.text('• Se atendio la incidencia estrictamente dentro del SLA establecido.', 18, nextY3 + 18);
+                    doc.text('• Recomendacion: Se recomienda evaluar la adquisicion de bancos de baterias adicionales para nodos con baja autonomia.', 18, nextY3 + 24, { maxWidth: pageW - 32 });
+
+                    // FIRMAS DUALES PINT
+                    dibujarBloqueFirma(doc, 20, nextY3 + 32, 75, 'COORDINADOR DE MANTENIMIENTO', tecnico, empresaNombre, firmaDataUrl);
+                    dibujarBloqueFirma(doc, pageW - 95, nextY3 + 32, 75, 'SUPERVISOR PLANTA INTERNA', 'ARISTOTELES SONDOR', empresaNombre, '');
+
+                } else if (currentSlaType === 'Abastecimiento Combustible GEE') {
+                    drawHeaderFooter(1, 'INFORME DE ABASTECIMIENTO DE COMBUSTIBLE');
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('1. DATOS DE IDENTIFICACIÓN DE ABASTECIMIENTO', 14, 34);
+
+                    var idCombustible = [
+                        [{ content: 'Fecha:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, new Date().toLocaleDateString('es-PE'), { content: 'Responsable:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tecnico],
+                        [{ content: 'CRQ / OT:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, incidencia || '41415', { content: 'Lugar / Ubicación:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Puerto Maldonado - Madre de Dios'],
+                        [{ content: 'Nodo:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tramo || 'IÑAPARI', { content: 'Distrito:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'TAHUAMANU'],
+                        [{ content: 'Fecha/Hora Inicio:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '10:57 hrs', { content: 'Fecha/Hora Término:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '12:28 hrs']
+                    ];
+
+                    if (autoTableFn) {
+                        autoTableFn.call(doc, {
+                            startY: 38,
+                            body: idCombustible,
+                            theme: 'grid',
+                            bodyStyles: { fontSize: 8, cellPadding: 3 },
+                            margin: { left: 14, right: 14 }
+                        });
+                    }
+
+                    var nextYComb1 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 75;
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('2. BITACORA DE REGISTRO DE COMBUSTIBLE', 14, nextYComb1);
+
+                    doc.setTextColor(15, 23, 42);
+                    doc.setFontSize(8.5);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('• 10:57 hrs: Acceso al nodo y monitoreo de nivel del tanque del GEE1 (nivel inicial: 22%).', 18, nextYComb1 + 6);
+                    doc.text('• 11:39 hrs: Corte de etiquetas y precintos de seguridad para proceder al abastecimiento.', 18, nextYComb1 + 12);
+                    doc.text('• 12:28 hrs: Culminacion de abastecimiento de GEE1 (nivel final: 35%). Personal se retira.', 18, nextYComb1 + 18);
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('3. MATERIALES E INSUMOS UTILIZADOS', 14, nextYComb1 + 28);
+
+                    var matCombustible = [
+                        ['01', 'Combustible Diesel B5', 'Galones', '50', 'GEE1 Nivel 22% a 35%'],
+                        ['02', 'Kit Antiderrame de Hidrocarburos', 'Unid', '1', 'GEE1 Limpieza de residuos']
+                    ];
+
+                    if (autoTableFn) {
+                        autoTableFn.call(doc, {
+                            startY: nextYComb1 + 32,
+                            head: [['ÍTEM', 'DESCRIPCIÓN', 'UNIDAD', 'CANTIDAD', 'OBSERVACIONES']],
+                            body: matCombustible,
+                            theme: 'grid',
+                            headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255] },
+                            bodyStyles: { fontSize: 8, cellPadding: 3 },
+                            margin: { left: 14, right: 14 }
+                        });
+                    }
+
+                    var nextYComb2 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 150;
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('4. ACCIONES PREVENTIVAS Y CONCLUSIONES', 14, nextYComb2);
+
+                    doc.setTextColor(15, 23, 42);
+                    doc.setFontSize(8.5);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('• Se contaba en sitio con kit anti derrame de hidrocarburos activo.', 18, nextYComb2 + 6);
+                    doc.text('• Se realizo el monitoreo y trabajo bajo el procedimiento de seguridad ambiental aprobado.', 18, nextYComb2 + 12);
+                    doc.text('• Conclusion: Se realizo con exito el abastecimiento elevando el nivel del tanque del 22% al 35%.', 18, nextYComb2 + 18);
+
+                    // FIRMAS DUALES GEE
+                    dibujarBloqueFirma(doc, 20, nextYComb2 + 30, 75, 'RESPONSABLE DE ABASTECIMIENTO', tecnico, empresaNombre, firmaDataUrl);
+                    dibujarBloqueFirma(doc, pageW - 95, nextYComb2 + 30, 75, 'SUPERVISOR PLANTA INTERNA', 'BRANDON BORDA ALIAGA', empresaNombre, '');
+
                 } else {
-                    dibujarLogoEmpresaTexto(doc, pageW, empresaNombre);
+                    drawHeaderFooter(1, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
+
+                    doc.setTextColor(0, 0, 0);
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('REPORTE DE INCIDENCIA N° ' + incidencia.toUpperCase(), pageW / 2, 65, { align: 'center' });
+
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('INTERNO', pageW / 2, 75, { align: 'center' });
+                    doc.line(pageW / 2 - 15, 76.5, pageW / 2 + 15, 76.5);
+
+                    doc.setFontSize(16);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text(titulo.toUpperCase(), pageW / 2, 115, { align: 'center' });
+
+                    doc.addPage();
+                    drawHeaderFooter(2, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Tabla de contenido', 14, 38);
+
+                    var tocItems = [
+                        ['1.  RESUMEN EJECUTIVO .............................................................................................................', '3'],
+                        ['2.  CRONOLOGÍA DE LA INCIDENCIA .............................................................................................', '4'],
+                        ['3.  MATERIALES DE INTERVENCIÓN .............................................................................................', '5'],
+                        ['4.  DETALLE DE AFECTACIÓN AL SERVICIO .................................................................................', '5'],
+                        ['5.  ANÁLISIS DE CAUSA RAÍZ Y ACCIONES ...................................................................................', '6'],
+                        ['6.  PLAN DE ACCIÓN / MEJORAS ................................................................................................', '6'],
+                        ['7.  OBSERVACIONES Y MARCO LEGAL ............................................................................................', '6']
+                    ];
+
+                    doc.setTextColor(15, 23, 42);
+                    doc.setFontSize(9.5);
+                    doc.setFont('helvetica', 'normal');
+                    var tocY = 50;
+                    tocItems.forEach(function(item) {
+                        doc.text(item[0], 14, tocY);
+                        doc.text(item[1], pageW - 14, tocY, { align: 'right' });
+                        tocY += 9;
+                    });
+
+                    doc.addPage();
+                    drawHeaderFooter(3, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('1. RESUMEN EJECUTIVO', 14, 38);
+
+                    doc.setTextColor(15, 23, 42);
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'normal');
+                    var splitNarrative = doc.splitTextToSize(detalle, pageW - 28);
+                    doc.text(splitNarrative, 14, 46);
+
+                    var currY = 46 + (splitNarrative.length * 4.8) + 6;
+
+                    var dataResumen = [
+                        [{ content: 'Ticket Incidencia', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, { content: incidencia, styles: { fontStyle: 'bold' } }],
+                        [{ content: 'Descripción', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Interrupción de los servicios de Fibra Óptica.'],
+                        [{ content: 'FECHA Y HORA', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'INICIO: ' + new Date().toLocaleDateString('es-PE') + ' 07:38 hrs.    FIN: ' + new Date().toLocaleDateString('es-PE') + ' 08:13 hrs.'],
+                        [{ content: 'DURACIÓN TOTAL', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '27,405 minutos / 456:45 hrs.'],
+                        [{ content: 'Causa Tipificada', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, causa],
+                        [{ content: 'Causa Real', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Fibra optica expuesta afectada por actos vandalicos (machetazo) ocasionando dano en el cable de fibra optica.'],
+                        [{ content: 'Servicio Afectado', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Enlace de Fibra Optica Red Dorsal'],
+                        [{ content: 'Nodo / Tramo Afectado', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tramo]
+                    ];
+
+                    if (autoTableFn) {
+                        autoTableFn.call(doc, {
+                            startY: currY,
+                            body: dataResumen,
+                            theme: 'grid',
+                            bodyStyles: { fontSize: 8.5, cellPadding: 3.5 },
+                            columnStyles: {
+                                0: { cellWidth: 50 },
+                                1: { cellWidth: 'auto' }
+                            },
+                            margin: { left: 14, right: 14 }
+                        });
+                    }
+
+                    doc.addPage();
+                    drawHeaderFooter(4, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('2. CRONOLOGÍA DE LA INCIDENCIA', 14, 38);
+
+                    doc.setTextColor(100, 116, 139);
+                    doc.setFontSize(8.5);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('Se detalla a continuacion la cronologia de eventos sucedidos a lo largo de la incidencia (formato GMT):', 14, 45);
+
+                    var cronologiaRows = [
+                        ['1', '09/06/2026 07:28hrs', 'NOC PRONATEL informa de la incidencia a NOC ' + empresaNombre + '.'],
+                        ['2', '09/06/2026 07:28hrs', 'Se informa al personal O&M del CM Jaen que debe desplazarse hacia el nodo para mediciones reflectometricas.'],
+                        ['3', '09/06/2026 09:00hrs', 'Personal se encuentra en desplazamiento hacia la zona afectada.'],
+                        ['4', '09/06/2026 18:27hrs', 'Personal O&M llega al nodo y realiza mediciones OTDR detectando corte a 69.1 km.'],
+                        ['5', '10/06/2026 07:28hrs', 'Pobladores de la zona restringen el ingreso al punto de corte requiriendo coordinacion social.'],
+                        ['6', '25/06/2026 10:16hrs', 'PRONATEL y pobladores llegan a un acuerdo. Se autoriza el ingreso al punto de afectacion.'],
+                        ['7', '25/06/2026 15:50hrs', 'Personal O&M llega al punto y verifica corte por vandalismo (machetazo) en ID CONSOL 82076.'],
+                        ['8', '25/06/2026 18:43hrs', 'Personal O&M realiza fusiones de cable de fibra optica en ID CONSOL 82076.'],
+                        ['9', '26/06/2026 11:03hrs', 'Se ubica segundo punto de afectacion por vandalismo entre ID CONSOL 82226 y 82229.'],
+                        ['10', '28/06/2026 09:17hrs', 'Se realiza acondicionamiento de mufa de empalme y pruebas con especialista DWDM.'],
+                        ['11', '29/06/2026 08:13hrs', 'NOC PRONATEL confirma restablecimiento del enlace afectado con niveles de potencia de linea.']
+                    ];
+
+                    if (autoTableFn) {
+                        autoTableFn.call(doc, {
+                            startY: 49,
+                            head: [['ÍTEM', 'FECHA Y HORA', 'DESCRIPCIÓN DE EVENTOS']],
+                            body: cronologiaRows,
+                            theme: 'grid',
+                            headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+                            bodyStyles: { fontSize: 8, cellPadding: 3 },
+                            columnStyles: {
+                                0: { cellWidth: 14, halign: 'center' },
+                                1: { cellWidth: 42, fontStyle: 'bold' },
+                                2: { cellWidth: 'auto' }
+                            },
+                            margin: { left: 14, right: 14 }
+                        });
+                    }
+
+                    doc.addPage();
+                    drawHeaderFooter(5, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('3. MATERIALES DE INTERVENCIÓN', 14, 38);
+
+                    var materialesRows = [
+                        ['1', 'ADSS-48 G.652D PE Span 800m', 'MTS', '510', 'DRUM 0017'],
+                        ['2', 'KIT DE HERRAJE DE RETENCIÓN VANO 600M (PE)', 'UND', '10', 'HERR-600'],
+                        ['3', 'MUFA DE EMPALME DE FIBRA OPTICA 48 HILOS', 'UND', '3', 'MUFA-48H'],
+                        ['4', 'FLEJE Y HEBILLAS DE ACERO INOXIDABLE 3/4"', 'MTS', '25', 'FLEJ-34']
+                    ];
+
+                    if (autoTableFn) {
+                        autoTableFn.call(doc, {
+                            startY: 44,
+                            head: [['ÍTEM', 'DESCRIPCIÓN MATERIAL', 'UNIDAD', 'CANTIDAD', 'CÓDIGO SAP']],
+                            body: materialesRows,
+                            theme: 'grid',
+                            headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+                            bodyStyles: { fontSize: 8, cellPadding: 3 },
+                            columnStyles: {
+                                0: { cellWidth: 14, halign: 'center' },
+                                1: { cellWidth: 'auto' },
+                                2: { cellWidth: 20, halign: 'center' },
+                                3: { cellWidth: 24, halign: 'center' },
+                                4: { cellWidth: 32 }
+                            },
+                            margin: { left: 14, right: 14 }
+                        });
+                    }
+
+                    var nextY2 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 100;
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('4. DETALLE DE AFECTACIÓN AL SERVICIO', 14, nextY2);
+
+                    doc.setTextColor(15, 23, 42);
+                    doc.setFontSize(8.5);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('La incidencia afecto el servicio de fibra optica entre ' + tramo + ', con un tiempo de inactividad total de 27,405 minutos (456 hrs). La recuperacion total se logro tras las acciones correctivas.', 14, nextY2 + 6, { maxWidth: pageW - 28 });
+
+                    doc.addPage();
+                    drawHeaderFooter(6, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(14);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('5. ANÁLISIS DE CAUSA RAÍZ Y ACCIONES', 14, 38);
+
+                    doc.setTextColor(15, 23, 42);
+                    doc.setFontSize(9);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Causa y Efecto:', 14, 46);
+
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('• Causa Principal: ' + causa, 18, 52, { maxWidth: pageW - 32 });
+                    doc.text('• Efecto: Perdida de conectividad entre los nodos principales del tramo afectado.', 18, 58);
+
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('Solución Implementada:', 14, 66);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('Empalmes de fibra optica en mufas y tendido de tramo sustituto en los ID CONSOL 82076, 82229 y 82152.', 18, 72, { maxWidth: pageW - 32 });
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('6. PLAN DE ACCIÓN / MEJORAS', 14, 84);
+
+                    var planRows = [
+                        ['Abastecimiento continuo de materiales y revision de inventario', '30/07/2026'],
+                        ['Evaluacion y mejora de procedimientos de emergencia PEXT', '15/08/2026'],
+                        ['Revision de Procedimientos Operativos para Gestion de Incidentes', '30/08/2026']
+                    ];
+
+                    if (autoTableFn) {
+                        autoTableFn.call(doc, {
+                            startY: 88,
+                            head: [['PLAN DE ACCIÓN DE MEJORA', 'FECHA DE CIERRE']],
+                            body: planRows,
+                            theme: 'grid',
+                            headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' },
+                            bodyStyles: { fontSize: 8.5, cellPadding: 3.5 },
+                            columnStyles: {
+                                0: { cellWidth: 'auto' },
+                                1: { cellWidth: 40, halign: 'center' }
+                            },
+                            margin: { left: 14, right: 14 }
+                        });
+                    }
+
+                    var nextY3 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 140;
+
+                    doc.setTextColor(0, 151, 216);
+                    doc.setFontSize(12);
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('7. OBSERVACIONES Y MARCO LEGAL', 14, nextY3);
+
+                    doc.setTextColor(15, 23, 42);
+                    doc.setFontSize(8);
+                    doc.setFont('helvetica', 'normal');
+                    doc.text('El restablecimiento del servicio no pudo efectuarse dentro del plazo inicial del SLA debido a circunstancias de fuerza mayor y factores externos no atribuibles a ' + empresaNombre + ' (acceso bloqueado por comunidad, terrenos de dificil acceso y lluvias persistentes). Articulo 1315 del Codigo Civil Peruano y Ley 29783.', 14, nextY3 + 6, { maxWidth: pageW - 28 });
+
+                    // FIRMAS DUALES PEXT
+                    dibujarBloqueFirma(doc, 20, nextY3 + 25, 75, 'RESPONSABLE TÉCNICO DE CAMPO', tecnico, empresaNombre, firmaDataUrl);
+                    dibujarBloqueFirma(doc, pageW - 95, nextY3 + 25, 75, 'SUPERVISOR PLANTA EXTERNA', 'ELQUIN CASTILLO SICCHA', empresaNombre, '');
                 }
 
-                doc.setDrawColor(200, 200, 200);
-                doc.setLineWidth(0.3);
-                doc.line(14, pageH - 14, pageW - 14, pageH - 14);
+                if (typeof doc.putTotalPages === 'function') {
+                    doc.putTotalPages(totalPagesExp);
+                }
 
-                doc.setTextColor(100, 116, 139);
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'normal');
-                doc.text('Versión 1.0', 14, pageH - 9);
-                doc.text('RED DORSAL NACIONAL DE FIBRA ÓPTICA', pageW / 2, pageH - 9, { align: 'center' });
-                doc.text('Página ' + pageNumber + ' de ' + totalPagesExp, pageW - 14, pageH - 9, { align: 'right' });
+                var blob = doc.output('blob');
+                var safeName = currentSlaType.replace(/[^a-zA-Z0-9]/g, '_') + '_' + incidencia.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
+                if (typeof window.downloadBlobRuteo === 'function') {
+                    window.downloadBlobRuteo(blob, safeName);
+                } else {
+                    var u = URL.createObjectURL(blob);
+                    var a = document.createElement('a');
+                    a.href = u; a.download = safeName;
+                    document.body.appendChild(a); a.click();
+                    setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(u); }, 500);
+                }
+            } catch(err) {
+                console.error(err);
+                showToast('Error generando documento PDF.', 'error');
+            } finally {
+                $btnSubmit.prop('disabled', false).text('Generar PDF');
+                $('#sla-modal-overlay').fadeOut(200);
             }
-
-            if (currentSlaType === 'Informe Planta Interna (PINT)') {
-                drawHeaderFooter(1, 'INFORME DE MANTENIMIENTO CORRECTIVO PLANTA INTERNA');
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('1. UBICACIÓN DEL NODO EN ATENCIÓN', 14, 34);
-
-                var ubicacionBody = [
-                    ['Nombre del Nodo', 'Dirección', 'Coordenadas (Lat / Long)', 'Altura'],
-                    [tramo || 'Piscobamba', 'Predio denominado Parara valle Callejon de Conchucos', 'Lat: -8.862111  Long: -77.359905', '3269 m']
-                ];
-
-                if (autoTableFn) {
-                    autoTableFn.call(doc, {
-                        startY: 38,
-                        body: ubicacionBody,
-                        theme: 'grid',
-                        headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' },
-                        bodyStyles: { fontSize: 8, cellPadding: 3 },
-                        margin: { left: 14, right: 14 }
-                    });
-                }
-
-                var nextY1 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 65;
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('2. INFORMACIÓN DE LA ATENCIÓN', 14, nextY1);
-
-                var atencionBody = [
-                    [{ content: 'NODO:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tramo || 'Piscobamba', { content: 'DEPARTAMENTO:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Ancash'],
-                    [{ content: 'INC:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, incidencia || '88791', { content: 'OT:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'OT-2026-PINT'],
-                    [{ content: 'FECHA Y HORA INICIO:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '03/05/2026 03:53 am', { content: 'FECHA Y HORA FIN:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '03/05/2026 09:18 am'],
-                    [{ content: 'TIEMPO SOLUCIÓN:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '05:25 horas', { content: 'SLA:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '24 horas'],
-                    [{ content: 'TÉCNICO EN CAMPO:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tecnico, { content: 'SUPERVISOR:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Aristoteles Sondor'],
-                    [{ content: 'MOTIVO DE ATENCIÓN:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, causa, { content: 'TIPO DE NODO:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Distribución']
-                ];
-
-                if (autoTableFn) {
-                    autoTableFn.call(doc, {
-                        startY: nextY1 + 4,
-                        body: atencionBody,
-                        theme: 'grid',
-                        bodyStyles: { fontSize: 8, cellPadding: 3 },
-                        margin: { left: 14, right: 14 }
-                    });
-                }
-
-                var nextY2 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 130;
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(11);
-                doc.setFont('helvetica', 'bold');
-                doc.text('3. PERSONAL EN CAMPO:  • ' + tecnico, 14, nextY2);
-                doc.text('4. DESCARTES / ANÁLISIS:  • Se consulto a la concesionaria si era corte programado.', 14, nextY2 + 6);
-
-                doc.setFontSize(11);
-                doc.text('5. BITÁCORA DE ATENCIÓN:', 14, nextY2 + 14);
-
-                var bitacoraPint = [
-                    ['1', '03/05/2026 09:06 am', 'Personal de O&M ingresa al nodo para energizar con GEP.'],
-                    ['2', '03/05/2026 09:13 am', 'Verifica la ausencia de energia electrica comercial en el nodo.'],
-                    ['3', '03/05/2026 09:18 am', 'Se procede a encender el GEP portatil.'],
-                    ['4', '04/05/2026 14:55 pm', 'Personal verifica que retorno la energia comercial al nodo.'],
-                    ['5', '04/05/2026 14:59 pm', 'Se validan los trabajos con NOC y SOC Pronatel.']
-                ];
-
-                if (autoTableFn) {
-                    autoTableFn.call(doc, {
-                        startY: nextY2 + 18,
-                        head: [['ITEM', 'FECHA Y HORA', 'DESCRIPCIÓN DE MANIOBRA']],
-                        body: bitacoraPint,
-                        theme: 'grid',
-                        headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255] },
-                        bodyStyles: { fontSize: 8, cellPadding: 2.5 },
-                        margin: { left: 14, right: 14 }
-                    });
-                }
-
-                doc.addPage();
-                drawHeaderFooter(2, 'INFORME DE MANTENIMIENTO CORRECTIVO PLANTA INTERNA');
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('6. REGISTRO DE TARJETAS Y EQUIPOS (EMPLEADAS / RETIRADAS)', 14, 34);
-
-                var tarjetasBody = [
-                    ['1', 'GEP PORTATIL 5.0KW', 'Generador portatil de emergencia', 'GEP-9021', 'PARTE-GEP-01', 'SHELF-01', 'SLOT-A']
-                ];
-
-                if (autoTableFn) {
-                    autoTableFn.call(doc, {
-                        startY: 38,
-                        head: [['ITEM', 'EQUIPO', 'DESCRIPCIÓN', 'N° SERIE', 'N° PARTE', 'SHELF', 'SLOT']],
-                        body: tarjetasBody,
-                        theme: 'grid',
-                        headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255] },
-                        bodyStyles: { fontSize: 8, cellPadding: 2.5 },
-                        margin: { left: 14, right: 14 }
-                    });
-                }
-
-                var nextY3 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 70;
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('7. OBSERVACIONES, CONCLUSIONES Y RECOMENDACIONES', 14, nextY3);
-
-                doc.setTextColor(15, 23, 42);
-                doc.setFontSize(8.5);
-                doc.setFont('helvetica', 'normal');
-                doc.text('• NOC Pronatel informo oportunamente de la incidencia en Planta Interna.', 18, nextY3 + 6);
-                doc.text('• Personal de ' + empresaNombre + ' energizo con GEP portatil el nodo por periodo de contingencia.', 18, nextY3 + 12);
-                doc.text('• Se atendio la incidencia strictly dentro del SLA establecido.', 18, nextY3 + 18);
-                doc.text('• Recomendacion: Se recomienda evaluar la adquisicion de bancos de baterias adicionales para nodos con baja autonomia.', 18, nextY3 + 24, { maxWidth: pageW - 32 });
-
-                // FIRMAS DUALES PINT
-                dibujarBloqueFirma(doc, 20, nextY3 + 32, 75, 'COORDINADOR DE MANTENIMIENTO', tecnico, empresaNombre, userFirma);
-                dibujarBloqueFirma(doc, pageW - 95, nextY3 + 32, 75, 'SUPERVISOR PLANTA INTERNA', 'ARISTOTELES SONDOR', empresaNombre, '');
-
-            } else if (currentSlaType === 'Abastecimiento Combustible GEE') {
-                drawHeaderFooter(1, 'INFORME DE ABASTECIMIENTO DE COMBUSTIBLE');
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('1. DATOS DE IDENTIFICACIÓN DE ABASTECIMIENTO', 14, 34);
-
-                var idCombustible = [
-                    [{ content: 'Fecha:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, new Date().toLocaleDateString('es-PE'), { content: 'Responsable:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tecnico],
-                    [{ content: 'CRQ / OT:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, incidencia || '41415', { content: 'Lugar / Ubicación:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Puerto Maldonado - Madre de Dios'],
-                    [{ content: 'Nodo:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tramo || 'IÑAPARI', { content: 'Distrito:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'TAHUAMANU'],
-                    [{ content: 'Fecha/Hora Inicio:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '10:57 hrs', { content: 'Fecha/Hora Término:', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '12:28 hrs']
-                ];
-
-                if (autoTableFn) {
-                    autoTableFn.call(doc, {
-                        startY: 38,
-                        body: idCombustible,
-                        theme: 'grid',
-                        bodyStyles: { fontSize: 8, cellPadding: 3 },
-                        margin: { left: 14, right: 14 }
-                    });
-                }
-
-                var nextYComb1 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 75;
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('2. BITACORA DE REGISTRO DE COMBUSTIBLE', 14, nextYComb1);
-
-                doc.setTextColor(15, 23, 42);
-                doc.setFontSize(8.5);
-                doc.setFont('helvetica', 'normal');
-                doc.text('• 10:57 hrs: Acceso al nodo y monitoreo de nivel del tanque del GEE1 (nivel inicial: 22%).', 18, nextYComb1 + 6);
-                doc.text('• 11:39 hrs: Corte de etiquetas y precintos de seguridad para proceder al abastecimiento.', 18, nextYComb1 + 12);
-                doc.text('• 12:28 hrs: Culminacion de abastecimiento de GEE1 (nivel final: 35%). Personal se retira.', 18, nextYComb1 + 18);
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('3. MATERIALES E INSUMOS UTILIZADOS', 14, nextYComb1 + 28);
-
-                var matCombustible = [
-                    ['01', 'Combustible Diesel B5', 'Galones', '50', 'GEE1 Nivel 22% a 35%'],
-                    ['02', 'Kit Antiderrame de Hidrocarburos', 'Unid', '1', 'GEE1 Limpieza de residuos']
-                ];
-
-                if (autoTableFn) {
-                    autoTableFn.call(doc, {
-                        startY: nextYComb1 + 32,
-                        head: [['ÍTEM', 'DESCRIPCIÓN', 'UNIDAD', 'CANTIDAD', 'OBSERVACIONES']],
-                        body: matCombustible,
-                        theme: 'grid',
-                        headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255] },
-                        bodyStyles: { fontSize: 8, cellPadding: 3 },
-                        margin: { left: 14, right: 14 }
-                    });
-                }
-
-                var nextYComb2 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 150;
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('4. ACCIONES PREVENTIVAS Y CONCLUSIONES', 14, nextYComb2);
-
-                doc.setTextColor(15, 23, 42);
-                doc.setFontSize(8.5);
-                doc.setFont('helvetica', 'normal');
-                doc.text('• Se contaba en sitio con kit anti derrame de hidrocarburos activo.', 18, nextYComb2 + 6);
-                doc.text('• Se realizo el monitoreo y trabajo bajo el procedimiento de seguridad ambiental aprobado.', 18, nextYComb2 + 12);
-                doc.text('• Conclusion: Se realizo con exito el abastecimiento elevando el nivel del tanque del 22% al 35%.', 18, nextYComb2 + 18);
-
-                // FIRMAS DUALES GEE
-                dibujarBloqueFirma(doc, 20, nextYComb2 + 30, 75, 'RESPONSABLE DE ABASTECIMIENTO', tecnico, empresaNombre, userFirma);
-                dibujarBloqueFirma(doc, pageW - 95, nextYComb2 + 30, 75, 'SUPERVISOR PLANTA INTERNA', 'BRANDON BORDA ALIAGA', empresaNombre, '');
-
-            } else {
-                drawHeaderFooter(1, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
-
-                doc.setTextColor(0, 0, 0);
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text('REPORTE DE INCIDENCIA N° ' + incidencia.toUpperCase(), pageW / 2, 65, { align: 'center' });
-
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('INTERNO', pageW / 2, 75, { align: 'center' });
-                doc.line(pageW / 2 - 15, 76.5, pageW / 2 + 15, 76.5);
-
-                doc.setFontSize(16);
-                doc.setFont('helvetica', 'bold');
-                doc.text(titulo.toUpperCase(), pageW / 2, 115, { align: 'center' });
-
-                doc.addPage();
-                drawHeaderFooter(2, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Tabla de contenido', 14, 38);
-
-                var tocItems = [
-                    ['1.  RESUMEN EJECUTIVO .............................................................................................................', '3'],
-                    ['2.  CRONOLOGÍA DE LA INCIDENCIA .............................................................................................', '4'],
-                    ['3.  MATERIALES DE INTERVENCIÓN .............................................................................................', '5'],
-                    ['4.  DETALLE DE AFECTACIÓN AL SERVICIO .................................................................................', '5'],
-                    ['5.  ANÁLISIS DE CAUSA RAÍZ Y ACCIONES ...................................................................................', '6'],
-                    ['6.  PLAN DE ACCIÓN / MEJORAS ................................................................................................', '6'],
-                    ['7.  OBSERVACIONES Y MARCO LEGAL ............................................................................................', '6']
-                ];
-
-                doc.setTextColor(15, 23, 42);
-                doc.setFontSize(9.5);
-                doc.setFont('helvetica', 'normal');
-                var tocY = 50;
-                tocItems.forEach(function(item) {
-                    doc.text(item[0], 14, tocY);
-                    doc.text(item[1], pageW - 14, tocY, { align: 'right' });
-                    tocY += 9;
-                });
-
-                doc.addPage();
-                drawHeaderFooter(3, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text('1. RESUMEN EJECUTIVO', 14, 38);
-
-                doc.setTextColor(15, 23, 42);
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'normal');
-                var splitNarrative = doc.splitTextToSize(detalle, pageW - 28);
-                doc.text(splitNarrative, 14, 46);
-
-                var currY = 46 + (splitNarrative.length * 4.8) + 6;
-
-                var dataResumen = [
-                    [{ content: 'Ticket Incidencia', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, { content: incidencia, styles: { fontStyle: 'bold' } }],
-                    [{ content: 'Descripción', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Interrupción de los servicios de Fibra Óptica.'],
-                    [{ content: 'FECHA Y HORA', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'INICIO: ' + new Date().toLocaleDateString('es-PE') + ' 07:38 hrs.    FIN: ' + new Date().toLocaleDateString('es-PE') + ' 08:13 hrs.'],
-                    [{ content: 'DURACIÓN TOTAL', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, '27,405 minutos / 456:45 hrs.'],
-                    [{ content: 'Causa Tipificada', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, causa],
-                    [{ content: 'Causa Real', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Fibra optica expuesta afectada por actos vandalicos (machetazo) ocasionando dano en el cable de fibra optica.'],
-                    [{ content: 'Servicio Afectado', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, 'Enlace de Fibra Optica Red Dorsal'],
-                    [{ content: 'Nodo / Tramo Afectado', styles: { fontStyle: 'bold', fillColor: [30, 58, 138], textColor: [255, 255, 255] } }, tramo]
-                ];
-
-                if (autoTableFn) {
-                    autoTableFn.call(doc, {
-                        startY: currY,
-                        body: dataResumen,
-                        theme: 'grid',
-                        bodyStyles: { fontSize: 8.5, cellPadding: 3.5 },
-                        columnStyles: {
-                            0: { cellWidth: 50 },
-                            1: { cellWidth: 'auto' }
-                        },
-                        margin: { left: 14, right: 14 }
-                    });
-                }
-
-                doc.addPage();
-                drawHeaderFooter(4, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text('2. CRONOLOGÍA DE LA INCIDENCIA', 14, 38);
-
-                doc.setTextColor(100, 116, 139);
-                doc.setFontSize(8.5);
-                doc.setFont('helvetica', 'normal');
-                doc.text('Se detalla a continuacion la cronologia de eventos sucedidos a lo largo de la incidencia (formato GMT):', 14, 45);
-
-                var cronologiaRows = [
-                    ['1', '09/06/2026 07:28hrs', 'NOC PRONATEL informa de la incidencia a NOC ' + empresaNombre + '.'],
-                    ['2', '09/06/2026 07:28hrs', 'Se informa al personal O&M del CM Jaen que debe desplazarse hacia el nodo para mediciones reflectometricas.'],
-                    ['3', '09/06/2026 09:00hrs', 'Personal se encuentra en desplazamiento hacia la zona afectada.'],
-                    ['4', '09/06/2026 18:27hrs', 'Personal O&M llega al nodo y realiza mediciones OTDR detectando corte a 69.1 km.'],
-                    ['5', '10/06/2026 07:28hrs', 'Pobladores de la zona restringen el ingreso al punto de corte requiriendo coordinacion social.'],
-                    ['6', '25/06/2026 10:16hrs', 'PRONATEL y pobladores llegan a un acuerdo. Se autoriza el ingreso al punto de afectacion.'],
-                    ['7', '25/06/2026 15:50hrs', 'Personal O&M llega al punto y verifica corte por vandalismo (machetazo) en ID CONSOL 82076.'],
-                    ['8', '25/06/2026 18:43hrs', 'Personal O&M realiza fusiones de cable de fibra optica en ID CONSOL 82076.'],
-                    ['9', '26/06/2026 11:03hrs', 'Se ubica segundo punto de afectacion por vandalismo entre ID CONSOL 82226 y 82229.'],
-                    ['10', '28/06/2026 09:17hrs', 'Se realiza acondicionamiento de mufa de empalme y pruebas con especialista DWDM.'],
-                    ['11', '29/06/2026 08:13hrs', 'NOC PRONATEL confirma restablecimiento del enlace afectado con niveles de potencia de linea.']
-                ];
-
-                if (autoTableFn) {
-                    autoTableFn.call(doc, {
-                        startY: 49,
-                        head: [['ÍTEM', 'FECHA Y HORA', 'DESCRIPCIÓN DE EVENTOS']],
-                        body: cronologiaRows,
-                        theme: 'grid',
-                        headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
-                        bodyStyles: { fontSize: 8, cellPadding: 3 },
-                        columnStyles: {
-                            0: { cellWidth: 14, halign: 'center' },
-                            1: { cellWidth: 42, fontStyle: 'bold' },
-                            2: { cellWidth: 'auto' }
-                        },
-                        margin: { left: 14, right: 14 }
-                    });
-                }
-
-                doc.addPage();
-                drawHeaderFooter(5, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text('3. MATERIALES DE INTERVENCIÓN', 14, 38);
-
-                var materialesRows = [
-                    ['1', 'ADSS-48 G.652D PE Span 800m', 'MTS', '510', 'DRUM 0017'],
-                    ['2', 'KIT DE HERRAJE DE RETENCIÓN VANO 600M (PE)', 'UND', '10', 'HERR-600'],
-                    ['3', 'MUFA DE EMPALME DE FIBRA OPTICA 48 HILOS', 'UND', '3', 'MUFA-48H'],
-                    ['4', 'FLEJE Y HEBILLAS DE ACERO INOXIDABLE 3/4"', 'MTS', '25', 'FLEJ-34']
-                ];
-
-                if (autoTableFn) {
-                    autoTableFn.call(doc, {
-                        startY: 44,
-                        head: [['ÍTEM', 'DESCRIPCIÓN MATERIAL', 'UNIDAD', 'CANTIDAD', 'CÓDIGO SAP']],
-                        body: materialesRows,
-                        theme: 'grid',
-                        headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
-                        bodyStyles: { fontSize: 8, cellPadding: 3 },
-                        columnStyles: {
-                            0: { cellWidth: 14, halign: 'center' },
-                            1: { cellWidth: 'auto' },
-                            2: { cellWidth: 20, halign: 'center' },
-                            3: { cellWidth: 24, halign: 'center' },
-                            4: { cellWidth: 32 }
-                        },
-                        margin: { left: 14, right: 14 }
-                    });
-                }
-
-                var nextY2 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 10 : 100;
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('4. DETALLE DE AFECTACIÓN AL SERVICIO', 14, nextY2);
-
-                doc.setTextColor(15, 23, 42);
-                doc.setFontSize(8.5);
-                doc.setFont('helvetica', 'normal');
-                doc.text('La incidencia afecto el servicio de fibra optica entre ' + tramo + ', con un tiempo de inactividad total de 27,405 minutos (456 hrs). La recuperacion total se logro tras las acciones correctivas.', 14, nextY2 + 6, { maxWidth: pageW - 28 });
-
-                doc.addPage();
-                drawHeaderFooter(6, 'REPORTE DE INCIDENCIAS - PLANTA EXTERNA / SLA');
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(14);
-                doc.setFont('helvetica', 'bold');
-                doc.text('5. ANÁLISIS DE CAUSA RAÍZ Y ACCIONES', 14, 38);
-
-                doc.setTextColor(15, 23, 42);
-                doc.setFontSize(9);
-                doc.setFont('helvetica', 'bold');
-                doc.text('Causa y Efecto:', 14, 46);
-
-                doc.setFont('helvetica', 'normal');
-                doc.text('• Causa Principal: ' + causa, 18, 52, { maxWidth: pageW - 32 });
-                doc.text('• Efecto: Perdida de conectividad entre los nodos principales del tramo afectado.', 18, 58);
-
-                doc.setFont('helvetica', 'bold');
-                doc.text('Solución Implementada:', 14, 66);
-                doc.setFont('helvetica', 'normal');
-                doc.text('Empalmes de fibra optica en mufas y tendido de tramo sustituto en los ID CONSOL 82076, 82229 y 82152.', 18, 72, { maxWidth: pageW - 32 });
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('6. PLAN DE ACCIÓN / MEJORAS', 14, 84);
-
-                var planRows = [
-                    ['Abastecimiento continuo de materiales y revision de inventario', '30/07/2026'],
-                    ['Evaluacion y mejora de procedimientos de emergencia PEXT', '15/08/2026'],
-                    ['Revision de Procedimientos Operativos para Gestion de Incidentes', '30/08/2026']
-                ];
-
-                if (autoTableFn) {
-                    autoTableFn.call(doc, {
-                        startY: 88,
-                        head: [['PLAN DE ACCIÓN DE MEJORA', 'FECHA DE CIERRE']],
-                        body: planRows,
-                        theme: 'grid',
-                        headStyles: { fillColor: [30, 58, 138], textColor: [255, 255, 255], fontStyle: 'bold' },
-                        bodyStyles: { fontSize: 8.5, cellPadding: 3.5 },
-                        columnStyles: {
-                            0: { cellWidth: 'auto' },
-                            1: { cellWidth: 40, halign: 'center' }
-                        },
-                        margin: { left: 14, right: 14 }
-                    });
-                }
-
-                var nextY3 = doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 140;
-
-                doc.setTextColor(0, 151, 216);
-                doc.setFontSize(12);
-                doc.setFont('helvetica', 'bold');
-                doc.text('7. OBSERVACIONES Y MARCO LEGAL', 14, nextY3);
-
-                doc.setTextColor(15, 23, 42);
-                doc.setFontSize(8);
-                doc.setFont('helvetica', 'normal');
-                doc.text('El restablecimiento del servicio no pudo efectuarse dentro del plazo inicial del SLA debido a circunstancias de fuerza mayor y factores externos no atribuibles a ' + empresaNombre + ' (acceso bloqueado por comunidad, terrenos de dificil acceso y lluvias persistentes). Articulo 1315 del Codigo Civil Peruano y Ley 29783.', 14, nextY3 + 6, { maxWidth: pageW - 28 });
-
-                // FIRMAS DUALES PEXT
-                dibujarBloqueFirma(doc, 20, nextY3 + 25, 75, 'RESPONSABLE TÉCNICO DE CAMPO', tecnico, empresaNombre, userFirma);
-                dibujarBloqueFirma(doc, pageW - 95, nextY3 + 25, 75, 'SUPERVISOR PLANTA EXTERNA', 'ELQUIN CASTILLO SICCHA', empresaNombre, '');
-            }
-
-            if (typeof doc.putTotalPages === 'function') {
-                doc.putTotalPages(totalPagesExp);
-            }
-
-            var blob = doc.output('blob');
-            var safeName = currentSlaType.replace(/[^a-zA-Z0-9]/g, '_') + '_' + incidencia.replace(/[^a-zA-Z0-9]/g, '_') + '.pdf';
-            if (typeof window.downloadBlobRuteo === 'function') {
-                window.downloadBlobRuteo(blob, safeName);
-            } else {
-                var u = URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = u; a.download = safeName;
-                document.body.appendChild(a); a.click();
-                setTimeout(function() { document.body.removeChild(a); URL.revokeObjectURL(u); }, 500);
-            }
-        } catch(err) {
+        }).catch(function(err) {
             console.error(err);
-            showToast('Error generando documento PDF.', 'error');
-        }
-
-        $('#sla-modal-overlay').fadeOut(200);
+            $btnSubmit.prop('disabled', false).text('Generar PDF');
+            $('#sla-modal-overlay').fadeOut(200);
+        });
     });
 
     // --- LOGIN AJAX ---
