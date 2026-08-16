@@ -262,11 +262,21 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         if ( is_admin() || wp_doing_ajax() ) {
             return;
         }
+
+        // Redirigir cualquier pagina no encontrada (404) al portal principal
+        if ( is_404() ) {
+            wp_safe_redirect( home_url( '/' ) );
+            exit;
+        }
+
         if ( is_front_page() || is_home() ) {
             $front_id = (int) get_option( 'page_on_front' );
             $portal_page = get_page_by_path( 'portal' );
             if ( ! $portal_page ) {
                 $portal_page = get_page_by_path( 'portal-ruteo' );
+            }
+            if ( ! $portal_page ) {
+                $portal_page = get_page_by_path( 'portal-de-ruteo' );
             }
             if ( $portal_page ) {
                 if ( (int) $portal_page->ID === $front_id ) {
@@ -274,7 +284,7 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
                 }
                 $target_url = get_permalink( $portal_page->ID );
             } else {
-                $target_url = home_url( '/portal/' );
+                $target_url = home_url( '/' );
             }
             
             if ( ! empty( $target_url ) && rtrim( $target_url, '/' ) !== rtrim( home_url( '/' ), '/' ) ) {
