@@ -1731,12 +1731,25 @@ body.admin-bar .ruteo-app-layout {
     background: linear-gradient(115deg, rgba(108,92,231,0.22) 0%, rgba(0,151,216,0.18) 30%, rgba(142,68,173,0.2) 65%, rgba(108,92,231,0.25) 100%);
 }
 
-/* Aseguramos que el texto del header se lea bien sobre el fondo claro */
+/* Aseguramos que el texto del header se lea bien sobre el fondo claro y en Modo Noche */
 .ruteo-top-header .header-title {
     color: #1E1B4B;
 }
 .ruteo-top-header .header-subtitle-row {
     color: #4C4A70;
+}
+
+[data-theme="dark"] .ruteo-top-header .header-title {
+    color: #F8FAFC !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+[data-theme="dark"] .ruteo-top-header .header-subtitle-row,
+[data-theme="dark"] .ruteo-top-header .header-subtext,
+[data-theme="dark"] .ruteo-top-header .header-date {
+    color: #CBD5E1 !important;
+}
+[data-theme="dark"] .ruteo-top-header .bullet-sep {
+    color: #64748B !important;
 }
 
 /* --- 3. SIDEBAR Y LOGO CON DEGRADADO --- */
