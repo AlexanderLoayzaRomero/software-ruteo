@@ -2064,33 +2064,25 @@ html[data-theme="dark"] .ruteo-auth-login-form input::placeholder {
 .ruteo-message.error   { color: #FF6B6B; }
 .ruteo-message.success { color: #83CA16; }
 
-.demo-accounts-box {
-    display: none !important;
-}
-
-.btn-demo-login {
-    background: var(--bg-subtle, #F1F5F9);
-    border: 1px solid var(--border, #CBD5E1);
-    color: var(--text-main, #0F172A) !important;
-    font-weight: 600;
-}
-.btn-demo-login:hover {
-    background: var(--gradient-brand) !important;
-    color: #FFFFFF !important;
-    border-color: transparent !important;
-    box-shadow: var(--shadow-accent);
-}
+.demo-accounts-box,
+.btn-demo-login,
+button.btn-demo-login,
 .ruteo-wrapper .btn-demo-login,
-.ruteo-glass-container .btn-demo-login {
-    background: rgba(255,255,255,0.12) !important;
-    border: 1px solid rgba(255,255,255,0.2) !important;
-    color: #FFFFFF !important;
-}
-.ruteo-wrapper .btn-demo-login:hover,
-.ruteo-glass-container .btn-demo-login:hover {
-    background: var(--gradient-brand) !important;
-    color: #FFFFFF !important;
-    border-color: transparent !important;
+.ruteo-glass-container .btn-demo-login,
+[data-user="admingeneral"],
+[data-user="tecnico1"],
+[data-user="supervisor1"],
+[data-user="seguridad1"],
+[data-user="hse1"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 
