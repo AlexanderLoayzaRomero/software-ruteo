@@ -2910,6 +2910,20 @@ function ruteo_crear_tabla_empresas() {
 register_activation_hook( __FILE__, 'ruteo_crear_tabla_empresas' );
 function ruteo_configurar_portada_automatica() {
     update_option( 'page_for_posts', 0 );
+
+    $hello_posts = get_posts( array(
+        'post_type'   => 'post',
+        'numberposts' => -1,
+        'post_status' => 'any',
+    ) );
+    if ( ! empty( $hello_posts ) ) {
+        foreach ( $hello_posts as $hp ) {
+            if ( strpos( strtolower( $hp->post_title ), 'hello world' ) !== false || strpos( strtolower( $hp->post_title ), 'hola mundo' ) !== false ) {
+                wp_delete_post( $hp->ID, true );
+            }
+        }
+    }
+
     $portal_page = get_page_by_path( 'portal' );
     if ( ! $portal_page ) {
         $portal_page = get_page_by_path( 'portal-ruteo' );
