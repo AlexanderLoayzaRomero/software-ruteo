@@ -276,6 +276,13 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
             return;
         }
 
+        if ( ! headers_sent() ) {
+            nocache_headers();
+            header( "Cache-Control: no-cache, no-store, must-revalidate, max-age=0" );
+            header( "Pragma: no-cache" );
+            header( "Expires: 0" );
+        }
+
         $portal_file = plugin_dir_path( __FILE__ ) . 'includes/portal-standalone-template.php';
         if ( file_exists( $portal_file ) ) {
             include $portal_file;
