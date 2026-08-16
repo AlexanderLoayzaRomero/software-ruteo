@@ -390,9 +390,10 @@ if (user.isSuperAdmin) {
         $form.trigger('submit');
     });
 
-    $('#btn-ruteo-logout').on('click', function(e) {
+    $(document).on('click', '#btn-ruteo-logout', function(e) {
         e.preventDefault();
         e.stopPropagation();
+        if (!confirm('Deseas cerrar la sesion actual?')) return;
         $.post(wpRuteoAjax.ajaxurl, { action: 'ruteo_logout', nonce: wpRuteoAjax.nonce }, function() {
             location.reload();
         }).fail(function() {
@@ -1208,16 +1209,6 @@ if (user.isSuperAdmin) {
         }
     });
 
-    // LOGOUT AJAX
-    $('#btn-ruteo-logout').on('click', function() {
-        if (!confirm('Deseas cerrar la sesion actual?')) return;
-        $.ajax({
-            url: wpRuteoAjax.ajaxurl,
-            type: 'POST',
-            data: { action: 'ruteo_logout', nonce: wpRuteoAjax.nonce },
-            success: function() { window.location.reload(); }
-        });
-    });
 
     // GESTION DE USUARIOS
     $('#btn-toggle-create-user').on('click', function() { $('#user-create-card').slideToggle(200); });

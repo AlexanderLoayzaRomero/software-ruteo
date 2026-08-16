@@ -38,6 +38,7 @@ class WPRuteoApp {
         add_action( 'wp_ajax_nopriv_ruteo_upload_document', array( $this, 'handle_upload_document' ) );
 
         // Auth & User Management AJAX Endpoints
+        add_filter( 'auth_cookie_expiration', array( $this, 'extender_duracion_sesion' ), 10, 3 );
         add_action( 'wp_ajax_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_nopriv_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_ruteo_logout', array( $this, 'handle_ajax_logout' ) );
@@ -812,6 +813,11 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         ) );
     }
 
+    public function extender_duracion_sesion( $length, $user_id, $remember ) {
+        // Mantener sesion activa por 30 dias (evita cierres de sesion automaticos)
+        return 30 * DAY_IN_SECONDS;
+    }
+
     public function handle_ajax_login() {
         if ( ! empty( $_POST['nonce'] ) ) {
             check_ajax_referer( 'ruteo_submit_nonce', 'nonce', false );
@@ -819,7 +825,7 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
 
         $raw_input = isset( $_POST['username'] ) ? trim( wp_unslash( $_POST['username'] ) ) : '';
         $password  = isset( $_POST['password'] ) ? $_POST['password'] : '';
-        $remember  = ! empty( $_POST['remember'] );
+        $remember  = isset( $_POST['remember'] ) ? ! empty( $_POST['remember'] ) : true;
 
         if ( empty( $raw_input ) || empty( $password ) ) {
             wp_send_json_error( array( 'message' => 'Usuario y clave son requeridos.' ) );
@@ -845,13 +851,15 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
             $username = sanitize_user( $raw_input );
         }
 
+        $secure_cookie = is_ssl() || ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && 'https' === strtolower( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) );
+
         $creds = array(
             'user_login'    => $username,
             'user_password' => $password,
             'remember'      => $remember,
         );
 
-        $user = wp_signon( $creds, is_ssl() );
+        $user = wp_signon( $creds, $secure_cookie );
 
         if ( is_wp_error( $user ) ) {
             set_transient( $intentos_key, $intentos + 1, 10 * MINUTE_IN_SECONDS );
@@ -862,7 +870,7 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         delete_transient( $intentos_key );
 
         wp_set_current_user( $user->ID );
-        wp_set_auth_cookie( $user->ID, $remember );
+        wp_set_auth_cookie( $user->ID, $remember, $secure_cookie );
 
        $is_admin       = in_array( 'administrator', (array) $user->roles, true ) || in_array( 'ruteo_admin', (array) $user->roles, true );
         $is_super_admin = self::es_super_admin( $user );
