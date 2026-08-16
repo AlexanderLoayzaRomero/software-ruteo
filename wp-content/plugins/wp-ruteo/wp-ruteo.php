@@ -924,8 +924,6 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
             return;
         }
 
-        delete_transient( $intentos_key );
-
         wp_set_current_user( $user->ID );
         wp_set_auth_cookie( $user->ID, $remember, $secure_cookie );
 
