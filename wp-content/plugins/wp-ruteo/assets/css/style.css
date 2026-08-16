@@ -1732,24 +1732,42 @@ body.admin-bar .ruteo-app-layout {
 }
 
 /* Aseguramos que el texto del header se lea bien sobre el fondo claro y en Modo Noche */
-.ruteo-top-header .header-title {
+.ruteo-top-header .header-title,
+#page-header-title {
     color: #1E1B4B;
 }
-.ruteo-top-header .header-subtitle-row {
+.ruteo-top-header .header-subtitle-row,
+.ruteo-top-header .header-subtext,
+.ruteo-top-header .header-date {
     color: #4C4A70;
 }
 
-[data-theme="dark"] .ruteo-top-header .header-title {
+[data-theme="dark"] .ruteo-top-header .header-title,
+[data-theme="dark"] #page-header-title,
+.ruteo-app-layout[data-theme="dark"] .ruteo-top-header .header-title,
+html[data-theme="dark"] .ruteo-top-header .header-title,
+body[data-theme="dark"] .ruteo-top-header .header-title {
     color: #F8FAFC !important;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6) !important;
 }
+
 [data-theme="dark"] .ruteo-top-header .header-subtitle-row,
 [data-theme="dark"] .ruteo-top-header .header-subtext,
-[data-theme="dark"] .ruteo-top-header .header-date {
+[data-theme="dark"] .ruteo-top-header .header-date,
+.ruteo-app-layout[data-theme="dark"] .ruteo-top-header .header-subtitle-row,
+.ruteo-app-layout[data-theme="dark"] .ruteo-top-header .header-subtext,
+.ruteo-app-layout[data-theme="dark"] .ruteo-top-header .header-date,
+html[data-theme="dark"] .ruteo-top-header .header-subtext,
+body[data-theme="dark"] .ruteo-top-header .header-subtext {
     color: #CBD5E1 !important;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5) !important;
 }
-[data-theme="dark"] .ruteo-top-header .bullet-sep {
-    color: #64748B !important;
+
+[data-theme="dark"] .ruteo-top-header .bullet-sep,
+.ruteo-app-layout[data-theme="dark"] .ruteo-top-header .bullet-sep,
+html[data-theme="dark"] .ruteo-top-header .bullet-sep,
+body[data-theme="dark"] .ruteo-top-header .bullet-sep {
+    color: #94A3B8 !important;
 }
 
 /* --- 3. SIDEBAR Y LOGO CON DEGRADADO --- */
