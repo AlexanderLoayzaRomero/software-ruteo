@@ -1499,20 +1499,6 @@ if (user.isSuperAdmin) {
         });
     });
 
-    // BOTONES ACCESO RAPIDO DEMO
-    $(document).on('click', '.btn-demo-login', function() {
-        var u = $(this).data('user');
-        var p = $(this).data('pass');
-        var $card = $(this).closest('.login-card-container, #tab-login, #ruteo-form-restricted-notice');
-        var $form = $card.find('form');
-        if (!$form.length) $form = $('.ruteo-auth-login-form, #ruteo-login-form').first();
-        if ($form.length) {
-            $form.find('input[name="username"]').val(u);
-            $form.find('input[name="password"]').val(p);
-            $form.submit();
-        }
-    });
-
 
     // GESTION DE USUARIOS
     $('#btn-toggle-create-user').on('click', function() { $('#user-create-card').slideToggle(200); });
