@@ -51,6 +51,9 @@ class WPRuteoApp {
         add_action( 'wp_ajax_nopriv_ruteo_recover_password', array( $this, 'handle_ajax_recover_password' ) );
         add_action( 'wp_ajax_ruteo_reset_password', array( $this, 'handle_ajax_reset_password' ) );
         add_action( 'wp_ajax_nopriv_ruteo_reset_password', array( $this, 'handle_ajax_reset_password' ) );
+        add_filter( 'retrieve_password_message', array( $this, 'custom_retrieve_password_message' ), 10, 4 );
+        add_action( 'login_form_rp', array( $this, 'redireccionar_resetpass_portal' ) );
+        add_action( 'login_form_resetpass', array( $this, 'redireccionar_resetpass_portal' ) );
         add_action( 'wp_ajax_ruteo_get_users', array( $this, 'handle_ajax_get_users' ) );
         add_action( 'wp_ajax_ruteo_create_user', array( $this, 'handle_ajax_create_user' ) );
         add_action( 'wp_ajax_ruteo_delete_user', array( $this, 'handle_ajax_delete_user' ) );
@@ -1489,6 +1492,46 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
         $phpmailer->Password   = 'iandsktzrykcavix';
         $phpmailer->From       = 'alexander.loayza@tecsup.edu.pe';
         $phpmailer->FromName   = get_bloginfo( 'name' ) . ' O&M';
+    }
+
+    public function custom_retrieve_password_message( $message, $key, $user_login, $user_data ) {
+        $reset_url = add_query_arg(
+            array(
+                'action' => 'rp',
+                'key'    => $key,
+                'login'  => rawurlencode( $user_login ),
+            ),
+            home_url( '/' )
+        );
+
+        $site_name = get_bloginfo( 'name' );
+
+        $msg  = "Hola " . ( isset( $user_data->display_name ) ? esc_html( $user_data->display_name ) : esc_html( $user_login ) ) . ",\r\n\r\n";
+        $msg .= "Recibimos una solicitud para restablecer tu contraseña en el portal de " . esc_html( $site_name ) . ".\r\n\r\n";
+        $msg .= "Haz clic en el siguiente enlace para ingresar tu nueva clave:\r\n";
+        $msg .= $reset_url . "\r\n\r\n";
+        $msg .= "Si no solicitaste este cambio, puedes ignorar este mensaje.\r\n\r\n";
+        $msg .= "Atentamente,\r\n";
+        $msg .= "Equipo O&M - " . esc_html( $site_name );
+
+        return $msg;
+    }
+
+    public function redireccionar_resetpass_portal() {
+        if ( isset( $_GET['key'], $_GET['login'] ) ) {
+            $key   = sanitize_text_field( $_GET['key'] );
+            $login = sanitize_text_field( $_GET['login'] );
+            $redirect = add_query_arg(
+                array(
+                    'action' => 'rp',
+                    'key'    => $key,
+                    'login'  => $login,
+                ),
+                home_url( '/' )
+            );
+            wp_redirect( $redirect );
+            exit;
+        }
     }
 
     public function handle_ajax_recover_password() {
