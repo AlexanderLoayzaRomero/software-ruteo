@@ -691,7 +691,7 @@ if (user.isSuperAdmin) {
     });
 
     // --- ACCIONES SLA E INFORMES (MODAL E INTERACCION) ---
-    var currentSlaType = 'Formato SLA';
+    var currentSlaType = 'Informe SLA';
 
     function cleanText(str) {
         if (!str) return '';

@@ -822,9 +822,9 @@ body.admin-bar .ruteo-app-layout {
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                 </svg>
                             </div>
-                            <h4>Formato SLA Cumplimiento</h4>
+                            <h4>Informe SLA Cumplimiento</h4>
                             <p>Generacion de reporte de cumplimiento de tiempos de respuesta y solucion segun acuerdo de nivel de servicio.</p>
-                            <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Formato SLA">Abrir Formato SLA</button>
+                            <button class="portal-btn portal-btn--refresh btn-sla-action" data-type="Informe SLA">Abrir Informe SLA</button>
                         </div>
 
                         <div class="sla-card">
@@ -1710,7 +1710,7 @@ body.admin-bar .ruteo-app-layout {
         <div class="ruteo-modal-overlay" id="sla-modal-overlay" style="display:none;">
             <div class="ruteo-modal-card animate-fade-in">
                 <div class="modal-header">
-                    <h3 id="sla-modal-title">Formato SLA / Informe Tecnico</h3>
+                    <h3 id="sla-modal-title">Informe SLA / Informe Tecnico</h3>
                     <button type="button" class="btn-close-modal" id="btn-close-sla-modal" title="Cerrar">&times;</button>
                 </div>
                 <div class="modal-body">
