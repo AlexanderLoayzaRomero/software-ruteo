@@ -95,6 +95,7 @@ class WPRuteoApp {
         add_action( 'wp_ajax_nopriv_ruteo_recover_password', array( $this, 'handle_ajax_recover_password' ) );
         add_action( 'wp_ajax_ruteo_reset_password', array( $this, 'handle_ajax_reset_password' ) );
         add_action( 'wp_ajax_nopriv_ruteo_reset_password', array( $this, 'handle_ajax_reset_password' ) );
+        add_filter( 'retrieve_password_title', array( $this, 'custom_retrieve_password_title' ), 10, 3 );
         add_filter( 'retrieve_password_message', array( $this, 'custom_retrieve_password_message' ), 10, 4 );
         add_action( 'login_form_rp', array( $this, 'redireccionar_resetpass_portal' ) );
         add_action( 'login_form_resetpass', array( $this, 'redireccionar_resetpass_portal' ) );
@@ -1616,6 +1617,10 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
         return home_url( '/' );
     }
 
+    public function custom_retrieve_password_title( $title, $user_login = '', $user_data = null ) {
+        return 'Restablecer Contraseña - Software O&M';
+    }
+
     public function custom_retrieve_password_message( $message, $key, $user_login, $user_data ) {
         $reset_url = add_query_arg(
             array(
@@ -1626,7 +1631,7 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
             $this->get_ruteo_base_url()
         );
 
-        $site_name    = get_bloginfo( 'name' );
+        $site_name    = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
         $display_name = isset( $user_data->display_name ) ? esc_html( $user_data->display_name ) : esc_html( $user_login );
 
         $msg  = '<!DOCTYPE html>';
@@ -1763,7 +1768,7 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
         );
         $reset_url = esc_url_raw( $reset_url_raw );
 
-        $site_name    = get_bloginfo( 'name' );
+        $site_name    = wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES );
         $display_name = isset( $user->display_name ) && ! empty( $user->display_name ) ? esc_html( $user->display_name ) : esc_html( $user->user_login );
 
         $subject = 'Restablecer Contraseña - ' . $site_name;
