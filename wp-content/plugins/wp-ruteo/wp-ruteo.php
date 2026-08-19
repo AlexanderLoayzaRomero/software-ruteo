@@ -83,9 +83,9 @@ class WPRuteoApp {
         add_filter( 'auth_cookie_expiration', array( $this, 'extender_duracion_sesion' ), 10, 3 );
         add_action( 'wp_logout', array( $this, 'ruteo_redireccionar_logout' ) );
         add_action( 'wp_footer', array( $this, 'render_global_modals' ) );
-        add_action( 'phpmailer_init', array( $this, 'configurar_smtp_hostinger' ) );
-        add_filter( 'wp_mail_from', array( $this, 'ruteo_custom_wp_mail_from' ), 999 );
-        add_filter( 'wp_mail_from_name', array( $this, 'ruteo_custom_wp_mail_from_name' ), 999 );
+        add_action( 'phpmailer_init', array( $this, 'configurar_smtp_hostinger' ), 99999 );
+        add_filter( 'wp_mail_from', array( $this, 'ruteo_custom_wp_mail_from' ), 99999 );
+        add_filter( 'wp_mail_from_name', array( $this, 'ruteo_custom_wp_mail_from_name' ), 99999 );
         add_filter( 'wp_mail_content_type', array( $this, 'ruteo_custom_wp_mail_content_type' ), 999 );
         add_action( 'wp_ajax_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_nopriv_ruteo_login', array( $this, 'handle_ajax_login' ) );
@@ -1535,8 +1535,7 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
             $mail->CharSet    = 'UTF-8';
             $mail->isHTML( true );
 
-            $site_name = get_bloginfo( 'name' );
-            $mail->setFrom( 'Desarrollador_SW@oracleperu.org', $site_name . ' O&M' );
+            $mail->setFrom( 'Desarrollador_SW@oracleperu.org', 'Software O&M' );
             $mail->Sender = 'Desarrollador_SW@oracleperu.org';
             $mail->addAddress( $to );
             if ( strtolower( $to ) !== 'desarrollador_sw@oracleperu.org' ) {
@@ -1577,7 +1576,7 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
     }
 
     public function ruteo_custom_wp_mail_from_name( $name ) {
-        return get_bloginfo( 'name' ) . ' O&M';
+        return 'Software O&M';
     }
 
     public function ruteo_custom_wp_mail_content_type( $content_type ) {
@@ -1597,7 +1596,7 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
         $phpmailer->Password   = 'OPS_id_001';
         $phpmailer->From       = 'Desarrollador_SW@oracleperu.org';
         $phpmailer->Sender     = 'Desarrollador_SW@oracleperu.org';
-        $phpmailer->FromName   = get_bloginfo( 'name' ) . ' O&M';
+        $phpmailer->FromName   = 'Software O&M';
         $phpmailer->CharSet    = 'UTF-8';
         $phpmailer->SMTPOptions = array(
             'ssl' => array(

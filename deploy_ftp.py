@@ -47,6 +47,13 @@ def main():
         print("Conexion FTP exitosa (modo pasivo).")
         
         upload_dir(ftp, LOCAL_BASE, REMOTE_BASE)
+        
+        # Subir mu-plugins (hostinger-smtp.php)
+        mu_local = os.path.join(os.path.dirname(__file__), 'wp-content', 'mu-plugins')
+        mu_remote = '/domains/oracleperu.org/public_html/wp-content/mu-plugins'
+        if os.path.exists(mu_local):
+            upload_dir(ftp, mu_local, mu_remote)
+            
         ftp.quit()
         print("¡Despliegue FTP completado con exito en /domains/oracleperu.org/public_html!")
     except Exception as e:
