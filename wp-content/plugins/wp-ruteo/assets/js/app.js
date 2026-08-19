@@ -1688,8 +1688,19 @@ if (user.isSuperAdmin) {
                     $msg.addClass('error').text(res.data.message || 'Error al guardar usuario.').fadeIn(200);
                 }
             },
-            error: function() {
-                $msg.addClass('error').text('Error de conexion con el servidor.').fadeIn(200);
+            error: function(xhr) {
+                var errStr = 'Error de conexion con el servidor.';
+                if (xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message) {
+                    errStr = xhr.responseJSON.data.message;
+                } else if (xhr && xhr.responseText) {
+                    try {
+                        var parsed = JSON.parse(xhr.responseText);
+                        if (parsed && parsed.data && parsed.data.message) {
+                            errStr = parsed.data.message;
+                        }
+                    } catch(e) {}
+                }
+                $msg.addClass('error').text(errStr).fadeIn(200);
             }
         });
     });
@@ -1755,12 +1766,83 @@ if (user.isSuperAdmin) {
     window.openRecoverPasswordModal = function(e) {
         if (e && e.preventDefault) e.preventDefault();
         if (e && e.stopPropagation) e.stopPropagation();
+
+        var $trigger = $(e ? e.target : '');
+        var $loginForm = $trigger.closest('form');
+        var loginUser = '';
+
+        if ($loginForm.length) {
+            loginUser = $loginForm.find('input[name="username"]').val() || '';
+        }
+        if (!loginUser) {
+            loginUser = $('input[name="username"]').first().val() || '';
+        }
+
+        loginUser = $.trim(loginUser);
+
+        // Si ya hay un usuario o correo ingresado, enviamos la solicitud directamente
+        if (loginUser) {
+            var $msgContainer = $loginForm.length ? $loginForm.find('.ruteo-message, .login-message') : $('.login-message');
+            if (!$msgContainer.length && $loginForm.length) {
+                $msgContainer = $('<div class="ruteo-message login-message" style="margin-top:12px; font-size:13px; text-align:center;"></div>').appendTo($loginForm);
+            }
+
+            if ($msgContainer.length) {
+                $msgContainer.removeClass('error success').css({
+                    'display': 'block',
+                    'color': '#0097D8',
+                    'background': 'rgba(0,151,216,0.1)',
+                    'padding': '10px 14px',
+                    'border-radius': '8px',
+                    'border': '1px solid #0097D8'
+                }).text('Enviando correo de recuperacion a ' + loginUser + '...').show();
+            }
+
+            $.ajax({
+                url: wpRuteoAjax.ajaxurl + '?_ts=' + Date.now(),
+                type: 'POST',
+                data: {
+                    action: 'ruteo_recover_password',
+                    nonce: wpRuteoAjax.nonce,
+                    user_login: loginUser
+                },
+                success: function(res) {
+                    if (res.success) {
+                        if ($msgContainer.length) {
+                            $msgContainer.css({
+                                'color': '#22C55E',
+                                'background': 'rgba(34,197,94,0.1)',
+                                'border': '1px solid #22C55E'
+                            }).html('✔ ' + res.data.message).show();
+                        }
+                    } else {
+                        if ($msgContainer.length) {
+                            $msgContainer.css({
+                                'color': '#D92625',
+                                'background': 'rgba(217,38,37,0.1)',
+                                'border': '1px solid #D92625'
+                            }).text(res.data.message || 'Error al solicitar recuperacion.').show();
+                        }
+                    }
+                },
+                error: function() {
+                    if ($msgContainer.length) {
+                        $msgContainer.css({
+                            'color': '#D92625',
+                            'background': 'rgba(217,38,37,0.1)',
+                            'border': '1px solid #D92625'
+                        }).text('Error de conexion con el servidor.').show();
+                    }
+                }
+            });
+            return;
+        }
+
+        // Si no habia nada ingresado, abrimos el modal tradicional
         var $modal = $('#modal-recover-password');
         if ($modal.length) {
             $modal.attr('style', 'display: flex !important; position: fixed !important; inset: 0 !important; z-index: 9999999 !important; background: rgba(0,0,0,0.7) !important; backdrop-filter: blur(6px) !important; align-items: center !important; justify-content: center !important; padding: 16px !important;');
-            setTimeout(function() { $('#recover-input').val('').focus(); }, 150);
-        } else {
-            console.error('Modal #modal-recover-password not found in DOM');
+            setTimeout(function() { $('#recover-input').focus(); }, 150);
         }
     };
 
@@ -1768,18 +1850,11 @@ if (user.isSuperAdmin) {
         window.openRecoverPasswordModal(e);
     });
 
-    $(document).on('click', '#btn-close-recover-modal', function(e) {
+    // Cierre del modal de recuperacion SOLO con la X (nunca al hacer clic afuera)
+    $(document).on('click', '#btn-close-recover-modal, #modal-recover-password .btn-close-modal', function(e) {
         e.preventDefault();
         e.stopPropagation();
         $('#modal-recover-password').attr('style', 'display: none !important;');
-    });
-
-    $(document).on('click', '#modal-recover-password', function(e) {
-        if (e.target === this) {
-            e.preventDefault();
-            e.stopPropagation();
-            $('#modal-recover-password').attr('style', 'display: none !important;');
-        }
     });
 
     $('#form-recover-password').on('submit', function(e) {
@@ -1817,18 +1892,26 @@ if (user.isSuperAdmin) {
         });
     });
 
-    // DETECCION DE ENLACE DE RECUPERACION DE CONTRASEÑA EN URL (ROBUSTO)
+    // DETECCION DE ENLACE DE RECUPERACION DE CONTRASEÑA EN URL (INFALIBLE)
     window.checkResetPasswordUrl = function() {
-        var urlParams = new URLSearchParams(window.location.search);
+        var searchStr = window.location.search.replace(/&amp;/g, '&');
+        var urlParams = new URLSearchParams(searchStr);
         var rpAction = urlParams.get('action');
-        var rpKey = urlParams.get('key');
-        var rpLogin = urlParams.get('login');
+        var rpKey = urlParams.get('key') || urlParams.get('amp;key');
+        var rpLogin = urlParams.get('login') || urlParams.get('amp;login');
 
-        if ((rpAction === 'rp' || rpAction === 'resetpass') && rpKey && rpLogin) {
+        if (rpKey) {
+            rpKey = rpKey.replace(/^amp;/, '').trim();
+        }
+        if (rpLogin) {
+            rpLogin = rpLogin.replace(/^amp;/, '').trim();
+        }
+
+        if (rpKey) {
             var $resetModal = $('#modal-reset-password');
             if ($resetModal.length) {
                 $('#reset-key').val(rpKey);
-                $('#reset-login').val(rpLogin);
+                $('#reset-login').val(rpLogin || '');
                 $resetModal.attr('style', 'display: flex !important; position: fixed !important; inset: 0 !important; z-index: 9999999 !important; background: rgba(0,0,0,0.7) !important; backdrop-filter: blur(6px) !important; align-items: center !important; justify-content: center !important; padding: 16px !important;');
                 setTimeout(function() { $('#reset-new-password').focus(); }, 300);
             }
@@ -1839,18 +1922,28 @@ if (user.isSuperAdmin) {
     setTimeout(window.checkResetPasswordUrl, 500);
     setTimeout(window.checkResetPasswordUrl, 1500);
 
-    $(document).on('click', '#btn-close-reset-modal, #modal-reset-password', function(e) {
-        if (e.target === this || $(e.target).hasClass('btn-close-modal')) {
-            e.preventDefault();
-            e.stopPropagation();
-            $('#modal-reset-password').attr('style', 'display: none !important;');
-        }
+    $(document).on('click', '.ruteo-modal-card', function(e) {
+        e.stopPropagation();
+    });
+
+    // Cierre del modal de restablecimiento SOLO con la X (nunca al hacer clic afuera)
+    $(document).on('click', '#btn-close-reset-modal, #modal-reset-password .btn-close-modal', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $('#modal-reset-password').attr('style', 'display: none !important;');
     });
 
     $('#form-reset-password').on('submit', function(e) {
         e.preventDefault();
-        var $btn = $(this).find('button[type="submit"]');
-        var $msg = $(this).find('.reset-message');
+        e.stopPropagation();
+
+        var $form = $(this);
+        if ($form.data('submitting')) {
+            return false;
+        }
+
+        var $btn = $form.find('button[type="submit"]');
+        var $msg = $form.find('.reset-message');
         var key = $('#reset-key').val();
         var login = $('#reset-login').val();
         var pass1 = $('#reset-new-password').val();
@@ -1866,6 +1959,7 @@ if (user.isSuperAdmin) {
             return;
         }
 
+        $form.data('submitting', true);
         $btn.prop('disabled', true);
         $msg.removeClass('success error').hide();
 
@@ -1880,7 +1974,6 @@ if (user.isSuperAdmin) {
                 password: pass1
             },
             success: function(res) {
-                $btn.prop('disabled', false);
                 if (res.success) {
                     $msg.addClass('success').text(res.data.message).fadeIn(200);
                     $('#reset-new-password, #reset-confirm-password').val('');
@@ -1889,12 +1982,15 @@ if (user.isSuperAdmin) {
                         if (window.history && window.history.replaceState) {
                             window.history.replaceState({}, document.title, window.location.pathname);
                         }
-                    }, 2500);
+                    }, 3000);
                 } else {
+                    $form.data('submitting', false);
+                    $btn.prop('disabled', false);
                     $msg.addClass('error').text(res.data.message || 'Error al restablecer la clave.').fadeIn(200);
                 }
             },
             error: function() {
+                $form.data('submitting', false);
                 $btn.prop('disabled', false);
                 $msg.addClass('error').text('Error de conexion al restablecer la clave.').fadeIn(200);
             }

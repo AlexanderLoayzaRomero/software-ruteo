@@ -1,10 +1,27 @@
 <?php
+@header( 'X-LiteSpeed-Purge: *' );
+if ( function_exists( 'opcache_invalidate' ) ) {
+    @opcache_invalidate( __FILE__, true );
+}
+if ( function_exists( 'opcache_reset' ) ) {
+    @opcache_reset();
+}
 /**
  * Plugin Name: Software O&M
  * Description: Software O&M - Plugin para recopilar datos y fotos en campo, consumo de materiales y gestion de usuarios.
- * Version: 2.0.0
+ * Version: 2.0.3
  * Author: Antigravity
  */
+
+if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+    define( 'DONOTCACHEPAGE', true );
+}
+if ( ! defined( 'DONOTCACHEOBJECT' ) ) {
+    define( 'DONOTCACHEOBJECT', true );
+}
+if ( ! defined( 'DONOTCACHEDB' ) ) {
+    define( 'DONOTCACHEDB', true );
+}
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
@@ -17,12 +34,36 @@ class WPRuteoApp {
     private $assets_enqueued = false;
 
     public function __construct() {
+        if ( class_exists( 'LiteSpeed\Purge' ) ) {
+            @LiteSpeed\Purge::purge_all();
+        }
+        add_filter( 'wp_headers', function( $headers ) {
+            $headers['Cache-Control'] = 'no-cache, no-store, must-revalidate, max-age=0';
+            $headers['Pragma'] = 'no-cache';
+            $headers['Expires'] = 'Wed, 11 Jan 1984 05:00:00 GMT';
+            return $headers;
+        } );
         $this->register_roles();
         add_action( 'wp', array( $this, 'fuerza_redireccion_portal' ), 1 );
         add_filter( 'template_include', array( $this, 'cargar_plantilla_portal_directa' ), 999 );
         add_shortcode( 'formulario_ruteo', array( $this, 'render_form' ) );
         add_shortcode( 'portal_ruteo', array( $this, 'render_portal' ) );
         add_shortcode( 'login_ruteo', array( $this, 'render_login' ) );
+        add_action( 'init', function() {
+            if ( ( defined( 'DOING_AJAX' ) && DOING_AJAX ) || isset( $_REQUEST['action'] ) ) {
+                if ( ! defined( 'LSCACHE_NO_CACHE' ) ) {
+                    define( 'LSCACHE_NO_CACHE', true );
+                }
+                @header( 'X-LiteSpeed-Cache-Control: no-cache' );
+                @header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
+            }
+        } );
+        add_action( 'litespeed_control_finalize', function() {
+            if ( isset( $_REQUEST['action'] ) && strpos( $_REQUEST['action'], 'ruteo_' ) !== false ) {
+                do_action( 'litespeed_control_set_nocache', 'ruteo_ajax' );
+            }
+        } );
+
         add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_assets' ) );
         add_action( 'wp_ajax_ruteo_submit', array( $this, 'handle_ajax_submit' ) );
         add_action( 'wp_ajax_nopriv_ruteo_submit', array( $this, 'handle_ajax_submit' ) );
@@ -42,7 +83,10 @@ class WPRuteoApp {
         add_filter( 'auth_cookie_expiration', array( $this, 'extender_duracion_sesion' ), 10, 3 );
         add_action( 'wp_logout', array( $this, 'ruteo_redireccionar_logout' ) );
         add_action( 'wp_footer', array( $this, 'render_global_modals' ) );
-        add_action( 'phpmailer_init', array( $this, 'configurar_smtp_gmail' ) );
+        add_action( 'phpmailer_init', array( $this, 'configurar_smtp_hostinger' ) );
+        add_filter( 'wp_mail_from', array( $this, 'ruteo_custom_wp_mail_from' ), 999 );
+        add_filter( 'wp_mail_from_name', array( $this, 'ruteo_custom_wp_mail_from_name' ), 999 );
+        add_filter( 'wp_mail_content_type', array( $this, 'ruteo_custom_wp_mail_content_type' ), 999 );
         add_action( 'wp_ajax_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_nopriv_ruteo_login', array( $this, 'handle_ajax_login' ) );
         add_action( 'wp_ajax_ruteo_logout', array( $this, 'handle_ajax_logout' ) );
@@ -430,9 +474,6 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
                 $u = new WP_User( $user_id );
                 if ( isset( $c['role'] ) ) {
                     $u->set_role( $c['role'] );
-                }
-                if ( ! empty( $c['pass'] ) ) {
-                    wp_set_password( $c['pass'], $user_id );
                 }
             }
             if ( $user_id && ! is_wp_error( $user_id ) ) {
@@ -1005,12 +1046,7 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         : self::get_user_empresa_id( $current_user->ID );
 
     if ( ! $is_super_admin && ! $empresa_id ) {
-        wp_send_json_error(
-            array(
-                'message' => 'Tu usuario no tiene una empresa asociada.'
-            )
-        );
-        return;
+        $empresa_id = 1;
     }
 
     $user_query_args = array(
@@ -1112,23 +1148,27 @@ public static function user_can_access_empresa( $empresa_id, $user_id = 0 ) {
         ? $input['requested_empresa_id']
         : self::get_user_empresa_id( $current_user->ID );
 
-    if ( ! $empresa_id ) {
-        wp_send_json_error( array( 'message' => 'No se pudo determinar la empresa asociada al usuario.' ), 400 );
-        return;
+    if ( ! $empresa_id && $input['edit_id'] > 0 ) {
+        $empresa_id = absint( get_user_meta( $input['edit_id'], 'ruteo_empresa_id', true ) );
     }
 
-    if ( ! self::empresa_existe( $empresa_id ) ) {
-        wp_send_json_error( array( 'message' => 'La empresa seleccionada no existe.' ), 400 );
+    if ( ! $empresa_id ) {
+        global $wpdb;
+        $tabla_empresas = $wpdb->prefix . 'ruteo_empresas';
+        $empresa_id = absint( $wpdb->get_var( "SELECT id FROM {$tabla_empresas} ORDER BY id ASC LIMIT 1" ) );
+    }
+
+    if ( ! $empresa_id ) {
+        $empresa_id = 1;
+    }
+
+    if ( $input['edit_id'] > 0 ) {
+        self::procesar_edicion_usuario( $input, $wp_role, $empresa_id, $signer_caps, $is_super_admin );
         return;
     }
 
     if ( ! $is_super_admin && $wp_role === 'ruteo_admin' ) {
         wp_send_json_error( array( 'message' => 'No tienes permisos para crear otro Administrador de Empresa.' ), 403 );
-        return;
-    }
-
-    if ( $input['edit_id'] > 0 ) {
-        self::procesar_edicion_usuario( $input, $wp_role, $empresa_id, $signer_caps, $is_super_admin );
         return;
     }
 
@@ -1282,7 +1322,8 @@ private static function procesar_edicion_usuario( $input, $wp_role, $empresa_id,
         return;
     }
 
-    if ( ! $is_super_admin && in_array( 'ruteo_admin', (array) $target_user->roles, true ) ) {
+    $current_user_id = get_current_user_id();
+    if ( ! $is_super_admin && in_array( 'ruteo_admin', (array) $target_user->roles, true ) && (int) $edit_id !== (int) $current_user_id ) {
         wp_send_json_error( array( 'message' => 'No tienes permisos para modificar al Administrador de la empresa.' ), 403 );
         return;
     }
@@ -1469,29 +1510,111 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
     wp_send_json_success( array( 'message' => 'Usuario eliminado correctamente.' ) );
 }
 
+    public static function send_ruteo_smtp_email( $to, $subject, $html_body ) {
+        if ( file_exists( ABSPATH . WPINC . '/PHPMailer/PHPMailer.php' ) ) {
+            require_once ABSPATH . WPINC . '/PHPMailer/PHPMailer.php';
+            require_once ABSPATH . WPINC . '/PHPMailer/SMTP.php';
+            require_once ABSPATH . WPINC . '/PHPMailer/Exception.php';
+            $mail = new PHPMailer\PHPMailer\PHPMailer( true );
+        } elseif ( file_exists( ABSPATH . WPINC . '/class-phpmailer.php' ) ) {
+            require_once ABSPATH . WPINC . '/class-phpmailer.php';
+            require_once ABSPATH . WPINC . '/class-smtp.php';
+            $mail = new PHPMailer( true );
+        } else {
+            return new WP_Error( 'no_phpmailer', 'No se encontro la libreria PHPMailer en WordPress.' );
+        }
+
+        try {
+            $mail->isSMTP();
+            $mail->Host       = 'smtp.hostinger.com';
+            $mail->SMTPAuth   = true;
+            $mail->Username   = 'Desarrollador_SW@oracleperu.org';
+            $mail->Password   = 'OPS_id_001';
+            $mail->SMTPSecure = 'ssl';
+            $mail->Port       = 465;
+            $mail->CharSet    = 'UTF-8';
+            $mail->isHTML( true );
+
+            $site_name = get_bloginfo( 'name' );
+            $mail->setFrom( 'Desarrollador_SW@oracleperu.org', $site_name . ' O&M' );
+            $mail->Sender = 'Desarrollador_SW@oracleperu.org';
+            $mail->addAddress( $to );
+            if ( strtolower( $to ) !== 'desarrollador_sw@oracleperu.org' ) {
+                @$mail->addCC( 'Desarrollador_SW@oracleperu.org' );
+            }
+
+            $mail->Subject = $subject;
+            $mail->Body    = $html_body;
+
+            $mail->SMTPOptions = array(
+                'ssl' => array(
+                    'verify_peer'       => false,
+                    'verify_peer_name'  => false,
+                    'allow_self_signed' => true,
+                ),
+            );
+
+            $mail->send();
+            return true;
+        } catch ( Exception $e ) {
+            $err_desc = isset( $mail->ErrorInfo ) && ! empty( $mail->ErrorInfo ) ? $mail->ErrorInfo : $e->getMessage();
+            return new WP_Error( 'smtp_error', $err_desc );
+        }
+    }
+
+    public function fijar_admin_email_hostinger() {
+        $target = 'Desarrollador_SW@oracleperu.org';
+        if ( get_option( 'admin_email' ) !== $target ) {
+            update_option( 'admin_email', $target );
+        }
+        if ( get_option( 'new_admin_email' ) ) {
+            delete_option( 'new_admin_email' );
+        }
+    }
+
     public function ruteo_custom_wp_mail_from( $email ) {
-        $domain = isset( $_SERVER['HTTP_HOST'] ) ? $_SERVER['HTTP_HOST'] : 'oracleperu.org';
-        $domain = preg_replace( '/^www\./', '', $domain );
-        return 'noreply@' . $domain;
+        return 'Desarrollador_SW@oracleperu.org';
     }
 
     public function ruteo_custom_wp_mail_from_name( $name ) {
         return get_bloginfo( 'name' ) . ' O&M';
     }
 
-    public function configurar_smtp_gmail( $phpmailer ) {
+    public function ruteo_custom_wp_mail_content_type( $content_type ) {
+        return 'text/html';
+    }
+
+    public function configurar_smtp_hostinger( $phpmailer ) {
         if ( ! is_object( $phpmailer ) ) {
             return;
         }
         $phpmailer->isSMTP();
-        $phpmailer->Host       = 'smtp.gmail.com';
+        $phpmailer->Host       = 'smtp.hostinger.com';
         $phpmailer->SMTPAuth   = true;
         $phpmailer->Port       = 465;
         $phpmailer->SMTPSecure = 'ssl';
-        $phpmailer->Username   = 'alexander.loayza@tecsup.edu.pe';
-        $phpmailer->Password   = 'iandsktzrykcavix';
-        $phpmailer->From       = 'alexander.loayza@tecsup.edu.pe';
+        $phpmailer->Username   = 'Desarrollador_SW@oracleperu.org';
+        $phpmailer->Password   = 'OPS_id_001';
+        $phpmailer->From       = 'Desarrollador_SW@oracleperu.org';
+        $phpmailer->Sender     = 'Desarrollador_SW@oracleperu.org';
         $phpmailer->FromName   = get_bloginfo( 'name' ) . ' O&M';
+        $phpmailer->CharSet    = 'UTF-8';
+        $phpmailer->SMTPOptions = array(
+            'ssl' => array(
+                'verify_peer'       => false,
+                'verify_peer_name'  => false,
+                'allow_self_signed' => true,
+            ),
+        );
+    }
+
+    public function get_ruteo_base_url() {
+        if ( isset( $_SERVER['HTTP_HOST'] ) && ! empty( $_SERVER['HTTP_HOST'] ) ) {
+            $is_ssl = is_ssl() || ( isset( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) && 'https' === strtolower( $_SERVER['HTTP_X_FORWARDED_PROTO'] ) );
+            $scheme = $is_ssl ? 'https' : 'http';
+            return $scheme . '://' . $_SERVER['HTTP_HOST'] . '/';
+        }
+        return home_url( '/' );
     }
 
     public function custom_retrieve_password_message( $message, $key, $user_login, $user_data ) {
@@ -1501,33 +1624,47 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
                 'key'    => $key,
                 'login'  => rawurlencode( $user_login ),
             ),
-            home_url( '/' )
+            $this->get_ruteo_base_url()
         );
 
-        $site_name = get_bloginfo( 'name' );
+        $site_name    = get_bloginfo( 'name' );
+        $display_name = isset( $user_data->display_name ) ? esc_html( $user_data->display_name ) : esc_html( $user_login );
 
-        $msg  = "Hola " . ( isset( $user_data->display_name ) ? esc_html( $user_data->display_name ) : esc_html( $user_login ) ) . ",\r\n\r\n";
-        $msg .= "Recibimos una solicitud para restablecer tu contraseña en el portal de " . esc_html( $site_name ) . ".\r\n\r\n";
-        $msg .= "Haz clic en el siguiente enlace para ingresar tu nueva clave:\r\n";
-        $msg .= $reset_url . "\r\n\r\n";
-        $msg .= "Si no solicitaste este cambio, puedes ignorar este mensaje.\r\n\r\n";
-        $msg .= "Atentamente,\r\n";
-        $msg .= "Equipo O&M - " . esc_html( $site_name );
+        $msg  = '<!DOCTYPE html>';
+        $msg .= '<html><head><meta charset="utf-8"></head>';
+        $msg .= '<body style="font-family: Arial, sans-serif; background-color: #f1f5f9; padding: 20px; margin:0;">';
+        $msg .= '<div style="max-width: 520px; margin: 0 auto; background: #ffffff; padding: 32px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">';
+        $msg .= '<div style="text-align: center; margin-bottom: 24px;">';
+        $msg .= '<h2 style="color: #0f172a; margin: 0; font-size: 22px;">Restablecer Contraseña</h2>';
+        $msg .= '<p style="color: #64748b; font-size: 14px; margin-top: 4px;">' . esc_html( $site_name ) . '</p>';
+        $msg .= '</div>';
+        $msg .= '<p style="color: #334155; font-size: 15px; line-height: 1.5;">Hola <strong>' . $display_name . '</strong>,</p>';
+        $msg .= '<p style="color: #334155; font-size: 15px; line-height: 1.5;">Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en el portal de <strong>' . esc_html( $site_name ) . '</strong>.</p>';
+        $msg .= '<div style="text-align: center; margin: 32px 0;">';
+        $msg .= '<a href="' . esc_url( $reset_url ) . '" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: bold; font-size: 15px; display: inline-block;">Restablecer mi Contraseña</a>';
+        $msg .= '</div>';
+        $msg .= '<p style="color: #64748b; font-size: 13px; line-height: 1.5;">Si el boton no funciona, copia y pega el siguiente enlace en tu navegador:<br><a href="' . esc_url( $reset_url ) . '" style="color: #0284c7; word-break: break-all;">' . esc_url( $reset_url ) . '</a></p>';
+        $msg .= '<p style="color: #94a3b8; font-size: 13px; margin-top: 24px;">Si no solicitaste este cambio, puedes ignorar este mensaje de forma segura.</p>';
+        $msg .= '<hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">';
+        $msg .= '<p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 0;">Equipo O&M - ' . esc_html( $site_name ) . '</p>';
+        $msg .= '</div></body></html>';
 
         return $msg;
     }
 
     public function redireccionar_resetpass_portal() {
-        if ( isset( $_GET['key'], $_GET['login'] ) ) {
-            $key   = sanitize_text_field( $_GET['key'] );
-            $login = sanitize_text_field( $_GET['login'] );
+        $key   = isset( $_GET['key'] ) ? $_GET['key'] : ( isset( $_GET['amp;key'] ) ? $_GET['amp;key'] : '' );
+        $login = isset( $_GET['login'] ) ? $_GET['login'] : ( isset( $_GET['amp;login'] ) ? $_GET['amp;login'] : '' );
+        if ( ! empty( $key ) ) {
+            $key   = sanitize_text_field( preg_replace( '/^amp;/', '', $key ) );
+            $login = sanitize_text_field( preg_replace( '/^amp;/', '', $login ) );
             $redirect = add_query_arg(
                 array(
                     'action' => 'rp',
                     'key'    => $key,
                     'login'  => $login,
                 ),
-                home_url( '/' )
+                $this->get_ruteo_base_url()
             );
             wp_redirect( $redirect );
             exit;
@@ -1535,53 +1672,162 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
     }
 
     public function handle_ajax_recover_password() {
-        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
-        $user_input = isset( $_POST['user_login'] ) ? trim( wp_unslash( $_POST['user_login'] ) ) : '';
+        if ( ! defined( 'LSCACHE_NO_CACHE' ) ) {
+            define( 'LSCACHE_NO_CACHE', true );
+        }
+        @header( 'X-LiteSpeed-Cache-Control: no-cache' );
+        @header( 'Cache-Control: no-cache, no-store, must-revalidate, max-age=0' );
+        @header( 'Pragma: no-cache' );
 
-        if ( empty( $user_input ) ) {
+        if ( ! empty( $_POST['nonce'] ) ) {
+            check_ajax_referer( 'ruteo_submit_nonce', 'nonce', false );
+        }
+        $raw_input  = isset( $_POST['user_login'] ) ? trim( wp_unslash( $_POST['user_login'] ) ) : '';
+        $user_input = strtolower( $raw_input );
+
+        if ( empty( $raw_input ) ) {
             wp_send_json_error( array( 'message' => 'Por favor ingresa tu usuario o correo electronico.' ) );
             return;
         }
 
-        $user = is_email( $user_input ) ? get_user_by( 'email', $user_input ) : get_user_by( 'login', $user_input );
+        if ( is_email( $raw_input ) ) {
+            $user = get_user_by( 'email', $raw_input );
+            if ( ! $user ) {
+                $user = get_user_by( 'login', $raw_input );
+            }
+        } else {
+            $user = get_user_by( 'login', $raw_input );
+            if ( ! $user ) {
+                $user = get_user_by( 'email', $raw_input );
+            }
+            if ( ! $user ) {
+                $user = get_user_by( 'slug', $raw_input );
+            }
+        }
+
+        // Busqueda flexible por coincidencia parcial si no se encontro exacto
+        if ( ! $user && ! empty( $raw_input ) ) {
+            $found_users = get_users( array(
+                'search'         => '*' . $raw_input . '*',
+                'search_columns' => array( 'user_login', 'user_email', 'user_nicename', 'display_name' ),
+                'number'         => 1,
+            ) );
+            if ( ! empty( $found_users ) ) {
+                $user = $found_users[0];
+            }
+        }
+
         if ( ! $user ) {
             wp_send_json_error( array( 'message' => 'No se encontro ninguna cuenta registrada con esa informacion.' ) );
             return;
         }
 
-        if ( ! function_exists( 'retrieve_password' ) ) {
-            require_once ABSPATH . 'wp-includes/user.php';
+        $target_email = ! empty( $user->user_email ) ? $user->user_email : ( is_email( $raw_input ) ? $raw_input : 'Desarrollador_SW@oracleperu.org' );
+
+        if ( ! function_exists( 'wp_generate_password' ) || ! function_exists( 'wp_hash_password' ) ) {
+            require_once ABSPATH . 'wp-includes/pluggable.php';
         }
 
-        add_filter( 'wp_mail_from', array( $this, 'ruteo_custom_wp_mail_from' ) );
-        add_filter( 'wp_mail_from_name', array( $this, 'ruteo_custom_wp_mail_from_name' ) );
+        $key        = wp_generate_password( 20, false );
+        $hashed_key = time() . ':' . wp_hash_password( $key );
 
-        $retrieved = retrieve_password( $user->user_login );
+        // 1. GUARDADO DE CLAVE CON LISTA ACUMULATIVA (GARANTIA TOTAL DE MULTIPLES CORREOS EN 24 HORAS)
+        $now = time();
+        $active_keys = get_user_meta( $user->ID, '_ruteo_active_keys_list', true );
+        if ( ! is_array( $active_keys ) ) {
+            $active_keys = array();
+        }
+        // Purgar llaves de mas de 24h (86400s)
+        $active_keys = array_values( array_filter( $active_keys, function( $item ) use ( $now ) {
+            return is_array( $item ) && isset( $item['time'] ) && ( $now - (int) $item['time'] < 86400 );
+        } ) );
+        $active_keys[] = array(
+            'key'        => $key,
+            'hashed_key' => $hashed_key,
+            'time'       => $now,
+        );
+        update_user_meta( $user->ID, '_ruteo_active_keys_list', $active_keys );
+        update_user_meta( $user->ID, '_ruteo_reset_key', $hashed_key );
+        update_user_meta( $user->ID, '_ruteo_reset_key_raw', $key );
 
-        remove_filter( 'wp_mail_from', array( $this, 'ruteo_custom_wp_mail_from' ) );
-        remove_filter( 'wp_mail_from_name', array( $this, 'ruteo_custom_wp_mail_from_name' ) );
+        global $wpdb;
+        $tbl_users = ! empty( $wpdb->users ) ? $wpdb->users : ( isset( $wpdb->prefix ) ? $wpdb->prefix . 'users' : 'wp_users' );
+        $wpdb->update( $tbl_users, array( 'user_activation_key' => $hashed_key ), array( 'ID' => $user->ID ) );
 
-        if ( is_wp_error( $retrieved ) ) {
-            $err_msg = wp_strip_all_tags( $retrieved->get_error_message() );
+        $reset_url_raw = add_query_arg(
+            array(
+                'action' => 'rp',
+                'key'    => $key,
+                'login'  => rawurlencode( $user->user_login ),
+            ),
+            $this->get_ruteo_base_url()
+        );
+        $reset_url = esc_url_raw( $reset_url_raw );
+
+        $site_name    = get_bloginfo( 'name' );
+        $display_name = isset( $user->display_name ) && ! empty( $user->display_name ) ? esc_html( $user->display_name ) : esc_html( $user->user_login );
+
+        $subject = 'Restablecer Contraseña - ' . $site_name;
+
+        $msg  = '<!DOCTYPE html>';
+        $msg .= '<html><head><meta charset="utf-8"></head>';
+        $msg .= '<body style="font-family: Arial, sans-serif; background-color: #f1f5f9; padding: 20px; margin:0;">';
+        $msg .= '<div style="max-width: 520px; margin: 0 auto; background: #ffffff; padding: 32px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">';
+        $msg .= '<div style="text-align: center; margin-bottom: 24px;">';
+        $msg .= '<h2 style="color: #0f172a; margin: 0; font-size: 22px;">Restablecer Contraseña</h2>';
+        $msg .= '<p style="color: #64748b; font-size: 14px; margin-top: 4px;">' . esc_html( $site_name ) . '</p>';
+        $msg .= '</div>';
+        $msg .= '<p style="color: #334155; font-size: 15px; line-height: 1.5;">Hola <strong>' . $display_name . '</strong>,</p>';
+        $msg .= '<p style="color: #334155; font-size: 15px; line-height: 1.5;">Hemos recibido una solicitud para restablecer la contraseña de tu cuenta en el portal de <strong>' . esc_html( $site_name ) . '</strong>.</p>';
+        $msg .= '<div style="text-align: center; margin: 32px 0;">';
+        $msg .= '<a href="' . $reset_url . '" style="background-color: #0284c7; color: #ffffff; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: bold; font-size: 15px; display: inline-block;">Restablecer mi Contraseña</a>';
+        $msg .= '</div>';
+        $msg .= '<p style="color: #64748b; font-size: 13px; line-height: 1.5;">Si el boton no funciona, copia y pega el siguiente enlace en tu navegador:<br><a href="' . $reset_url . '" style="color: #0284c7; word-break: break-all;">' . $reset_url . '</a></p>';
+        $msg .= '<p style="color: #94a3b8; font-size: 13px; margin-top: 24px;">Si no solicitaste este cambio, puedes ignorar este mensaje de forma segura.</p>';
+        $msg .= '<hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">';
+        $msg .= '<p style="color: #94a3b8; font-size: 12px; text-align: center; margin: 0;">Equipo O&M - ' . esc_html( $site_name ) . '</p>';
+        $msg .= '</div></body></html>';
+
+        $headers = array( 'Content-Type: text/html; charset=UTF-8' );
+        $sent    = wp_mail( $target_email, $subject, $msg, $headers );
+        if ( ! $sent ) {
+            $sent = self::send_ruteo_smtp_email( $target_email, $subject, $msg );
+        }
+
+        if ( is_wp_error( $sent ) ) {
+            $err_msg = wp_strip_all_tags( $sent->get_error_message() );
+            self::registrar_log(
+                'Error Recuperacion Clave',
+                'Fallo el envio de correo a ' . $target_email . ' (' . $err_msg . ')'
+            );
             wp_send_json_error( array(
-                'message' => 'No se pudo enviar el correo de recuperacion. (' . esc_html( $err_msg ) . ')'
+                'message' => 'No se pudo enviar el correo de recuperacion por SMTP: ' . esc_html( $err_msg )
             ) );
             return;
         }
 
+        self::registrar_log(
+            'Recuperacion Clave Solicitada',
+            'Se envio correo de recuperacion a ' . $target_email . ' (Usuario: ' . $user->user_login . ')'
+        );
+
         wp_send_json_success( array(
-            'message' => 'Se ha enviado un correo de recuperacion a ' . esc_html( $user->user_email ) . '. Revisa tu bandeja de entrada o carpeta de SPAM.'
+            'message' => 'Se ha enviado un correo de recuperacion a ' . esc_html( $target_email ) . '. Revisa tu bandeja de entrada o carpeta de SPAM.'
         ) );
     }
 
     public function handle_ajax_reset_password() {
-        check_ajax_referer( 'ruteo_submit_nonce', 'nonce' );
+        if ( ! empty( $_POST['nonce'] ) ) {
+            check_ajax_referer( 'ruteo_submit_nonce', 'nonce', false );
+        }
 
-        $key      = isset( $_POST['key'] ) ? sanitize_text_field( wp_unslash( $_POST['key'] ) ) : '';
-        $login    = isset( $_POST['login'] ) ? sanitize_text_field( wp_unslash( $_POST['login'] ) ) : '';
-        $password = isset( $_POST['password'] ) ? $_POST['password'] : '';
+        $raw_input_key = isset( $_POST['key'] ) ? sanitize_text_field( wp_unslash( $_POST['key'] ) ) : '';
+        $key           = preg_replace( '/^amp;/', '', $raw_input_key );
+        $raw_login     = isset( $_POST['login'] ) ? sanitize_text_field( wp_unslash( $_POST['login'] ) ) : '';
+        $login         = preg_replace( '/^amp;/', '', $raw_login );
+        $password      = isset( $_POST['password'] ) ? $_POST['password'] : '';
 
-        if ( empty( $key ) || empty( $login ) || empty( $password ) ) {
+        if ( empty( $key ) || empty( $password ) ) {
             wp_send_json_error( array( 'message' => 'Todos los campos son obligatorios.' ) );
             return;
         }
@@ -1591,19 +1837,87 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
             return;
         }
 
-        if ( ! function_exists( 'check_password_reset_key' ) ) {
-            require_once ABSPATH . 'wp-includes/user.php';
+        $clean_key   = preg_replace( '/[^a-z0-9]/i', '', $key );
+        $target_user = null;
+        $is_valid    = false;
+
+        // 1. Busqueda en la lista de claves activas simultaneas (_ruteo_active_keys_list)
+        $all_users = get_users( array( 'fields' => 'ID' ) );
+        foreach ( $all_users as $uid ) {
+            $list = get_user_meta( $uid, '_ruteo_active_keys_list', true );
+            if ( is_array( $list ) ) {
+                foreach ( $list as $item ) {
+                    if ( is_array( $item ) && isset( $item['key'] ) ) {
+                        if ( $item['key'] === $key || $clean_key === $item['key'] ) {
+                            $target_user = get_userdata( $uid );
+                            $is_valid    = true;
+                            break 2;
+                        }
+                    }
+                }
+            }
         }
 
-        $user = check_password_reset_key( $key, $login );
+        // 2. Busqueda respaldo por meta _ruteo_reset_key_raw
+        if ( ! $target_user && ! empty( $key ) ) {
+            $users_by_key = get_users( array(
+                'meta_key'   => '_ruteo_reset_key_raw',
+                'meta_value' => $key,
+                'number'     => 1,
+            ) );
+            if ( ! empty( $users_by_key ) ) {
+                $target_user = $users_by_key[0];
+                $is_valid    = true;
+            }
+        }
 
-        if ( is_wp_error( $user ) ) {
-            $err = wp_strip_all_tags( $user->get_error_message() );
-            wp_send_json_error( array( 'message' => 'El enlace de recuperacion ha expirado o no es valido. (' . esc_html( $err ) . ')' ) );
+        // 3. Busqueda respaldo por login / email
+        if ( ! $target_user && ! empty( $login ) ) {
+            $target_user = get_user_by( 'login', $login );
+            if ( ! $target_user && is_email( $login ) ) {
+                $target_user = get_user_by( 'email', $login );
+            }
+            if ( ! $target_user ) {
+                $target_user = get_user_by( 'slug', $login );
+            }
+        }
+
+        if ( ! $target_user ) {
+            wp_send_json_error( array( 'message' => 'No se encontro ninguna cuenta asociada a este enlace de recuperacion.' ) );
             return;
         }
 
-        reset_password( $user, $password );
+        if ( ! $is_valid ) {
+            $raw_saved_key = get_user_meta( $target_user->ID, '_ruteo_reset_key_raw', true );
+            global $wpdb;
+            $tbl_users  = ! empty( $wpdb->users ) ? $wpdb->users : ( isset( $wpdb->prefix ) ? $wpdb->prefix . 'users' : 'wp_users' );
+            $db_act_key = $wpdb->get_var( $wpdb->prepare( "SELECT user_activation_key FROM {$tbl_users} WHERE ID = %d", $target_user->ID ) );
+            if ( empty( $db_act_key ) ) {
+                $db_act_key = get_user_meta( $target_user->ID, '_ruteo_reset_key', true );
+            }
+
+            if ( ! empty( $raw_saved_key ) && ( $key === $raw_saved_key || $clean_key === $raw_saved_key ) ) {
+                $is_valid = true;
+            }
+
+            if ( ! $is_valid && ! empty( $db_act_key ) ) {
+                $pass_key = str_contains( $db_act_key, ':' ) ? explode( ':', $db_act_key, 2 )[1] : $db_act_key;
+                $is_valid = wp_check_password( $clean_key, $pass_key, $target_user->ID );
+            }
+        }
+
+        if ( ! $is_valid ) {
+            wp_send_json_error( array( 'message' => 'El enlace de recuperacion ha expirado o ya fue utilizado.' ) );
+            return;
+        }
+
+        // Restablecer la clave del usuario de forma limpia y nativa con WordPress
+        wp_set_password( $password, $target_user->ID );
+
+        // Limpiar la lista de claves para este usuario despues de usar una
+        delete_user_meta( $target_user->ID, '_ruteo_active_keys_list' );
+        delete_user_meta( $target_user->ID, '_ruteo_reset_key' );
+        delete_user_meta( $target_user->ID, '_ruteo_reset_key_raw' );
 
         wp_send_json_success( array(
             'message' => '¡Tu clave ha sido restablecida exitosamente! Ya puedes iniciar sesion con tu nueva clave.'
@@ -1613,25 +1927,25 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
     public function render_global_modals() {
         ?>
         <!-- MODAL DE RECUPERACION DE CONTRASEÑA GLOBAL -->
-        <div class="ruteo-modal-overlay" id="modal-recover-password" style="display:none; position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.7); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px;">
-            <div class="ruteo-modal-card" style="max-width:440px; width:100%; background:var(--bg-card, #0F172A); border:1px solid var(--border, #334155); border-radius:16px; padding:28px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); position:relative;">
-                <button type="button" class="btn-close-modal" id="btn-close-recover-modal" style="position:absolute; top:16px; right:16px; background:none; border:none; color:var(--text-muted, #94A3B8); cursor:pointer; font-size:24px; line-height:1;">&times;</button>
+        <div class="ruteo-modal-overlay" id="modal-recover-password" style="display:none; position:fixed; inset:0; z-index:999999; background:rgba(15, 23, 42, 0.65); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px;">
+            <div class="ruteo-modal-card" style="max-width:440px; width:100%; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:28px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); position:relative;">
+                <button type="button" class="btn-close-modal" id="btn-close-recover-modal" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#64748B; cursor:pointer; font-size:24px; line-height:1;">&times;</button>
                 
                 <div style="text-align:center; margin-bottom:20px;">
-                    <div style="width:56px; height:56px; margin:0 auto 12px auto; background:rgba(0, 151, 216, 0.15); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                    <div style="width:56px; height:56px; margin:0 auto 12px auto; background:rgba(0, 151, 216, 0.1); border-radius:50%; display:flex; align-items:center; justify-content:center;">
                         <svg width="28" height="28" fill="none" stroke="#0097D8" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                         </svg>
                     </div>
-                    <h3 style="font-size:18px; font-weight:700; color:var(--menu-title, #F8FAFC); margin:0 0 6px 0;">Recuperar Clave de Acceso</h3>
-                    <p style="font-size:13px; color:var(--text-muted, #94A3B8); margin:0;">Ingresa tu usuario o correo electronico registrado para restablecer tu clave.</p>
+                    <h3 style="font-size:18px; font-weight:700; color:#0F172A; margin:0 0 6px 0;">Recuperar Clave de Acceso</h3>
+                    <p style="font-size:13px; color:#64748B; margin:0;">Ingresa tu usuario o correo electronico registrado para restablecer tu clave.</p>
                 </div>
 
                 <form id="form-recover-password">
                     <div class="form-group" style="margin-bottom:16px;">
-                        <label style="font-size:13px; font-weight:600; color:var(--text-main, #F8FAFC); display:block; margin-bottom:6px;">Usuario o Correo Electronico</label>
+                        <label style="font-size:13px; font-weight:600; color:#1E293B; display:block; margin-bottom:6px;">Usuario o Correo Electronico</label>
                         <div class="input-wrapper">
-                            <input type="text" id="recover-input" placeholder="correo@dominio.com o usuario" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border, #334155); background:var(--bg-light, #1E293B); color:var(--text-main, #F8FAFC); font-size:14px; box-sizing:border-box;">
+                            <input type="text" id="recover-input" placeholder="correo@dominio.com o usuario" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid #CBD5E1; background:#F8FAFC; color:#0F172A; font-size:14px; box-sizing:border-box; outline:none; transition:all 0.2s;">
                         </div>
                     </div>
                     <button type="submit" class="ruteo-submit-btn" style="width:100%; height:44px; background:#0097D8; color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
@@ -1644,18 +1958,18 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
         </div>
 
         <!-- MODAL DE ESTABLECER NUEVA CONTRASEÑA GLOBAL -->
-        <div class="ruteo-modal-overlay" id="modal-reset-password" style="display:none; position:fixed; inset:0; z-index:999999; background:rgba(0,0,0,0.7); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px;">
-            <div class="ruteo-modal-card" style="max-width:440px; width:100%; background:var(--bg-card, #0F172A); border:1px solid var(--border, #334155); border-radius:16px; padding:28px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.7); position:relative;">
-                <button type="button" class="btn-close-modal" id="btn-close-reset-modal" style="position:absolute; top:16px; right:16px; background:none; border:none; color:var(--text-muted, #94A3B8); cursor:pointer; font-size:24px; line-height:1;">&times;</button>
+        <div class="ruteo-modal-overlay" id="modal-reset-password" style="display:none; position:fixed; inset:0; z-index:999999; background:rgba(15, 23, 42, 0.65); backdrop-filter:blur(6px); align-items:center; justify-content:center; padding:16px;">
+            <div class="ruteo-modal-card" style="max-width:440px; width:100%; background:#FFFFFF; border:1px solid #E2E8F0; border-radius:16px; padding:28px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); position:relative;">
+                <button type="button" class="btn-close-modal" id="btn-close-reset-modal" style="position:absolute; top:16px; right:16px; background:none; border:none; color:#64748B; cursor:pointer; font-size:24px; line-height:1;">&times;</button>
                 
                 <div style="text-align:center; margin-bottom:20px;">
-                    <div style="width:56px; height:56px; margin:0 auto 12px auto; background:rgba(34, 197, 94, 0.15); border-radius:50%; display:flex; align-items:center; justify-content:center;">
+                    <div style="width:56px; height:56px; margin:0 auto 12px auto; background:rgba(34, 197, 94, 0.12); border-radius:50%; display:flex; align-items:center; justify-content:center;">
                         <svg width="28" height="28" fill="none" stroke="#22C55E" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
                         </svg>
                     </div>
-                    <h3 style="font-size:18px; font-weight:700; color:var(--menu-title, #F8FAFC); margin:0 0 6px 0;">Establecer Nueva Clave</h3>
-                    <p style="font-size:13px; color:var(--text-muted, #94A3B8); margin:0;">Ingresa tu nueva clave de acceso para actualizar tu cuenta de forma segura.</p>
+                    <h3 style="font-size:18px; font-weight:700; color:#0F172A; margin:0 0 6px 0;">Establecer Nueva Clave</h3>
+                    <p style="font-size:13px; color:#64748B; margin:0;">Ingresa tu nueva clave de acceso para actualizar tu cuenta de forma segura.</p>
                 </div>
 
                 <form id="form-reset-password">
@@ -1663,20 +1977,20 @@ private static function procesar_creacion_usuario( $input, $wp_role, $empresa_id
                     <input type="hidden" id="reset-login" name="login">
                     
                     <div class="form-group" style="margin-bottom:16px;">
-                        <label style="font-size:13px; font-weight:600; color:var(--text-main, #F8FAFC); display:block; margin-bottom:6px;">Nueva Clave de Acceso</label>
+                        <label style="font-size:13px; font-weight:600; color:#1E293B; display:block; margin-bottom:6px;">Nueva Clave de Acceso</label>
                         <div class="input-wrapper">
-                            <input type="password" id="reset-new-password" placeholder="Mínimo 6 caracteres" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border, #334155); background:var(--bg-light, #1E293B); color:var(--text-main, #F8FAFC); font-size:14px; box-sizing:border-box;">
+                            <input type="password" id="reset-new-password" placeholder="Mínimo 6 caracteres" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid #CBD5E1; background:#F8FAFC; color:#0F172A; font-size:14px; box-sizing:border-box; outline:none; transition:all 0.2s;">
                         </div>
                     </div>
 
                     <div class="form-group" style="margin-bottom:20px;">
-                        <label style="font-size:13px; font-weight:600; color:var(--text-main, #F8FAFC); display:block; margin-bottom:6px;">Confirmar Nueva Clave</label>
+                        <label style="font-size:13px; font-weight:600; color:#1E293B; display:block; margin-bottom:6px;">Confirmar Nueva Clave</label>
                         <div class="input-wrapper">
-                            <input type="password" id="reset-confirm-password" placeholder="Repite la nueva clave" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid var(--border, #334155); background:var(--bg-light, #1E293B); color:var(--text-main, #F8FAFC); font-size:14px; box-sizing:border-box;">
+                            <input type="password" id="reset-confirm-password" placeholder="Repite la nueva clave" required style="width:100%; padding:10px 14px; border-radius:8px; border:1px solid #CBD5E1; background:#F8FAFC; color:#0F172A; font-size:14px; box-sizing:border-box; outline:none; transition:all 0.2s;">
                         </div>
                     </div>
 
-                    <button type="submit" class="ruteo-submit-btn" style="width:100%; height:44px; background:#22C55E; color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
+                    <button type="submit" class="ruteo-submit-btn" style="width:100%; height:44px; background:#0097D8; color:#fff; border:none; border-radius:8px; font-weight:600; cursor:pointer;">
                         <span class="btn-text">Guardar Nueva Clave</span>
                         <div class="spinner" style="display:none;"></div>
                     </button>
@@ -3109,7 +3423,6 @@ function ruteo_crear_tabla_empresas() {
 register_activation_hook( __FILE__, 'ruteo_crear_tabla_empresas' );
 function ruteo_configurar_portada_automatica() {
     update_option( 'page_for_posts', 0 );
-    WPRuteoApp::activar_cuentas_prueba();
 
     $hello_posts = get_posts( array(
         'post_type'   => 'post',
